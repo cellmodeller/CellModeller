@@ -25,7 +25,7 @@ import sys
 
 
 qapp = QApplication([])
-ui = uic.loadUi('CellModeller/GUI/PyGLtest.ui')
+ui = uic.loadUi('CellModeller/GUI/PyGLViewer.ui')
 ui.show()
 cmv = ui.PyGLCMViewer
 #cmv.setRegulator(reg)
