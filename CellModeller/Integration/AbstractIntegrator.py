@@ -11,14 +11,14 @@ class AbstractIntegrator:
         """Reference to Simulator required.
 
         simulator -- The Simulator object containing CellStates.
-	Should be used to access current cell states and other
-	simulation parameters
+        Should be used to access current cell states and other
+        simulation parameters
         """
         raise NotImplementedError()
 
     def reset(self):
-	""" Reset the model to its original condition, before any calls to step were made.
-	"""
+        """ Reset the model to its original condition, before any calls to step were made.
+        """
  
     def step(self, dt):
         """Step the model forward by dt, updating the CellState contents.
@@ -28,10 +28,10 @@ class AbstractIntegrator:
         raise NotImplementedError()
 
     def addCell(self, cellState):
-	""" Add cell to the model
+        """ Add cell to the model
 
-	cellState -- state of new cell. Id should be unique.
-	"""
+        cellState -- state of new cell. Id should be unique.
+        """
 
     def setRegulator(self, regulator):
         """Set the regulator object used by this integrator 

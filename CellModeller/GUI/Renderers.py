@@ -53,7 +53,7 @@ class GLGridRenderer:
       
         glEnable(GL_TEXTURE_2D)
         glDisable(GL_LIGHTING)
-	glDisable(GL_DEPTH_TEST)
+        glDisable(GL_DEPTH_TEST)
         glBindTexture(GL_TEXTURE_2D, self.texture)
         #Load the Data into the Texture
         glTexImage2D( GL_TEXTURE_2D, 0, GL_RGB, self.texDim, self.texDim, 0, GL_RGB, GL_UNSIGNED_BYTE, self.byteImageData )
@@ -76,7 +76,7 @@ class GLGridRenderer:
         glVertex3f(self.orig[0] , self.orig[1]+self.dim[1]*self.size[1],  0.0) 
         glEnd()
         glEnable(GL_LIGHTING)
-	glEnable(GL_DEPTH_TEST)
+        glEnable(GL_DEPTH_TEST)
         glDisable(GL_BLEND)
         glDisable(GL_TEXTURE_2D)
 
@@ -87,36 +87,36 @@ class GLPlantSignalRenderer:
         self.wallcol = [0, 0, 0]
         self.nodecol = [0, 0, 0]
         self.cellcol = [1, 1, 1] 
-	self.chanIdx = chanIdx
+        self.chanIdx = chanIdx
             
     def init_gl(self):
         pass    
 
     def renderNames_gl(self):
-	pass
+        pass
 
     def render_gl(self, selection=None):
-	# Render signals[chanIdx] as rgb
-	#
-	maxSig = [0,0,0]
+        # Render signals[chanIdx] as rgb
+        #
+        maxSig = [0,0,0]
         for i in range(len(self.chanIdx)):
             for (cid,cellState) in self.sim.cellStates.items():
-		s = cellState.signals[self.chanIdx[i]]
-		if s > maxSig[i]:
-		    maxSig[i] = s
-	    if maxSig[i]==0:
-		maxSig[i]=1.0
+                s = cellState.signals[self.chanIdx[i]]
+                if s > maxSig[i]:
+                    maxSig[i] = s
+                if maxSig[i]==0:
+                    maxSig[i]=1.0
 
-	for (cid,cellState) in self.sim.cellStates.items():
-	    col = [0,0,0]
-	    for i in range(len(self.chanIdx)):
-		col[i] = cellState.signals[self.chanIdx[i]]/maxSig[i]
-            glColor3fv(col)
-            glBegin(GL_POLYGON)
-            for p in cellState.nodep:
-                glVertex2d(p[0], p[1])
-            glEnd()
-	    
+        for (cid,cellState) in self.sim.cellStates.items():
+            col = [0,0,0]
+            for i in range(len(self.chanIdx)):
+                col[i] = cellState.signals[self.chanIdx[i]]/maxSig[i]
+                glColor3fv(col)
+                glBegin(GL_POLYGON)
+                for p in cellState.nodep:
+                    glVertex2d(p[0], p[1])
+                glEnd()
+    
 class GLPlantRenderer:
     def __init__(self, sim):
         self.sim = sim
@@ -128,8 +128,8 @@ class GLPlantRenderer:
         pass    
 
     def renderNames_gl(self):
-	# Render cell_ids for selection
-	#
+        # Render cell_ids for selection
+        #
         for (cid,cellState) in self.sim.cellStates.items():
             glColor3fv(self.cellcol)
             glPushName(cid)
@@ -137,11 +137,11 @@ class GLPlantRenderer:
             for p in cellState.nodep:
                 glVertex2d(p[0], p[1])
             glEnd()
-	    glPopName()
+            glPopName()
 
     def render_gl(self, selection=None):
         # Render model using PyOpenGL
-	#
+        #
             # principle axes
             #scale=10.0
             #c=cell.get_centre()
@@ -154,40 +154,39 @@ class GLPlantRenderer:
             #glVertex2d(c[0],c[1])
             #glVertex2d(c[0]+cell.pa2[0]*scale,c[1]+cell.pa2[1]*scale)
             #glEnd() 
-	glDisable(GL_LIGHTING)
-	glDisable(GL_DEPTH_TEST)
-	cellStates = self.sim.cellStates
+        glDisable(GL_LIGHTING)
+        glDisable(GL_DEPTH_TEST)
+        cellStates = self.sim.cellStates
 
-	#for (cid,cellState) in cellStates.items():
-	#    cellcol = cellState.color        
-	#    glColor3fv(cellcol)
+        #for (cid,cellState) in cellStates.items():
+        #    cellcol = cellState.color        
+        #    glColor3fv(cellcol)
         #    glBegin(GL_POLYGON)
         #    for p in cellState.nodep:
         #        glVertex2d(p[0], p[1])
         #    glEnd()
-	
-	for (cid,cellState) in cellStates.items():
- 	    col = self.wallcol
-	    for (wp1,wp2) in cellState.wallp:
-	        glColor3fv(col)
-	        glLineWidth(2)
-		glBegin(GL_LINES)
-		glVertex2d(wp1[0], wp1[1])
-		glVertex2d(wp2[0], wp2[1])
-		glEnd()
+        for (cid,cellState) in cellStates.items():
+            col = self.wallcol
+            for (wp1,wp2) in cellState.wallp:
+                glColor3fv(col)
+                glLineWidth(2)
+            glBegin(GL_LINES)
+            glVertex2d(wp1[0], wp1[1])
+            glVertex2d(wp2[0], wp2[1])
+            glEnd()
 
-	if selection>0 and cellStates.has_key(selection):
-	    scell = cellStates[selection]
-            glColor3fv([1,0,0])
-	    for (wp1,wp2) in scell.wallp:
-	        glLineWidth(2)
-	        glBegin(GL_LINES)
-	        glVertex2d(wp1[0], wp1[1])
-	        glVertex2d(wp2[0], wp2[1])
-	        glEnd()
+            if selection>0 and cellStates.has_key(selection):
+                scell = cellStates[selection]
+                glColor3fv([1,0,0])
+                for (wp1,wp2) in scell.wallp:
+                    glLineWidth(2)
+                    glBegin(GL_LINES)
+                    glVertex2d(wp1[0], wp1[1])
+                    glVertex2d(wp2[0], wp2[1])
+                    glEnd()
 
-	# Draw nodes as points
-	#glColor3fv(self.nodecol)
+        # Draw nodes as points
+        #glColor3fv(self.nodecol)
         #glPointSize(3)
         
         #for node in self.model.nodes:
@@ -271,10 +270,10 @@ class GLBacteriumRenderer:
             caxis = numpy.array(cell.dir) #(ae2-ae1)/l
             rotaxis = numpy.cross(caxis, zaxis)
             rotangle = numpy.arccos(numpy.dot(caxis,zaxis))
-	    
-	    cid = cell.id
-	    glPushName(cid) 
-	
+            
+            cid = cell.id
+            glPushName(cid) 
+        
             glMatrixMode(GL_MODELVIEW)
             glPushMatrix()
             glTranslatef(e1[0],e1[1],e1[2])
@@ -287,15 +286,15 @@ class GLBacteriumRenderer:
             gluSphere(self.quad, r, 8, 8)
             glPopMatrix() 
 
-	    glPopName()
+            glPopName()
 
             glEnable(GL_LIGHTING)
 
 
     def render_cells(self, selection=None):
-#	glDisable(GL_DEPTH_TEST)
+        #glDisable(GL_DEPTH_TEST)
         glDisable(GL_LIGHTING)
-  	cells = self.sim.cellStates.values()
+        cells = self.sim.cellStates.values()
         for cell in cells:
             l = cell.length
             #r = cell.radius*2.0
@@ -309,34 +308,33 @@ class GLBacteriumRenderer:
             rotaxis = numpy.cross(caxis, zaxis)
             rotangle = numpy.arccos(numpy.dot(caxis,zaxis))
            
-	    cid = cell.id
-	    if selection==cid:
-		cellcol = [1,0,0]
-	    else:
-		cellcol = cell.color #self.cellcol #[random.uniform(0,1), random.uniform(0,1), random.uniform(0,1)] 
-		if self.properties:
-		    cellcol = []
-		    for p in self.properties:
-			if hasattr(cell,p):
-			    cellcol.append(getattr(cell,p))
-			else:
-			    cellcol.append(0)
-		    for i in range(3):
-			cellcol[i] *= self.scales[i]
-			cellcol[i] = min(1,cellcol[i])
-	
+            cid = cell.id
+            if selection==cid:
+                cellcol = [1,0,0]
+            else:
+               cellcol = cell.color #self.cellcol #[random.uniform(0,1), random.uniform(0,1), random.uniform(0,1)] 
+            if self.properties:
+                cellcol = []
+                for p in self.properties:
+                    if hasattr(cell,p):
+                        cellcol.append(getattr(cell,p))
+                    else:
+                        cellcol.append(0)
+                for i in range(3):
+                    cellcol[i] *= self.scales[i]
+                    cellcol[i] = min(1,cellcol[i])
 
-	    # draw the outlines antialiased in black
-	    glColor3f(0.0, 0.0, 0.0)
-	    glEnable(GL_BLEND)
-	    glBlendFunc(GL_SRC_ALPHA ,GL_ONE_MINUS_SRC_ALPHA)
-	    glEnable(GL_LINE_SMOOTH)
-	    glLineWidth(8.0)
-	    # draw wireframe for back facing polygons and cull front-facing ones
-	    glPolygonMode(GL_BACK, GL_FILL)
-	    glEnable(GL_CULL_FACE)
-	    glCullFace(GL_FRONT)
-	    glDepthFunc(GL_LEQUAL)
+            # draw the outlines antialiased in black
+            glColor3f(0.0, 0.0, 0.0)
+            glEnable(GL_BLEND)
+            glBlendFunc(GL_SRC_ALPHA ,GL_ONE_MINUS_SRC_ALPHA)
+            glEnable(GL_LINE_SMOOTH)
+            glLineWidth(8.0)
+            # draw wireframe for back facing polygons and cull front-facing ones
+            glPolygonMode(GL_BACK, GL_FILL)
+            glEnable(GL_CULL_FACE)
+            glCullFace(GL_FRONT)
+            glDepthFunc(GL_LEQUAL)
 
             glMatrixMode(GL_MODELVIEW)
             glPushMatrix()
@@ -351,62 +349,61 @@ class GLBacteriumRenderer:
             glPopMatrix() 
 
 
-	    glDepthFunc(GL_LESS)
-	    glDisable(GL_CULL_FACE)
-	    glPolygonMode(GL_FRONT, GL_FILL)
-	    glDisable(GL_LINE_SMOOTH)
-	    glDisable(GL_BLEND)
+            glDepthFunc(GL_LESS)
+            glDisable(GL_CULL_FACE)
+            glPolygonMode(GL_FRONT, GL_FILL)
+            glDisable(GL_LINE_SMOOTH)
+            glDisable(GL_BLEND)
 
-	    glColor3fv(cellcol)
+            glColor3fv(cellcol)
             glMatrixMode(GL_MODELVIEW)
             glPushMatrix()
             glTranslatef(e1[0],e1[1],e1[2])
-	    glScalef(0.8,0.8,0.8)
+            glScalef(0.8,0.8,0.8)
             gluSphere(self.quad, r, 8, 8)
-	    #glScalef(1.25,1.0,1.0)
+            #glScalef(1.25,1.0,1.0)
             glRotatef(-rotangle*180.0/numpy.pi, rotaxis[0], rotaxis[1], rotaxis[2])
             gluCylinder(self.quad, r, r , l*1.25, 8, 1)
             glPopMatrix() 
             glPushMatrix()
             glTranslatef(e2[0],e2[1],e2[2])
-	    glScalef(0.8,0.8,0.8)
+            glScalef(0.8,0.8,0.8)
             gluSphere(self.quad, r, 8, 8)
             glPopMatrix() 
 
-#            glColor3f(68.0 / 256, 81.0 / 256, 44.0 / 256)
-#            glLineWidth(2)
-#            glBegin(GL_LINES)
-#            glVertex3f(e1[0], e1[1], e1[2])
-#            glVertex3f(e2[0], e2[1], e2[2])
-#            glEnd()    
-#            
-#            glColor3f(1.0, 1.0, 0.0)
-#            glPointSize(3)
-#            glBegin(GL_POINTS)
-#            glVertex3f(e1[0], e1[1], e1[2])
-#            glVertex3f(e2[0], e2[1], e2[2])
-#            glEnd()  
-	    
-	
-	# draw contact points
-	if False: #hasattr(cells[0], 'contacts'):
-	    glDisable(GL_DEPTH_TEST)
-	    glDisable(GL_LIGHTING)
-            for cell in cells:
-		contacts = cell.contacts
-		glBegin(GL_LINES)
-		for ct in contacts:
-		    glColor3fv(ct[6:9])
-		    glVertex3fv(ct[0:3])
-		    glVertex3fv(ct[3:6])
-		glEnd()
-		glBegin(GL_POINTS)
-		for ct in contacts:
-		    glColor3fv(ct[6:9])
-		    glVertex3fv(ct[0:3])
-		glEnd()
-	    glEnable(GL_DEPTH_TEST)
-	    glEnable(GL_LIGHTING)
+            #glColor3f(68.0 / 256, 81.0 / 256, 44.0 / 256)
+            #glLineWidth(2)
+            #glBegin(GL_LINES)
+            #glVertex3f(e1[0], e1[1], e1[2])
+            #glVertex3f(e2[0], e2[1], e2[2])
+            #glEnd()    
+            #
+            #glColor3f(1.0, 1.0, 0.0)
+            #glPointSize(3)
+            #glBegin(GL_POINTS)
+            #glVertex3f(e1[0], e1[1], e1[2])
+            #glVertex3f(e2[0], e2[1], e2[2])
+            #glEnd()  
+
+            # draw contact points
+            if False: #hasattr(cells[0], 'contacts'):
+                glDisable(GL_DEPTH_TEST)
+                glDisable(GL_LIGHTING)
+                for cell in cells:
+                    contacts = cell.contacts
+                    glBegin(GL_LINES)
+                    for ct in contacts:
+                        glColor3fv(ct[6:9])
+                        glVertex3fv(ct[0:3])
+                        glVertex3fv(ct[3:6])
+                    glEnd()
+                    glBegin(GL_POINTS)
+                    for ct in contacts:
+                        glColor3fv(ct[6:9])
+                        glVertex3fv(ct[0:3])
+                    glEnd()
+                    glEnable(GL_DEPTH_TEST)
+                    glEnable(GL_LIGHTING)
 
             
 class GLStaticMeshRenderer:
@@ -482,8 +479,8 @@ class GLStaticMeshRenderer:
             cid = c.getId()
             if selection!=cid:
                 s =  states[cid]
-		if len(s.signals)>0:
-		    glColor4f(s.signals[0],0,0,1)
+                if len(s.signals)>0:
+                    glColor4f(s.signals[0],0,0,1)
                 else:
                     glColor4fv(c.color) #c.color[0:3]) 
             else:
@@ -710,7 +707,7 @@ class GLCelBacteriumRenderer:
 
 
     def render_gl(self, selection=None):
-  	cells = self.sim.cellStates.values()
+        cells = self.sim.cellStates.values()
         for cell in cells: self.render_cell(cell, selection)
 
     def renderNames_gl(self, selection=None):

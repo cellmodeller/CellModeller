@@ -7,18 +7,18 @@ class AbstractBiophysicalModel:
         """Reference to Simulator required.
 
         simulator -- The Simulator object containing CellStates.
-	Should be used to access current cell states and other
-	simulation parameters
+        Should be used to access current cell states and other
+        simulation parameters
          """
         raise NotImplementedError()
 
     def reset(self):
-	""" Reset the model to its original condition, before any calls to step were made.
-	"""
+        """ Reset the model to its original condition, before any calls to step were made.
+        """
 
     def step(self, dt):
         """Step the simulation forward. Also update geometry information
-	in CellState for each cell.
+            in CellState for each cell.
 
         dt -- Time to step forward.
         """
@@ -42,8 +42,8 @@ class AbstractBiophysicalModel:
         raise NotImplementedError()
 
     def hasNeighbours(self):
-	""" Does this model implement neighbours? Return True/False
-	"""
+        """ Does this model implement neighbours? Return True/False
+        """
 
     def divide(self, parentState, daughter1State, daughter2State, *args, **kw):
         """Divide a cell.
@@ -52,7 +52,7 @@ class AbstractBiophysicalModel:
         daughter1State -- The state of the first daughter cell.  Should be unique.
         daughter2State -- The state of the second daughter cell.  Should be unique.
 
-	Additional keywords args for model specific behaviour.
+        Additional keywords args for model specific behaviour.
         """
         raise NotImplementedError()
 
