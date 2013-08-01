@@ -144,8 +144,8 @@ visualised.
         pid = pState.id
         d1id = self.next_id()
         d2id = self.next_id()
-        d1State = copy.copy(pState)
-        d2State = copy.copy(pState)
+        d1State = copy.deepcopy(pState)
+        d2State = copy.deepcopy(pState)
         d1State.id = d1id
         d2State.id = d2id
 
