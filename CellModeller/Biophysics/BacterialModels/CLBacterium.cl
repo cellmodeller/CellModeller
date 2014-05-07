@@ -402,7 +402,7 @@ __kernel void find_contacts(const int max_cells,
                             __global float* dists,
                             __global float4* pts,
                             __global float4* norms,
-			    __global float* reldists,
+                            __global float* reldists,
                             __global float* stiff)
 {
   // our id
@@ -484,7 +484,7 @@ __kernel void find_contacts(const int max_cells,
               reldists[ct_i] = stiffness*RHS_FRAC*dist;
               stiff[ct_i] = stiffness;
             }
-	}
+        }
         if(n_existing_cts>0){
           // recompute dist etc. for existing contact
           int idx = existing_cts_idx[0];
@@ -497,18 +497,18 @@ __kernel void find_contacts(const int max_cells,
 
 
         if (!two_pts){
-	  if(n_existing_cts>1){
-	    // Not parallel, but were before - how to deal with this?
-	    // Set stiffness and rhs (reldists) to zero so that this row has no effect
-	    int idx = existing_cts_idx[1];
-	    /*dists[idx] = 0.0;
-	    pts[idx] = pt;
-	    norms[idx] = norm;*/
-	    reldists[idx] = 0.0;
-            stiff[idx] = 0.0;
-	  }
-	  continue;
-	}
+            if(n_existing_cts>1){
+                // Not parallel, but were before - how to deal with this?
+                // Set stiffness and rhs (reldists) to zero so that this row has no effect
+                int idx = existing_cts_idx[1];
+                /*dists[idx] = 0.0;
+                pts[idx] = pt;
+                norms[idx] = norm;*/
+                reldists[idx] = 0.0;
+                stiff[idx] = 0.0;
+            }
+            continue;
+        }
 
         // if we had two contacts, add the second point
         v_ij = pj2-pi2;
@@ -516,9 +516,9 @@ __kernel void find_contacts(const int max_cells,
         norm = normalize(v_ij);
         pt = pi2 + rads[i]*norm;
 
-	// Are cells moving together or penetrating?
-	if (dist < MARGIN)
-	{
+        // Are cells moving together or penetrating?
+        if (dist < MARGIN)
+        {
             if (n_existing_cts<2)
             {
               ct_i = i*max_contacts+k;
@@ -531,7 +531,7 @@ __kernel void find_contacts(const int max_cells,
               reldists[ct_i] = stiffness*RHS_FRAC*dist;
               stiff[ct_i] = stiffness;
             }
-	}
+        }
         if(n_existing_cts>1){
           // recompute dist etc. for existing contact
           int idx = existing_cts_idx[1];
@@ -626,7 +626,7 @@ __kernel void collect_tos(const int max_cells,
 
 __kernel void build_matrix(const int max_contacts,
                            const float muA,
-			   const float gamma,
+                           const float gamma,
                            __global const float4* centers,
                            __global const float4* dirs,
                            __global const float* lens,
@@ -736,12 +736,12 @@ __kernel void calculate_MTMx(const int max_contacts,
 
 
 __kernel void calculate_Minv_x(const float muA,
-			       const float gamma,
-			       __global const float4* dirs,
-			       __global const float* lens,
-			       __global const float* rads,
-			       __global const float8* x,
-			       __global float8* Minvx)
+                   const float gamma,
+                   __global const float4* dirs,
+                   __global const float* lens,
+                   __global const float* rads,
+                   __global const float8* x,
+                   __global float8* Minvx)
 {
   int i = get_global_id(0);
 

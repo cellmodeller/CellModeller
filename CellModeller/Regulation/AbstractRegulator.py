@@ -9,8 +9,8 @@ class AbstractRegulator:
         """Reference to Simulator required.
 
         simulator -- The Simulator object containing CellStates.
-	Should be used to access current cell states and other
-	simulation parameters
+        Should be used to access current cell states and other
+        simulation parameters
          """
         raise NotImplementedError()
 
@@ -51,9 +51,9 @@ class AbstractRegulator:
 
     def speciesRates(self, cellState, speciesLevels, signalLevels):
         """Return rates of species production (dydt) by a cell,
-	given species and signal levels (y) supplied. I.e. dydt(y)
+        given species and signal levels (y) supplied. I.e. dydt(y)
 
-	Must return rates in a numpy array
+        Must return rates in a numpy array
 
         cellState -- The state of the cell to return rates of.
         speciesLevels -- Levels of species in the cell.
@@ -63,9 +63,9 @@ class AbstractRegulator:
 
     def signalRates(self, cellState, speciesLevels, signalLevels):
         """Return rates of signal production (dydt) by a cell,
-	given species and signal levels (y) supplied. I.e. dydt(y)
+        given species and signal levels (y) supplied. I.e. dydt(y)
 
-	Must return rates in a numpy array
+        Must return rates in a numpy array
 
         cellState -- The state of the cell to return rates of.
         speciesLevels -- Levels of species in the cell.
@@ -74,11 +74,11 @@ class AbstractRegulator:
         raise NotImplementedError()
 
     def initSpeciesLevels(levels):
-	"""Set the initial species levels for time step to current levels.
-	Write directly into levels array.
+        """Set the initial species levels for time step to current levels.
+        Write directly into levels array.
 
-	levels -- the array stored by integrator
-	"""
+        levels -- the array stored by integrator
+        """
         raise NotImplementedError()
 
     def isDividing(self, cellState):

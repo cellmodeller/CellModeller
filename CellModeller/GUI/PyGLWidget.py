@@ -67,7 +67,7 @@ class PyGLWidget(QtOpenGL.QGLWidget):
         self.last_point_ok_ = False
         self.last_point_3D_ = [1.0, 0.0, 0.0]
         self.isInRotation_  = False
-	self.pickSize = 3
+        self.pickSize = 3
 
         # connections
         #self.signalGLMatrixChanged.connect(self.printModelViewMatrix)
@@ -111,8 +111,8 @@ class PyGLWidget(QtOpenGL.QGLWidget):
         self.makeCurrent()
         glMatrixMode( GL_PROJECTION )
         glLoadIdentity()
-	viewport =glGetIntegerv(GL_VIEWPORT)
-	gluPickMatrix(x, viewport[3]-y, self.pickSize, self.pickSize, viewport);
+        viewport =glGetIntegerv(GL_VIEWPORT)
+        gluPickMatrix(x, viewport[3]-y, self.pickSize, self.pickSize, viewport);
         gluPerspective( self.fovy_, float(self.width()) / float(self.height()),
                         self.near_, self.far_ )
     
@@ -228,33 +228,33 @@ class PyGLWidget(QtOpenGL.QGLWidget):
         _event.accept()
 
     def selectName(self, point):
-	glSelectBuffer(50) # allocate a selection buffer of SIZE elements
-	glRenderMode(GL_SELECT)
-	
-	glMatrixMode( GL_PROJECTION )
-	glPushMatrix()
-	self.set_pick_projection( point.x(), point.y(), self.near_, self.far_, self.fovy_ );
-	
-	self.paintGL()
-	self.drawWithNames()
+        glSelectBuffer(50) # allocate a selection buffer of SIZE elements
+        glRenderMode(GL_SELECT)
+        
+        glMatrixMode( GL_PROJECTION )
+        glPushMatrix()
+        self.set_pick_projection( point.x(), point.y(), self.near_, self.far_, self.fovy_ );
+        
+        self.paintGL()
+        self.drawWithNames()
 
-	buf = glRenderMode(GL_RENDER)
-	selectedName = -1
-	for hit_record in buf:
-	    min_depth, max_depth, names = hit_record
-	    for name in names:
-		if name:
-		    selectedName = name
-	glMatrixMode( GL_PROJECTION )
-	glPopMatrix()
-	return selectedName
-	    
+        buf = glRenderMode(GL_RENDER)
+        selectedName = -1
+        for hit_record in buf:
+            min_depth, max_depth, names = hit_record
+            for name in names:
+                if name:
+                    selectedName = name
+        glMatrixMode( GL_PROJECTION )
+        glPopMatrix()
+        return selectedName
+    
     def mousePressEvent(self, _event):
         self.last_point_2D_ = _event.pos()
         self.last_point_ok_, self.last_point_3D_ = self.map_to_sphere(self.last_point_2D_)
-	if (_event.buttons() & QtCore.Qt.LeftButton) and (_event.modifiers() & QtCore.Qt.ShiftModifier):
-	    name = self.selectName(_event.pos())
-	    self.postSelection(name)
+        if (_event.buttons() & QtCore.Qt.LeftButton) and (_event.modifiers() & QtCore.Qt.ShiftModifier):
+            name = self.selectName(_event.pos())
+            self.postSelection(name)
 
     def mouseMoveEvent(self, _event):
         newPoint2D = _event.pos()
@@ -285,7 +285,7 @@ class PyGLWidget(QtOpenGL.QGLWidget):
             value_y = self.radius_ * dy * 2.0 / h;
             self.translate([0.0, 0.0, value_y])
         # move in x,y direction
-	elif (_event.buttons() & QtCore.Qt.RightButton):
+        elif (_event.buttons() & QtCore.Qt.RightButton):
             z = - (self.modelview_matrix_[0][2] * self.center_[0] +
                    self.modelview_matrix_[1][2] * self.center_[1] +
                    self.modelview_matrix_[2][2] * self.center_[2] +
