@@ -45,8 +45,8 @@ def setup(sim):
     #    state.color = list(cellcols[state.cellType,:])
 
     # Add some objects to draw the models
-    #therenderer = Renderers.GLBacteriumRenderer(sim)
-    #sim.addRenderer(therenderer)
+    therenderer = Renderers.GLBacteriumRenderer(sim)
+    sim.addRenderer(therenderer)
 
 
 def lineage(parents, founders, id):
