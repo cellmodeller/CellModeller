@@ -58,10 +58,9 @@ __kernel void gridCells(const float gridOrigx,
     float dz = (p.z - gridOrigz) / gridSizez;
     dz -= floor(dz);
 
-    /* 
-        Tedious bounds checking on neighbourhood to avoid wrapping and overflow...
-        Set weight to zero if off grid (index will also be zero)
-    */
+    //  Tedious bounds checking on neighbourhood to avoid wrapping and overflow...
+    //    Set weight to zero if off grid (index will also be zero)
+    
    weights[base+0] /*[0,0,0]*/ = (float)(ix>=0 && ix<gridDimx && iy>=0 && iy<gridDimy && iz>=0 && iz<gridDimz) *  (1-dx)*(1-dy)*(1-dz);
    weights[base+1] /*[0,0,1]*/ = (float)(ix>=0 && ix<gridDimx && iy>=0 && iy<gridDimy && iz>=-1 && iz<gridDimz-1) * (1-dx)*(1-dy)*dz;
    weights[base+2] /*[0,1,0]*/ = (float)(ix>=0 && ix<gridDimx && iy>=-1 && iy<gridDimy-1 && iz>=0 && iz<gridDimz) * (1-dx)*dy*(1-dz);

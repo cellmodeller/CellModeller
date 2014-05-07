@@ -123,12 +123,13 @@ class CLCrankNicIntegrator:
     def computeGreensFunc(self):
         L = LinearOperator((self.signalDataLen,self.signalDataLen), matvec=self.CNOperator, dtype=numpy.float32)
         rhs = numpy.zeros(self.gridDim, dtype=numpy.float32)
-        pos = numpy.array(self.signalling.gridOrig,dtype=numpy.float32) + 0.5*numpy.array(self.gridDim[1:],dtype=numpy.float32)*numpy.array(self.signalling.gridSize,dtype=numpy.float32)
+        pos = numpy.array(self.signalling.gridOrig,dtype=numpy.float32) +[1,1,1]# + 0.5*numpy.array(self.gridDim[1:],dtype=numpy.float32)*numpy.array(self.signalling.gridSize,dtype=numpy.float32)
         #idx = ( math.floor(self.gridDim[1]*0.5), math.floor(self.gridDim[2]*0.5), math.floor(self.gridDim[3]*0.5) )
         #for s in xrange(self.nSignals):
         #    rhs[(s,)+idx] = 1.0 # ~delta function in each signal
         self.signalling.interpAddToGrid(pos, numpy.ones(self.nSignals), rhs)
-        (self.greensFunc, info) = gmres(L,rhs.reshape(self.signalDataLen)) # Solve impulse response = greens func
+        (self.greensFunc, info) = gmres(L,rhs.reshape(self.signalDataLen), tol=1e-12) # Solve impulse response = greens func
+        print max(L*rhs.reshape(self.signalDataLen))
         # Take only bounding box of region where G > threshold
         self.greensFunc.shape = self.gridDim
         inds = numpy.transpose(numpy.nonzero(self.greensFunc.reshape(self.gridDim)>self.greensThreshold))

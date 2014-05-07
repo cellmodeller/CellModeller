@@ -95,7 +95,7 @@ visualised.
 
     def init_cl(self):
         """Set up the OpenCL context."""
-        platform = cl.get_platforms()[2]
+        platform = cl.get_platforms()[0]
         if sys.platform == 'darwin':
             self.CLContext = cl.Context(devices=[platform.get_devices()[0]])
         else:
@@ -107,6 +107,7 @@ visualised.
             self.CLContext = cl.Context(properties=[(cl.context_properties.PLATFORM, platform)],
                                           devices=[platform.get_devices()[0]])
         self.CLQueue = cl.CommandQueue(self.CLContext)
+        print platform.get_devices()[0]
         print (platform.get_devices()[0]).get_info(cl.device_info.DRIVER_VERSION)
 
     def getOpenCL(self):
@@ -208,7 +209,7 @@ visualised.
     def writePickle(self):
         filename = os.path.join(self.pickleDir, 'step-%05i.pickle' % self.stepNum)
         outfile = open(filename, 'wb')
-        if self.integ:
+        if self.integ and self.sig:
             sigData = (self.sig.gridSize, self.sig.gridOrig, self.integ.gridDim, self.integ.signalLevel.reshape(self.integ.gridDim))
             data = (self.cellStates, sigData, self.lineage)
         else:

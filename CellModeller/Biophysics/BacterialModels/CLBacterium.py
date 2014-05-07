@@ -1036,7 +1036,6 @@ class CLBacterium:
         print "Grid stuff timing for 1000 calls, time per call (s) = %f"%((t2-t1)*0.001)
         open("grid_prof","a").write( "%i, %i, %f\n"%(self.n_cells,self.n_cts,(t2-t1)*0.001) )
 
-
     def profileFindCts(self):
         if self.n_cts==0:
             return
@@ -1046,18 +1045,41 @@ class CLBacterium:
         for i in range(1000):
             self.n_cts = 0
             self.vclear(self.cell_n_cts_dev) # clear the accumulated contact count
-            self.predict(dt)
+            self.predict()
             # find all contacts
-            self.find_contacts(dt)
+            self.find_contacts()
+            # place 'backward' contacts in cells
+            #self.collect_tos()
+
+            # compact the contacts so we can dispatch only enough threads
+            # to deal with each
+            #self.ct_frs = self.ct_frs_dev.get()
+            #self.ct_tos = self.ct_tos_dev.get()
+            #self.ct_inds_dev.set(self.ct_inds)
+        t2 = time.clock()
+        print "Find contacts timing for 1000 calls, time per call (s) = %f"%((t2-t1)*0.001)
+        open("findcts_prof","a").write( "%i, %i, %f\n"%(self.n_cells,self.n_cts,(t2-t1)*0.001) )
+
+    def profileFindCts2(self):
+        if self.n_cts==0:
+            return
+        import time
+        t1 = time.clock()
+        dt = 0.005
+        for i in range(1000):
+            self.n_cts = 0
+            self.vclear(self.cell_n_cts_dev) # clear the accumulated contact count
+            self.predict()
+            # find all contacts
+            self.find_contacts()
             # place 'backward' contacts in cells
             self.collect_tos()
 
             # compact the contacts so we can dispatch only enough threads
             # to deal with each
-            self.ct_frs = self.ct_frs_dev.get()
-            self.ct_tos = self.ct_tos_dev.get()
-            self.compact_cts()
-            self.ct_inds_dev.set(self.ct_inds)
+            #self.ct_frs = self.ct_frs_dev.get()
+            #self.ct_tos = self.ct_tos_dev.get()
+            #self.ct_inds_dev.set(self.ct_inds)
         t2 = time.clock()
         print "Find contacts timing for 1000 calls, time per call (s) = %f"%((t2-t1)*0.001)
         open("findcts_prof","a").write( "%i, %i, %f\n"%(self.n_cells,self.n_cts,(t2-t1)*0.001) )
@@ -1069,7 +1091,7 @@ class CLBacterium:
         t1 = time.clock()
         dt = 0.005
         for i in range(1000):
-            self.build_matrix(dt) # Calculate entries of the matrix
+            self.build_matrix() # Calculate entries of the matrix
             (iters, res) = self.CGSSolve()
             print "cgs prof: iters=%i, res=%f"%(iters,res)
         t2 = time.clock()

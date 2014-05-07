@@ -13,6 +13,7 @@ setup(name='CellModeller',
                 'CellModeller.GUI'],
       package_data={'CellModeller.GUI':['test.ui', 'PyGLViewer.ui'],
                     'CellModeller.Integration':['CLCrankNicIntegrator.cl'],
+                    'CellModeller.Integration':['CLEulerIntegrator.cl'],
                     'CellModeller.Biophysics.PlantModels':['CLPlant.cl'],
                     'CellModeller.Biophysics.BacterialModels':['CLBacterium.cl']},
 )

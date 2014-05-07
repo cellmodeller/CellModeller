@@ -21,7 +21,7 @@ def setup(sim):
 
     #load data from pickle file
     import cPickle
-    data = cPickle.load(open('data/BiofilmWallLessCrash_no_alternation_9-12-56-25-09-12/step-00700.pickle','r'))
+    data = cPickle.load(open('/Users/tjr34/LazyLowRe/CellModeller/build/lib/data/lobes-16-06-30-08-12/step-00530.pickle','r'))
     cellStates = data[0]
     print "Loading %i cells"%len(cellStates)
     sim.cellStates = cellStates
@@ -45,8 +45,8 @@ def setup(sim):
     #    state.color = list(cellcols[state.cellType,:])
 
     # Add some objects to draw the models
-    therenderer = Renderers.GLBacteriumRenderer(sim)
-    sim.addRenderer(therenderer)
+    #therenderer = Renderers.GLBacteriumRenderer(sim)
+    #sim.addRenderer(therenderer)
 
 
 def lineage(parents, founders, id):
@@ -66,14 +66,7 @@ def numSpecies():
     return 0
 
 def update(cells):
-    for (id, cell) in cells.items():
-        cell.color = [0.7, 0.1, 0.1]
-        #max(cell.startVol*2.0,0.0): #cell.startvol*2: #random.uniform(1.75,2.0):
-        if cell.volume > cell.targetVol:
-            #print id, cell.volume, cell.targetVol
-            a = 1#random.uniform(0.95,1.05)
-            cell.asymm = [a,1]
-            cell.divideFlag = True
+    pass
 
 def divide(parent, d1, d2):
     d1.targetVol = 2.5 + random.uniform(0.0,0.5)
