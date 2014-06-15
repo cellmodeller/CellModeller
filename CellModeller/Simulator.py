@@ -97,7 +97,7 @@ visualised.
         """Set up the OpenCL context."""
         platform = cl.get_platforms()[0]
         if sys.platform == 'darwin':
-            self.CLContext = cl.Context(devices=[platform.get_devices()[1]])
+            self.CLContext = cl.Context(devices=[platform.get_devices()[0]])
         else:
             #try:
             #    self.CLContext 
