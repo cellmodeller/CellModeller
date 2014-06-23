@@ -6,7 +6,7 @@ import shutil
 
 from CellModeller.Simulator import Simulator
 
-sys.path.append('../../Models')
+sys.path.append('Models')
 
 max_cells = 30000
 cell_buffer = 256
