@@ -307,7 +307,6 @@ __kernel void find_plane_contacts(const int max_cells,
                                   __global const float* lens,
                                   __global const float* rads,
                                   __global int* n_cts,
-                                  __global int* frs,
                                   __global int* tos,
                                   __global float* dists,
                                   __global float4* pts,
@@ -352,7 +351,6 @@ __kernel void find_plane_contacts(const int max_cells,
         k++;
       }
 
-      frs[cti1] = i;
       tos[cti1] = to1;
       dists[cti1] = dist1;
       pts[cti1] = end1; // FIXME: not really the right point
@@ -367,7 +365,6 @@ __kernel void find_plane_contacts(const int max_cells,
         k++;
       }
 
-      frs[cti2] = i;
       tos[cti2] = to2;
       dists[cti2] = dist2;
       pts[cti2] = end2;
@@ -397,7 +394,6 @@ __kernel void find_contacts(const int max_cells,
                             __global const int* sorted_ids,
                             __global const int* sq_inds,
                             __global int* n_cts,
-                            __global int* frs,
                             __global int* tos,
                             __global float* dists,
                             __global float4* pts,
@@ -476,7 +472,6 @@ __kernel void find_contacts(const int max_cells,
             {
               // make new contact and compute distance etc.
               k++; // next contact
-              frs[ct_i] = i;
               tos[ct_i] = j;
               dists[ct_i] = dist;
               pts[ct_i] = pt;
@@ -523,7 +518,6 @@ __kernel void find_contacts(const int max_cells,
             {
               ct_i = i*max_contacts+k;
               k++;
-              frs[ct_i] = i;
               tos[ct_i] = j;
               dists[ct_i] = dist;
               pts[ct_i] = pt;
@@ -550,7 +544,6 @@ __kernel void find_contacts(const int max_cells,
   // zero out unused contacts
   // this IS necessary for calculate_Mx to work
   for (int u = k; u < max_contacts; u++) {
-    frs[i*max_contacts+u] = 0;
     tos[i*max_contacts+u] = 0;
   }
 }
@@ -569,7 +562,6 @@ __kernel void collect_tos(const int max_cells,
                           __global const int* sorted_ids,
                           __global const int* sq_inds,
                           __global const int* n_cts,
-                          __global const int* frs,
                           __global const int* tos,
                           __global int* cell_tos,
                           __global int* n_cell_tos)
@@ -632,7 +624,6 @@ __kernel void build_matrix(const int max_contacts,
                            __global const float* lens,
                            __global const float* rads,
                            __global const int* n_cts,
-                           __global const int* frs,
                            __global const int* tos,
                            __global const float* dists,
                            __global const float4* pts,
@@ -641,14 +632,13 @@ __kernel void build_matrix(const int max_contacts,
                            __global float8* to_ents,
                            __global float* stiff)
 {
-  int id = get_global_id(0);
+  int a = get_global_id(0); //id
   int ct = get_global_id(1);
 
-  if (ct >= n_cts[id]) return;
+  if (ct >= n_cts[a]) return;
 
-  int i = id*max_contacts + ct;
+  int i = a * max_contacts + ct;
 
-  int a = frs[i];
   float4 r_a = pts[i]-centers[a];
   float8 fr_ent = 0.f;
 
@@ -689,17 +679,15 @@ __kernel void build_matrix(const int max_contacts,
 }
 
 __kernel void calculate_Mx(const int max_contacts,
-                           __global const int* frs,
                            __global const int* tos,
                            __global const float8* fr_ents,
                            __global const float8* to_ents,
                            __global const float8* deltap,
                            __global float* Mx)
 {
-  int id = get_global_id(0);
+  int a = get_global_id(0);
   int ct = get_global_id(1);
-  int i = id*max_contacts + ct;
-  int a = frs[i];
+  int i = a * max_contacts + ct;
   int b = tos[i];
   if (a == 0 && b == 0) return; // not a contact
   float8 to_ents_i = b < 0 ? 0.f : to_ents[i];

@@ -203,8 +203,6 @@ class CLBacterium:
 
         # contact data
         ct_geom = (self.max_cells, self.max_contacts)
-        self.ct_frs = numpy.zeros(ct_geom, numpy.int32)
-        self.ct_frs_dev = cl_array.zeros(self.queue, ct_geom, numpy.int32)
         self.ct_tos = numpy.zeros(ct_geom, numpy.int32)
         self.ct_tos_dev = cl_array.zeros(self.queue, ct_geom, numpy.int32)
         self.ct_dists = numpy.zeros(ct_geom, numpy.float32)
@@ -400,7 +398,6 @@ class CLBacterium:
 
     def get_cts(self):
         """Copy contact froms, tos, dists, pts, and norms from the device."""
-        self.ct_frs = self.ct_frs_dev.get()
         self.ct_tos = self.ct_tos_dev.get()
         self.ct_dists = self.ct_dists_dev.get()
         self.ct_pts = self.ct_pts_dev.get()
@@ -631,7 +628,7 @@ class CLBacterium:
         cell_sqs, cell_dcenters, cell_dlens, cell_dangs,
         sorted_ids, and sq_inds are current on the device.
 
-        Calculates cell_n_cts, ct_frs, ct_tos, ct_dists, ct_pts,
+        Calculates cell_n_cts, ct_tos, ct_dists, ct_pts,
         ct_norms, ct_reldists, and n_cts.
         """
         if predict:
@@ -657,7 +654,6 @@ class CLBacterium:
                                          lens.data,
                                          self.cell_rads_dev.data,
                                          self.cell_n_cts_dev.data,
-                                         self.ct_frs_dev.data,
                                          self.ct_tos_dev.data,
                                          self.ct_dists_dev.data,
                                          self.ct_pts_dev.data,
@@ -684,7 +680,6 @@ class CLBacterium:
                                    self.sorted_ids_dev.data,
                                    self.sq_inds_dev.data,
                                    self.cell_n_cts_dev.data,
-                                   self.ct_frs_dev.data,
                                    self.ct_tos_dev.data,
                                    self.ct_dists_dev.data,
                                    self.ct_pts_dev.data,
@@ -701,7 +696,7 @@ class CLBacterium:
         """Call the collect_tos kernel.
 
         Assumes that cell_sqs, sorted_ids, sq_inds, cell_n_cts,
-        ct_frs, and ct_tos are current on the device.
+         and ct_tos are current on the device.
 
         Calculates cell_tos and n_cell_tos.
         """
@@ -720,7 +715,6 @@ class CLBacterium:
                                  self.sorted_ids_dev.data,
                                  self.sq_inds_dev.data,
                                  self.cell_n_cts_dev.data,
-                                 self.ct_frs_dev.data,
                                  self.ct_tos_dev.data,
                                  self.cell_tos_dev.data,
                                  self.n_cell_tos_dev.data).wait()
@@ -730,7 +724,7 @@ class CLBacterium:
         """Build the matrix so we can calculate M^TMx = Ax.
 
         Assumes cell_centers, cell_dirs, cell_lens, cell_rads,
-        ct_inds, ct_frs, ct_tos, ct_dists, and ct_norms are current on
+        ct_inds, ct_tos, ct_dists, and ct_norms are current on
         the device.
 
         Calculates fr_ents and to_ents.
@@ -746,7 +740,6 @@ class CLBacterium:
                                   self.pred_cell_lens_dev.data,
                                   self.cell_rads_dev.data,
                                   self.cell_n_cts_dev.data,
-                                  self.ct_frs_dev.data,
                                   self.ct_tos_dev.data,
                                   self.ct_dists_dev.data,
                                   self.ct_pts_dev.data,
@@ -761,7 +754,6 @@ class CLBacterium:
                                   (self.n_cells, self.max_contacts),
                                   None,
                                   numpy.int32(self.max_contacts),
-                                  self.ct_frs_dev.data,
                                   self.ct_tos_dev.data,
                                   self.fr_ents_dev.data,
                                   self.to_ents_dev.data,
