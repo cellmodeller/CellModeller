@@ -4,6 +4,7 @@ from scipy.sparse.linalg import LinearOperator
 from scipy.ndimage.filters import convolve
 from scipy.sparse.linalg import gmres
 import os.path
+from string import Template
 import pyopencl as cl
 import pyopencl.array as cl_array
 from pyopencl.array import vec
