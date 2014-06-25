@@ -150,7 +150,6 @@ class CLCrankNicIntegrator:
 
         # Set up slicing of levels for each daughter and copy parent levels
         d1idx = d1State.idx
-        self.nCells += 1
         self.specLevel[d1idx,:] = pState.species
         self.cellSigLevels[d1idx,:] = pState.signals
         d1State.species = self.specLevel[d1idx,:]
@@ -161,13 +160,6 @@ class CLCrankNicIntegrator:
         self.nCells += 1
         self.specLevel[d2idx,:] = pState.species
         self.cellSigLevels[d2idx,:] = pState.signals
-        d1State.species = self.specLevel[d1idx,:]
-        d1State.signals = self.cellSigLevels[d1idx,:]
-        self.celltype[d1idx] = d1State.cellType
-
-        d2idx = d2State.idx
-        self.nCells += 1
-        self.specLevel[d2idx,:] = pState.species
         d2State.species = self.specLevel[d2idx,:]
         d2State.signals = self.cellSigLevels[d2idx,:]
         self.celltype[d2idx] = d2State.cellType
