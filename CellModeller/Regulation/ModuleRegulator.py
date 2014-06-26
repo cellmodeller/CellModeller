@@ -66,11 +66,11 @@ class ModuleRegulator:
             levels[i,:] = csv[i].species
 
     def step(self, dt=0):
-        try:
-            self.module.update(self.cellStates)
-        except Exception as e:
-            print "Problem with regulation module " + self.modName
-            print e
+        #try:
+        self.module.update(self.cellStates)
+        #except Exception as e:
+        #    print "Problem with regulation module " + self.modName
+        #    print e
 
     def divide(self, pState, d1State, d2State):
         # Call the module's optional divide function
