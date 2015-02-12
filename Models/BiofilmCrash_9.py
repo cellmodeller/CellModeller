@@ -7,7 +7,7 @@ import math
 
 rodlen = 3.5 
 
-max_cells = 400000
+max_cells = 2**15
 
 #cell_colors = {0:[0.0, 1.0, 0.0],
 #               1:[0.0, 0.0, 1.0],
