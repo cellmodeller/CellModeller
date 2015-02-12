@@ -1,8 +1,11 @@
 #!/usr/bin/env python
 
-from distutils.core import setup
+#from distutils.core import setup
+from setuptools import setup
 
 setup(name='CellModeller',
+      install_requires=['numpy', 'scipy', 'pyopengl', 'mako', 'pyopencl'],
+      setup_requires=['numpy', 'scipy', 'pyopengl', 'mako', 'pyopencl'],
       packages=['CellModeller',
                 'CellModeller.Biophysics',
                 'CellModeller.Biophysics.BacterialModels',
