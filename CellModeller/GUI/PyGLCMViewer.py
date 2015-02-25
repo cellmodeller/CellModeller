@@ -82,8 +82,14 @@ class PyGLCMViewer(PyGLWidget):
             self.frameNo += 1
             if self.record:
                 if (self.frameNo%5)==0:
-                    self.setSnapshotCounter(self.frameNo)
+                    #self.setSnapshotCounter(self.frameNo)
                     self.saveSnapshot()
+    
+    def saveSnapshot(self):
+        print "saving snapshot", self.frameNo
+        buf = self.grabFrameBuffer()
+        return buf.save(os.path.join(
+            self.sim.pickleDir,"{0:07}-frame.png".format(self.frameNo)), "png")
 
     def updateSelectedCell(self):
         if self.sim:
