@@ -503,7 +503,8 @@ class CLBacterium:
 
         new_cts = 1
         self.n_cts = 0
-        self.vclear(self.cell_n_cts_dev) # clear the accumulated contact count
+        #self.vclear(self.cell_n_cts_dev) # clear the accumulated contact count
+        self.cell_n_cts_dev = cl.array.zeros_like(self.cell_n_cts_dev)
         i=0
         while new_cts>0 and i<self.max_substeps:
             old_n_cts = self.n_cts
