@@ -119,7 +119,8 @@ class CLBacterium:
         self.program = cl.Program(self.context, kernel_src).build(cache_dir=False)
 
         # Some kernels that seem like they should be built into pyopencl...
-        self.vclear = ElementwiseKernel(self.context, "float4 *v", "v[i]=0.0", "vecclear")
+        self.vclearf = ElementwiseKernel(self.context, "float8 *v", "v[i]=0.0", "vecclearf")
+        self.vcleari = ElementwiseKernel(self.context, "int *v", "v[i]=0", "veccleari")
         self.vadd = ElementwiseKernel(self.context, "float8 *res, const float8 *in1, const float8 *in2",
                                       "res[i] = in1[i] + in2[i]", "vecadd")
         self.vsub = ElementwiseKernel(self.context, "float8 *res, const float8 *in1, const float8 *in2",
@@ -503,7 +504,7 @@ class CLBacterium:
 
         new_cts = 1
         self.n_cts = 0
-        self.vclear(self.cell_n_cts_dev) # clear the accumulated contact count
+        self.vcleari(self.cell_n_cts_dev) # clear the accumulated contact count
         i=0
         while new_cts>0 and i<self.max_substeps:
             old_n_cts = self.n_cts
@@ -800,8 +801,8 @@ class CLBacterium:
 
         # There must be a way to do this using built in pyopencl - what
         # is it?!
-        self.vclear(self.deltap_dev)
-        self.vclear(self.rhs_dev)
+        self.vclearf(self.deltap_dev)
+        self.vclearf(self.rhs_dev)
 
         # put M^T n^Tv_rel in rhs (b)
         self.program.calculate_MTMx(self.queue,
@@ -1044,7 +1045,7 @@ class CLBacterium:
         dt = 0.005
         for i in range(1000):
             self.n_cts = 0
-            self.vclear(self.cell_n_cts_dev) # clear the accumulated contact count
+            self.vcleari(self.cell_n_cts_dev) # clear the accumulated contact count
             self.predict()
             # find all contacts
             self.find_contacts()
@@ -1068,7 +1069,7 @@ class CLBacterium:
         dt = 0.005
         for i in range(1000):
             self.n_cts = 0
-            self.vclear(self.cell_n_cts_dev) # clear the accumulated contact count
+            self.vcleari(self.cell_n_cts_dev) # clear the accumulated contact count
             self.predict()
             # find all contacts
             self.find_contacts()
