@@ -3,7 +3,9 @@ import copy
 import pyopencl as cl
 import sys
 import os
+import inspect
 import cPickle
+from DefaultValues import Parameters
 
 class Simulator:
     """
@@ -41,21 +43,28 @@ visualised.
 
         self.lineage = {}
 
-        self.init_cl()
-
         if moduleName:
             self.moduleName = moduleName
             self.module = __import__(self.moduleName, globals(), locals(), [], -1)
+            self.init_cl()  # setting up the module requires us to have a CLContext
             self.module.setup(self)
             import time
             self.startTime = time.localtime()
             self.pickleFileRoot = pickleFileRoot if pickleFileRoot else self.moduleName + '-' + time.strftime('%H-%M-%d-%m-%y', self.startTime)
             self.pickleDir = os.path.join('data', self.pickleFileRoot)
             os.mkdir(self.pickleDir) # raises OSError if dir already exists
-            # write a copy of the model into the dir (for reference)
-            self.moduleStr = open(self.module.__file__, 'rU').read()
-            open(os.path.join(self.pickleDir, self.moduleName), 'w').write(self.moduleStr)
-
+            # put copy of the model and parameters into data dir (for reference)
+            src = inspect.getsourcefile(self.module)
+            modStr = open(src, 'rU').read()
+            param_str = "# Parameters Model was run with\n"
+            for (k, v) in Parameters.__dict__.iteritems():
+                if k[0] != "_":
+                    param_str += "#    {0} = {1},\n".format(k, v)
+            self.moduleStr = "".join([param_str, "\n\n", modStr])
+            open(os.path.join(self.pickleDir, self.moduleName + "_ran.py"), 'w').write(self.moduleStr)
+        else:
+            self.init_cl()
+        
 
     def next_id(self):
         id = self._next_id
@@ -95,20 +104,21 @@ visualised.
 
     def init_cl(self):
         """Set up the OpenCL context."""
-        platform = cl.get_platforms()[0]
+        platform = cl.get_platforms()[Parameters.open_cl_platform]
         if sys.platform == 'darwin':
-            self.CLContext = cl.Context(devices=[platform.get_devices()[0]])
+            self.CLContext = cl.Context(devices=[platform.get_devices()[Parameters.open_cl_device]])
         else:
             #try:
             #    self.CLContext 
             #    = cl.Context(properties=[(cl.context_properties.PLATFORM, 
             #    platform)])
             #except:
-            self.CLContext = cl.Context(properties=[(cl.context_properties.PLATFORM, platform)],
-                                          devices=[platform.get_devices()[0]])
+            self.CLContext = cl.Context(
+                properties=[(cl.context_properties.PLATFORM, platform)],
+                devices=[platform.get_devices()[Parameters.open_cl_device]])
         self.CLQueue = cl.CommandQueue(self.CLContext)
-        print platform.get_devices()[0]
-        print (platform.get_devices()[0]).get_info(cl.device_info.DRIVER_VERSION)
+        print platform.get_devices()[Parameters.open_cl_device]
+        print (platform.get_devices()[Parameters.open_cl_device]).get_info(cl.device_info.DRIVER_VERSION)
 
     def getOpenCL(self):
         return (self.CLContext, self.CLQueue)

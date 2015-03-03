@@ -7,6 +7,9 @@ from CellModeller.GUI import Renderers
 import numpy
 import random
 
+from CellModeller.DefaultValues import Parameters
+Parameters.open_cl_platform = 1
+Parameters.open_cl_device = 0 
 max_cells = 2**15
 
 grid_dim = (64, 64, 12)
