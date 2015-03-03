@@ -13,7 +13,7 @@ class ModuleRegulator:
         self.reset()
 
     def addCell(self, cellState):
-        self.module.init(cellState)
+        self.module.init(cellState, sim=self.sim)
 
     def importModule(self):
         # modName may be a full path to file
@@ -65,12 +65,15 @@ class ModuleRegulator:
         for i in range(nCells):
             levels[i,:] = csv[i].species
 
+    def step_cell(self, dt, cellState):
+        self.module.update_cell(dt, cellState, self.sim)
+
     def step(self, dt=0):
-        try:
-            self.module.update(self.cellStates)
-        except Exception as e:
-            print "Problem with regulation module " + self.modName
-            print e
+        #try:
+        self.module.update(self.cellStates, self.sim)
+        #except Exception as e:
+        #    print "Problem with regulation module " + self.modName
+        #    print e
 
     def divide(self, pState, d1State, d2State):
         # Call the module's optional divide function

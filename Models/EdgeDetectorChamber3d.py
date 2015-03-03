@@ -41,7 +41,7 @@ def setup(sim):
     sim.pickleSteps = 10
 
 
-def init(cell):
+def init(cell, sim=None):
     cell.targetVol = 2.5 + random.uniform(0.0,0.5)
     cell.length = 2.0
     cell.signals[:] = [0]
@@ -100,15 +100,16 @@ def sigRateCL():
     rates[0] = -D1*(AHL-AHLi)*area/gridVolume;
     '''
 
-def update(cells):
+def update_cell(dt, cell, sim):
+    cell.color = [0.1, 0.1+cell.species[3]/10.0, 0.1+cell.species[4]*20.0]
+    if cell.volume > getattr(cell, 'target_volume', 3.0):
+        cell.asymm = [1,1]
+        cell.divideFlag = True
+
+def update(cells, sim):
     if len(cells) > max_cells-16:
         print 'reached cell limit'
         exit()
-    for (i,cell) in cells.iteritems():
-        cell.color = [0.1, 0.1+cell.species[3]/10.0, 0.1+cell.species[4]*20.0]
-        if cell.volume > getattr(cell, 'target_volume', 3.0):
-            cell.asymm = [1,1]
-            cell.divideFlag = True
 
 def divide(parent, d1, d2):
     d1.targetVol = 2.5 + random.uniform(0.0,0.5)
