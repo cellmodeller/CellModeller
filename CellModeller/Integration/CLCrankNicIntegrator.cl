@@ -2,11 +2,11 @@
 
 void userSignalRates(float gridVolume, float area, float volume, const int cellType, float* rates, __global const float* species, __global const float* signals)
 {
-    %s
+    $sigRate
 }
 void userSpecRates(float gridVolume, float area, float volume, const int cellType, __global float* rates, __global const float* species, __global const float* signals)
 {
-    %s
+    $specRate
 }
 
 __kernel void gridCells(const float gridOrigx,
@@ -149,7 +149,7 @@ __kernel void signalRates(const int numSignals,
     __global const float* species = cellSpecLevels+specbase;
     __global const float* signals = cellSignalLevels+sigbase;
 
-    float cellSigRates[%i];
+    float cellSigRates[$num_signals];
     userSignalRates(gridVolume, areas[id], volumes[id], cellType, cellSigRates, species, signals);
 
     // Iterate over 8 nearest grid nodes

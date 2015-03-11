@@ -1,6 +1,7 @@
 import sys
 import math
 import numpy
+import os.path
 import pyopencl as cl
 import pyopencl.array as cl_array
 from pyopencl.array import vec
@@ -115,7 +116,8 @@ class CLBacterium:
 
     def init_kernels(self):
         """Set up the OpenCL kernels."""
-        kernel_src = open('CellModeller/Biophysics/BacterialModels/CLBacterium.cl', 'r').read()
+        dir_this_file_is_in = os.path.dirname(os.path.realpath(__file__))
+        kernel_src = open(os.path.join(dir_this_file_is_in, 'CLBacterium.cl'), 'r').read()
         self.program = cl.Program(self.context, kernel_src).build(cache_dir=False)
 
         # Some kernels that seem like they should be built into pyopencl...

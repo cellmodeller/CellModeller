@@ -3,6 +3,8 @@ import scipy.integrate.odepack
 from scipy.sparse.linalg import LinearOperator
 from scipy.ndimage.filters import convolve
 from scipy.sparse.linalg import gmres
+import os.path
+from string import Template
 import pyopencl as cl
 import pyopencl.array as cl_array
 from pyopencl.array import vec
@@ -201,9 +203,11 @@ class CLCrankNicIntegrator:
         # Get user defined kernel source
         specRateKernel = self.regul.specRateCL()
         sigRateKernel = self.regul.sigRateCL()
-        kernel_src = open('CellModeller/Integration/CLCrankNicIntegrator.cl', 'r').read()
-        # substitute user defined kernel code, and number of signals
-        kernel_src = kernel_src%(sigRateKernel, specRateKernel, self.nSignals)
+        dir_this_file_is_in = os.path.dirname(os.path.realpath(__file__))
+        kernel_src = Template(open(os.path.join(dir_this_file_is_in, 'CLCrankNicIntegrator.cl'), 'r').read())
+        kernel_src = kernel_src.substitute(sigRate = sigRateKernel,
+                    specRate=specRateKernel,
+                    num_signals=self.nSignals)
         self.program = cl.Program(self.context, kernel_src).build(cache_dir=False)
 
 
