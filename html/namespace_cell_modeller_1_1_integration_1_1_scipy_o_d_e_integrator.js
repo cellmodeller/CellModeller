@@ -1,4 +1,0 @@
-var namespace_cell_modeller_1_1_integration_1_1_scipy_o_d_e_integrator =
-[
-    [ "ScipyODEIntegrator", "class_cell_modeller_1_1_integration_1_1_scipy_o_d_e_integrator_1_1_scipy_o_d_e_integrator.html", "class_cell_modeller_1_1_integration_1_1_scipy_o_d_e_integrator_1_1_scipy_o_d_e_integrator" ]
-];
