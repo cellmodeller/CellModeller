@@ -31,6 +31,7 @@ var namespaces =
     [ "DaninoOscillator", "namespace_danino_oscillator.html", null ],
     [ "DaninoOscillatorChamber", "namespace_danino_oscillator_chamber.html", null ],
     [ "degradient", "namespacedegradient.html", null ],
+    [ "doxmain", "namespacedoxmain.html", null ],
     [ "EdgeDetector", "namespace_edge_detector.html", null ],
     [ "EdgeDetectorChamber", "namespace_edge_detector_chamber.html", null ],
     [ "EdgeDetectorChamber3d", "namespace_edge_detector_chamber3d.html", null ],
