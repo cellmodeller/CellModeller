@@ -1,8 +1,8 @@
 var NAVTREE =
 [
-  [ "“Cellmodeller4”", "index.html", [
+  [ "Cellmodeller4", "index.html", [
     [ "Welcome to Cellmodeller 4 documentation", "index.html", null ],
-    [ "README", "md__r_e_a_d_m_e.html", null ],
+    [ "CellModeller4", "md__r_e_a_d_m_e.html", null ],
     [ "Namespaces", null, [
       [ "Namespace List", "namespaces.html", "namespaces" ],
       [ "Namespace Members", "namespacemembers.html", [
