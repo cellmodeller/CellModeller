@@ -26,9 +26,10 @@ class CLBacterium:
                  muA=1.0,
                  gamma=10.0,
                  cgs_tol=1e-3,
-                 reg_param=0.2,
+                 reg_param=1.0,
                  jitter_z=True,
-                 alternate_divisions=False):
+                 alternate_divisions=False,
+                 printing=True):
 
         self.frame_no = 0
         self.simulator = simulator
@@ -59,16 +60,14 @@ class CLBacterium:
         self.n_sqs = 0
 
         self.init_cl()
-        self.init_kernels()
+        #self.init_kernels()
         self.init_data()
 
         self.parents = {}
 
         self.jitter_z = jitter_z
         self.alternate_divisions = alternate_divisions
-
-        self.maxVel = 1.0
-
+        self.printing = printing
 
     # Biophysical Model interface
     def reset(self):
@@ -78,18 +77,39 @@ class CLBacterium:
 
     def setRegulator(self, regulator):
         self.regulator = regulator
+        self.init_kernels()
 
-    def addCell(self, cellState, pos=(0,0,0), dir=(1,0,0), len=4.0, rad=0.5):
+
+    def addCell(self, cellState, pos=(0,0,0), dir=(1,0,0), rad=0.5, **kwargs):
         i = cellState.idx
         self.n_cells += 1
         cid = cellState.id
         self.cell_centers[i] = tuple(pos+(0,))
         self.cell_dirs[i] = tuple(dir+(0,))
-        self.cell_lens[i] = len
+        self.cell_lens[i] = cellState.length
         self.cell_rads[i] = rad
         self.initCellState(cellState)
         self.set_cells()
         self.calc_cell_geom() # cell needs a volume
+
+    #---
+    # Some functions to modify existing cells (e.g. from GUI)
+    # Eventually prob better to have a generic editCell() that deals with this stuff
+    #
+    def moveCell(self, cellState, delta_pos):
+        print "cell idx = %d"%cellState.idx
+        i = cellState.idx
+        cid = cellState.id
+        print "cell center = "
+        print self.cell_centers[i]
+        print "delta_pos"
+        print delta_pos
+        pos = numpy.array(tuple(self.cell_centers[i]))
+        pos[0:3] += numpy.array(tuple(delta_pos))
+        self.cell_centers[i] = pos
+        self.simulator.cellStates[cid].pos = [self.cell_centers[i][j] for j in range(3)]
+        self.set_cells()
+        self.updateCellState(cellState)
 
     def addPlane(self, pt, norm, coeff):
         pidx = self.n_planes
@@ -115,9 +135,10 @@ class CLBacterium:
 
     def init_kernels(self):
         """Set up the OpenCL kernels."""
-        kernel_src = open('CellModeller/Biophysics/BacterialModels/CLBacterium.cl', 'r').read()
-        self.program = cl.Program(self.context, kernel_src).build(cache_dir=False)
+        from pkg_resources import resource_string
+        kernel_src = resource_string(__name__, 'CLBacterium.cl')
 
+        self.program = cl.Program(self.context, kernel_src).build(cache_dir=False)
         # Some kernels that seem like they should be built into pyopencl...
         self.vclearf = ElementwiseKernel(self.context, "float8 *v", "v[i]=0.0", "vecclearf")
         self.vcleari = ElementwiseKernel(self.context, "int *v", "v[i]=0", "veccleari")
@@ -131,9 +152,6 @@ class CLBacterium:
         self.vsubkx = ElementwiseKernel(self.context,
                                             "float8 *res, const float k, const float8 *in1, const float8 *in2",
                                             "res[i] = in1[i] - k*in2[i]", "vecsubkx")
-        self.vmax = ReductionKernel(self.context, numpy.float32, neutral="0",
-                reduce_expr="a>b ? a : b", map_expr="length(x[i])",
-                arguments="__global float4 *x")
 
         # cell geometry kernels
         self.calc_cell_area = ElementwiseKernel(self.context, "float* res, float* r, float* l",
@@ -149,7 +167,7 @@ class CLBacterium:
         self.vdot = ReductionKernel(self.context, numpy.float32, neutral="0",
                 reduce_expr="a+b", map_expr="dot(x[i].s0123,y[i].s0123)+dot(x[i].s4567,y[i].s4567)",
                 arguments="__global float8 *x, __global float8 *y")
-
+    
 
     def init_data(self):
         """Set up the data OpenCL will store on the device."""
@@ -215,6 +233,7 @@ class CLBacterium:
         self.ct_norms = numpy.zeros(ct_geom, vec.float4)
         self.ct_norms_dev = cl_array.zeros(self.queue, ct_geom, vec.float4)
         self.ct_stiff_dev = cl_array.zeros(self.queue, ct_geom, numpy.float32)
+        self.ct_overlap_dev = cl_array.zeros(self.queue, ct_geom, numpy.float32)
 
         # where the contacts pointing to this cell are collected
         self.cell_tos = numpy.zeros(ct_geom, numpy.int32)
@@ -234,6 +253,7 @@ class CLBacterium:
         self.fr_ents_dev = cl_array.zeros(self.queue, mat_geom, vec.float8)
         self.to_ents = numpy.zeros(mat_geom, vec.float8)
         self.to_ents_dev = cl_array.zeros(self.queue, mat_geom, vec.float8)
+        
 
         # vectors and intermediates
         self.deltap = numpy.zeros(cell_geom, vec.float8)
@@ -249,7 +269,7 @@ class CLBacterium:
         self.Ap_dev = cl_array.zeros(self.queue, cell_geom, vec.float8)
         self.res_dev = cl_array.zeros(self.queue, cell_geom, vec.float8)
         self.rhs_dev = cl_array.zeros(self.queue, cell_geom, vec.float8)
-
+    
 
     def load_from_cellstates(self, cell_states):
         for (cid,cs) in cell_states.items():
@@ -258,8 +278,11 @@ class CLBacterium:
             self.cell_dirs[i] = tuple(cs.dir)+(0,)
             self.cell_rads[i] = cs.radius
             self.cell_lens[i] = cs.length
+        
         self.n_cells = len(cell_states)
         self.set_cells()
+        self.calc_cell_area(self.cell_areas_dev, self.cell_rads_dev, self.cell_lens_dev)
+        self.calc_cell_vol(self.cell_vols_dev, self.cell_rads_dev, self.cell_lens_dev)
 
     def load_test_data(self):
         import CellModeller.Biophysics.BacterialModels.CLData as data
@@ -362,16 +385,6 @@ class CLBacterium:
         self.n_cells = d*d
         self.set_cells()
 
-    def load_from_cellstates(self, cell_states):
-        for (id, cs) in cell_states.items():
-            self.cell_centers.put([cs.idx], [tuple(cs.pos)+(0,)])
-            self.cell_dirs.put([cs.idx], [tuple(cs.dir)+(0,)])
-            self.cell_lens.put([cs.idx], [cs.length])
-            self.cell_rads.put([cs.idx], cs.radius)
-        self.n_cells = len(cell_states)
-        self.set_cells()
-
-
     def get_cells(self):
         """Copy cell centers, dirs, lens, and rads from the device."""
         self.cell_centers = self.cell_centers_dev.get()
@@ -444,6 +457,15 @@ class CLBacterium:
                 self.parents),
         cPickle.dump(data, outfile, protocol=-1)
 
+    def dydt(self):
+        self.set_cells()
+
+    def finish(self):
+        # pull cells from the device and update simulator
+        if self.simulator:
+            self.get_cells()
+            for state in self.simulator.cellStates.values():
+                self.updateCellState(state)
 
     def step(self, dt):
         """Step forward dt units of time.
@@ -460,8 +482,8 @@ class CLBacterium:
 
         # Choose good time-step for biophysics to work nicely, then do multiple 
         # ticks to integrate over dt
-        #delta_t = max(0.05, 0.25/max(self.maxVel,1.0)) #0.1/math.sqrt(self.n_cells)
-        #delta_t = 0.7/math.sqrt(self.n_cells)
+        #delta_t = 0.1/math.sqrt(self.n_cells)
+        #delta_t = 0.05/math.sqrt(self.n_cells)
         #delta_t = 5*0.1/self.n_cells
         delta_t = 0.005
         n_ticks = int(math.ceil(dt/delta_t))
@@ -518,13 +540,10 @@ class CLBacterium:
             if new_cts>0 or i==0:
                 self.build_matrix() # Calculate entries of the matrix
                 #print "max cell contacts = %i"%cl_array.max(self.cell_n_cts_dev).get()
-                self.CGSSolve() # invert MTMx to find deltap
+                self.CGSSolve(dt) # invert MTMx to find deltap
                 self.add_impulse()
             i += 1
 
-        # Calculate estimated max cell velocity
-        #self.maxVel = self.vmax(self.cell_dcenters_dev).get() + cl_array.max(self.cell_dlens_dev).get()
-        #print "maxVel = " + str(self.maxVel)
 
         self.integrate()
 
@@ -538,6 +557,9 @@ class CLBacterium:
         state.dir = [self.cell_dirs[i][j] for j in range(3)]
         state.radius = self.cell_rads[i]
         state.length = self.cell_lens[i]
+        #for effective growth calulations
+        state.oldLen = self.cell_lens[i]
+        
         state.volume = state.length # TO DO: do something better here
         pa = numpy.array(state.pos)
         da = numpy.array(state.dir)
@@ -555,6 +577,12 @@ class CLBacterium:
         state.dir = [self.cell_dirs[i][j] for j in range(3)]
         state.radius = self.cell_rads[i]
         state.length = self.cell_lens[i]
+        #currently the effective growth rate is calculated over the entire history of the cell
+        state.effGrowth = ((state.effGrowth * state.cellAge) + state.length - state.oldLen)
+        state.cellAge += 1
+        state.effGrowth = state.effGrowth / state.cellAge
+        state.oldLen = state.length
+        
         state.volume = state.length # TO DO: do something better here
         pa = numpy.array(state.pos)
         da = numpy.array(state.dir)
@@ -691,7 +719,8 @@ class CLBacterium:
                                    self.ct_pts_dev.data,
                                    self.ct_norms_dev.data,
                                    self.ct_reldists_dev.data,
-                                   self.ct_stiff_dev.data).wait()
+                                   self.ct_stiff_dev.data,
+                                   self.ct_overlap_dev.data).wait()
 
         # set dtype to int32 so we don't overflow the int32 when summing
         #self.n_cts = self.cell_n_cts_dev.get().sum(dtype=numpy.int32)
@@ -749,15 +778,15 @@ class CLBacterium:
                                   self.cell_n_cts_dev.data,
                                   self.ct_frs_dev.data,
                                   self.ct_tos_dev.data,
-                                  self.ct_dists_dev.data,
                                   self.ct_pts_dev.data,
                                   self.ct_norms_dev.data,
                                   self.fr_ents_dev.data,
                                   self.to_ents_dev.data,
                                   self.ct_stiff_dev.data).wait()
+    
 
+    def calculate_Ax(self, Ax, x, dt):
 
-    def calculate_Ax(self, Ax, x):
         self.program.calculate_Mx(self.queue,
                                   (self.n_cells, self.max_contacts),
                                   None,
@@ -782,7 +811,7 @@ class CLBacterium:
         # Tikhonov test
         #self.vaddkx(Ax, numpy.float32(0.01), Ax, x)
 
-        # Energy minimizing regularization
+        # Energy mimizing regularization
         self.program.calculate_Minv_x(self.queue,
                                       (self.n_cells,),
                                       None,
@@ -793,10 +822,14 @@ class CLBacterium:
                                       self.cell_rads_dev.data,
                                       x.data,
                                       self.Minvx_dev.data).wait()
-        self.vaddkx(Ax, self.reg_param/math.sqrt(self.n_cells), Ax, self.Minvx_dev).wait()
 
+        #this was altered from dt*reg_param
+        self.vaddkx(Ax, self.reg_param/numpy.sqrt(self.n_cells), Ax, self.Minvx_dev).wait()
+        # 1/math.sqrt(self.n_cells) removed from the reg_param NB
+    
+        #print(self.Minvx_dev)
 
-    def CGSSolve(self):
+    def CGSSolve(self, dt):
         # Solve A^TA\deltap=A^Tb (Ax=b)
 
         # There must be a way to do this using built in pyopencl - what
@@ -817,7 +850,7 @@ class CLBacterium:
                                     self.ct_reldists_dev.data,
                                     self.rhs_dev.data).wait()
 
-        self.calculate_Ax(self.MTMx_dev, self.deltap_dev)
+        self.calculate_Ax(self.MTMx_dev, self.deltap_dev, dt)
 
         # res = b-Ax
         self.vsub(self.res_dev, self.rhs_dev, self.MTMx_dev)
@@ -836,7 +869,7 @@ class CLBacterium:
         max_iters = self.n_cells*7
         for iter in range(max_iters):
             # Ap
-            self.calculate_Ax(self.Ap_dev, self.p_dev)
+            self.calculate_Ax(self.Ap_dev, self.p_dev, dt)
 
             # p^TAp
             pAp = self.vdot(self.p_dev, self.Ap_dev).get()
@@ -867,7 +900,7 @@ class CLBacterium:
             rsold = rsnew
             #print '        ',iter,rsold
 
-        if self.frame_no%100==0:
+        if self.printing and self.frame_no%100==0:
             print '% 5i'%self.frame_no + '% 6i cells  % 6i cts  % 6i iterations  residual = %f' % (self.n_cells, self.n_cts, iter+1, rsnew)
         return (iter+1, rsnew)
 
@@ -1000,6 +1033,7 @@ class CLBacterium:
         self.cell_dangs[a] = parent_dang
         self.cell_dangs[b] = parent_dang
 
+
         #return indices of daughter cells
         return (a,b)
 
@@ -1037,6 +1071,7 @@ class CLBacterium:
         print "Grid stuff timing for 1000 calls, time per call (s) = %f"%((t2-t1)*0.001)
         open("grid_prof","a").write( "%i, %i, %f\n"%(self.n_cells,self.n_cts,(t2-t1)*0.001) )
 
+
     def profileFindCts(self):
         if self.n_cts==0:
             return
@@ -1046,41 +1081,18 @@ class CLBacterium:
         for i in range(1000):
             self.n_cts = 0
             self.vcleari(self.cell_n_cts_dev) # clear the accumulated contact count
-            self.predict()
+            self.predict(dt)
             # find all contacts
-            self.find_contacts()
-            # place 'backward' contacts in cells
-            #self.collect_tos()
-
-            # compact the contacts so we can dispatch only enough threads
-            # to deal with each
-            #self.ct_frs = self.ct_frs_dev.get()
-            #self.ct_tos = self.ct_tos_dev.get()
-            #self.ct_inds_dev.set(self.ct_inds)
-        t2 = time.clock()
-        print "Find contacts timing for 1000 calls, time per call (s) = %f"%((t2-t1)*0.001)
-        open("findcts_prof","a").write( "%i, %i, %f\n"%(self.n_cells,self.n_cts,(t2-t1)*0.001) )
-
-    def profileFindCts2(self):
-        if self.n_cts==0:
-            return
-        import time
-        t1 = time.clock()
-        dt = 0.005
-        for i in range(1000):
-            self.n_cts = 0
-            self.vcleari(self.cell_n_cts_dev) # clear the accumulated contact count
-            self.predict()
-            # find all contacts
-            self.find_contacts()
+            self.find_contacts(dt)
             # place 'backward' contacts in cells
             self.collect_tos()
 
             # compact the contacts so we can dispatch only enough threads
             # to deal with each
-            #self.ct_frs = self.ct_frs_dev.get()
-            #self.ct_tos = self.ct_tos_dev.get()
-            #self.ct_inds_dev.set(self.ct_inds)
+            self.ct_frs = self.ct_frs_dev.get()
+            self.ct_tos = self.ct_tos_dev.get()
+            self.compact_cts()
+            self.ct_inds_dev.set(self.ct_inds)
         t2 = time.clock()
         print "Find contacts timing for 1000 calls, time per call (s) = %f"%((t2-t1)*0.001)
         open("findcts_prof","a").write( "%i, %i, %f\n"%(self.n_cells,self.n_cts,(t2-t1)*0.001) )
@@ -1092,7 +1104,7 @@ class CLBacterium:
         t1 = time.clock()
         dt = 0.005
         for i in range(1000):
-            self.build_matrix() # Calculate entries of the matrix
+            self.build_matrix(dt) # Calculate entries of the matrix
             (iters, res) = self.CGSSolve()
             print "cgs prof: iters=%i, res=%f"%(iters,res)
         t2 = time.clock()
@@ -1209,6 +1221,7 @@ def cell_color(i):
     while i not in founders:
         i = model.parents[i]
     return founders[i]
+
 
 
 def display():

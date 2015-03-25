@@ -1,6 +1,7 @@
 import copy
 import os.path
 import sys
+import imp
 
 class ModuleRegulator:
     def __init__(self, sim, modName, biophys=None, signalling=None):
@@ -12,8 +13,8 @@ class ModuleRegulator:
         self.module = None
         self.reset()
 
-    def addCell(self, cellState):
-        self.module.init(cellState)
+    def addCell(self, cellState, **kwargs):
+        self.module.init(cellState, **kwargs)
 
     def importModule(self):
         # modName may be a full path to file
@@ -24,7 +25,12 @@ class ModuleRegulator:
         if path:
             if path not in sys.path:
                 sys.path.append(path)
-        self.module = __import__(mod, globals(), locals(), [], -1)
+        #if from pickle, do this via exec
+        if self.sim.fromPickle==True:
+            self.module = imp.new_module(self.sim.moduleName)
+            exec self.sim.moduleStr in self.module.__dict__
+        else:
+            self.module = __import__(mod, globals(), locals(), [], -1)
 
     def reset(self, modName=None):
         print(modName)
@@ -52,7 +58,7 @@ class ModuleRegulator:
 
     def specRateCL(self):
         return self.module.specRateCL()
-
+    
     def signalRates(self, cstate, speciesLevels, signalLevels):
         return self.module.signalRates(cstate, speciesLevels, signalLevels)
 

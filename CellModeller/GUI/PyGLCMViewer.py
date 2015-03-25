@@ -11,7 +11,7 @@ from CellModeller.Simulator import Simulator
 from CellModeller.CellState import CellState
 import os
 import sys
-
+import cPickle
 
 class PyGLCMViewer(PyGLWidget):
 
@@ -26,9 +26,9 @@ class PyGLCMViewer(PyGLWidget):
         self.renderInfo = None
         self.sim= None
         self.modfile = None
-        self.record = False
         self.set_radius(32)
         self.frameNo = 0
+        self.fromP = False
 
     def help(self):
         pass
@@ -43,34 +43,52 @@ class PyGLCMViewer(PyGLWidget):
         else:
             self.animTimer.stop()
 
-    @pyqtSlot(bool)
-    def toggleRecord(self, rec):
-        self.record = rec
-        self.sim.savePickle = rec
-
     @pyqtSlot()
     def reset(self):
-        self.sim = Simulator(self.modname, self.dt)
-        #if self.sim:
-        #    self.sim.reset()
+        if self.fromP==False:
+            reload(self.sim.module)
+        del self.sim
+
+        if self.fromP==True:
+            self.sim = Simulator(self.modname, self.dt, fromPickle=self.moduleStr)
+        else:
+            self.sim = Simulator(self.modname, self.dt)
         self.frameNo = 0
+
+    @pyqtSlot()
+    def loadPickle(self):
+        qs = QtGui.QFileDialog.getOpenFileName(self, 'Load pickle file', '', '*.pickle')
+        if qs:
+            self.loadedPickle = str(qs)
+            data = cPickle.load(open(self.loadedPickle,'rb'))
+            if isinstance(data, dict):
+                if self.sim:
+                    del self.sim
+                self.modname = data['moduleName']
+                self.moduleStr = data['moduleStr']
+                self.sim = Simulator(self.modname, self.dt, fromPickle=self.moduleStr)
+                self.fromP = True
+                self.sim.loadFromPickle(data)
+                self.paintGL()
+            else:
+                print "Pickle is in an unsupported format, sorry"
 
     @pyqtSlot()
     def load(self):
         qs = QtGui.QFileDialog.getOpenFileName(self, 'Load Python module', '', '*.py')
-        self.modfile = str(qs)
-        self.loadFile(self.modfile)
+        if qs:
+            self.modfile = str(qs)
+            self.loadFile(self.modfile)
+            self.fromP = False
 
     def loadFile(self, modstr):
         (path,name) = os.path.split(modstr)
         modname = str(name).split('.')[0]
         self.modname = modname
         sys.path.append(path)
-
         if self.sim:
-            self.sim.reset(modname)
-        else:
-            self.sim = Simulator(modname, self.dt)
+            del self.sim
+        self.sim = Simulator(modname, self.dt)
         #self.draw()
         self.paintGL()
 
@@ -80,11 +98,7 @@ class PyGLCMViewer(PyGLWidget):
             self.sim.step()
             self.updateSelectedCell()
             self.frameNo += 1
-            if self.record:
-                if (self.frameNo%5)==0:
-                    self.setSnapshotCounter(self.frameNo)
-                    self.saveSnapshot()
-
+    
     def updateSelectedCell(self):
         if self.sim:
             states = self.sim.cellStates
@@ -98,12 +112,35 @@ class PyGLCMViewer(PyGLWidget):
                         #if len(vals)>6: vals = vals[0:6]
                         txt = txt + name + ': ' + vals + '\n'
             self.selectedCell.emit(txt)
-            if self.sim.stepNum%100==0:
-                self.updateGL()
+            #if self.sim.stepNum%100==0:
+            self.updateGL()
 
     def postSelection(self, name):
         self.selectedName = name
         self.updateSelectedCell()
+
+    def translate(self, _trans):
+        # Translate the selected cell by _trans (see PyGLWidget)
+        cid = self.selectedName
+        # Uncomment the condition below to enable movement of cells
+        # currently the translation is not great due to the way PyGLWidget works
+        if False: #self.sim and self.sim.cellStates.has_key(cid):
+            self.sim.moveCell(cid, _trans)
+            print "Called self.sim.moveCell"
+            self.updateSelectedCell()
+        else:
+            # Translate the object by _trans
+            # Update modelview_matrix_
+            self.makeCurrent()
+            glMatrixMode(GL_MODELVIEW)
+            glLoadIdentity()
+            glTranslated(_trans[0], _trans[1], _trans[2])
+            glMultMatrixd(self.modelview_matrix_)
+            self.modelview_matrix_ = glGetDoublev(GL_MODELVIEW_MATRIX)
+            self.translate_vector_[0] = self.modelview_matrix_[3][0]
+            self.translate_vector_[1] = self.modelview_matrix_[3][1]
+            self.translate_vector_[2] = self.modelview_matrix_[3][2]
+            self.signalGLMatrixChanged.emit()
 
     def paintGL(self):
         PyGLWidget.paintGL(self)
@@ -117,7 +154,6 @@ class PyGLCMViewer(PyGLWidget):
             for r in self.sim.renderers:
                 if r != None:
                     r.render_gl(self.selectedName)
-
         glPopMatrix()
 
     def drawWithNames(self):

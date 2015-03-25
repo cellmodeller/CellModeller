@@ -36,8 +36,8 @@ class CLEulerIntegrator:
 
         # set the species for existing states to views of the levels array
         cs = self.cellStates
-        for c in cs.items():
-            c.species = self.specLevels[c.idx,:]
+        for id,c in cs.items():
+            c.species = self.specLevel[c.idx,:]
 
 
     def makeViews(self):
@@ -90,7 +90,9 @@ class CLEulerIntegrator:
     def initKernels(self):
         # Get user defined kernel source
         specRateKernel = self.regul.specRateCL()
-        kernel_src = open('CellModeller/Integration/CLEulerIntegrator.cl', 'r').read()
+        from pkg_resources import resource_string
+        kernel_src = resource_string(__name__, 'CLEulerIntegrator.cl')
+        #kernel_src = open('CellModeller/Integration/CLEulerIntegrator.cl', 'r').read()
         # substitute user defined kernel code, and number of signals
         kernel_src = kernel_src%(specRateKernel)
         self.program = cl.Program(self.context, kernel_src).build(cache_dir=False)
@@ -141,6 +143,16 @@ class CLEulerIntegrator:
 #            if self.signalling:
 #                c.signals = self.signalling.signals(c, self.signalLevel)
 
+    def setLevels(self, specLevel):
+        self.cellStates = self.sim.cellStates
+        self.levels = specLevel
+        self.makeViews()
+        self.specLevel_dev.set(self.specLevel)
+        cs = self.cellStates
+        for id,c in cs.items():
+            c.species = self.specLevel[c.idx,:]
+            self.celltype[c.idx] = numpy.int32(c.cellType)
+        self.celltype_dev.set(self.celltype)
 
 
     def diluteSpecies(self):

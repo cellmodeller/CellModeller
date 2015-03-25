@@ -4,6 +4,11 @@ import pyopencl as cl
 import sys
 import os
 import cPickle
+import csv
+import numpy
+import inspect
+import imp
+import ConfigParser
 
 class Simulator:
     """
@@ -22,8 +27,10 @@ Simulator.addRenderer(renderer) so that the simulation can be
 visualised.
 """
 
-
-    def __init__(self, moduleName, dt, pickleSteps=50, pickleFileRoot=False):
+    ## Construct an empty simulator object. This object will not be able to
+    # do anything yet unti we use 'init' method to specify the models for
+    # physical interaction, genetic circuit, diffusion and integrator.
+    def __init__(self, moduleName, dt, invar=False, pickleSteps=50, pickleFileRoot=False, fromPickle=False):
         self.dt = dt
         self._next_id = 1
         self._next_idx = 0
@@ -36,36 +43,66 @@ visualised.
         self.integ = None
         self.renderers = []
         self.stepNum = 0
-        self.savePickle =True 
+        self.savePickle = True
         self.pickleSteps = pickleSteps
-
         self.lineage = {}
+        if fromPickle == False:
+            self.fromPickle = False
+        else:
+            self.fromPickle = True
 
+        if "CMPATH" in os.environ:
+            self.cfg_file = os.path.join(os.environ["CMPATH"], 'CMconfig.cfg')
+        else:
+            self.cfg_file = 'CellModeller/CMconfig.cfg'
         self.init_cl()
 
-        if moduleName:
-            self.moduleName = moduleName
+        self.moduleName = moduleName
+        print moduleName
+        if fromPickle:
+            self.moduleStr = fromPickle
+            self.module = imp.new_module(moduleName)
+            exec fromPickle in self.module.__dict__
+        else:
             self.module = __import__(self.moduleName, globals(), locals(), [], -1)
+        #setup the simulation here:
+        if invar:
+            self.module.setup(self, invar)
+        else:
             self.module.setup(self)
-            import time
-            self.startTime = time.localtime()
-            self.pickleFileRoot = pickleFileRoot if pickleFileRoot else self.moduleName + '-' + time.strftime('%H-%M-%d-%m-%y', self.startTime)
-            self.pickleDir = os.path.join('data', self.pickleFileRoot)
-            os.mkdir(self.pickleDir) # raises OSError if dir already exists
-            # write a copy of the model into the dir (for reference)
-            self.moduleStr = open(self.module.__file__, 'rU').read()
-            open(os.path.join(self.pickleDir, self.moduleName), 'w').write(self.moduleStr)
+
+        import time
+        self.startTime = time.localtime()
+        self.pickleFileRoot = pickleFileRoot if pickleFileRoot else self.moduleName + '-' + time.strftime('%y-%m-%d-%H-%M', self.startTime)
+        self.pickleDir = os.path.join('data', self.pickleFileRoot)
+        if "CMPATH" in os.environ:
+            self.pickleDir = os.path.join(os.environ["CMPATH"], self.pickleDir)
+        label = 2
+        while os.path.exists(self.pickleDir):
+            if label>2:
+                self.pickleDir = self.pickleDir[:-2]+"_"+str(label)
+            else:
+                self.pickleDir = self.pickleDir+"_"+str(label)
+            label+=1
+        os.mkdir(self.pickleDir)
+        # write a copy of the model into the dir (for reference), 
+        # this goes in the pickle too (and gets loaded when a pickle is loaded)
+        if not self.fromPickle:
+            self.moduleStr = inspect.getsource(self.module)
+        open(os.path.join(self.pickleDir, self.moduleName), 'w').write(self.moduleStr)
 
 
+    ## Get an id for the next cell to be created
     def next_id(self):
         id = self._next_id
         self._next_id += 1
         return id
-
+    ## Get the index (into flat arrays) of the next cell to be created
     def next_idx(self):
         idx = self._next_idx
         self._next_idx += 1
         return idx
+
 
     # Currently, the user-defined regulation module creates the
     # biophysics, regulation, and signalling objects in a function
@@ -73,6 +110,13 @@ visualised.
     #
     # We pass in the empty simulator object, ie. setup(sim)
     # and have the user-defined func initialise the 3 modules
+
+    ## Specify models to be used by simulator object. The four inputs are
+    # 'phy' = physical model of cell iteractions
+    # 'reg' = regulatory model of biochemical circuit in the cell
+    # 'sig' = signaling model of intercellular chemical reaction diffusion.
+    # 'integ' = integrator
+
     def init(self, phys, reg, sig, integ):
         self.phys = phys
         self.reg = reg
@@ -93,35 +137,67 @@ visualised.
             self.reg.setSignalling(sig)
 
 
+    ## Set up the OpenCL contex, the configuration is set up the first time, and is saved in the config file
     def init_cl(self):
-        """Set up the OpenCL context."""
-        platform = cl.get_platforms()[0]
-        if sys.platform == 'darwin':
-            self.CLContext = cl.Context(devices=[platform.get_devices()[0]])
+        #if config file exists read and set everything
+        config = ConfigParser.RawConfigParser()
+        platform = cl.get_platforms()
+        if os.path.isfile(self.cfg_file):
+            config.read(self.cfg_file)
+            platnum = int(config.get('Platform','platnum'))
+            devnum = int(config.get('Device','devnum'))
         else:
-            #try:
-            #    self.CLContext 
-            #    = cl.Context(properties=[(cl.context_properties.PLATFORM, 
-            #    platform)])
-            #except:
-            self.CLContext = cl.Context(properties=[(cl.context_properties.PLATFORM, platform)],
-                                          devices=[platform.get_devices()[0]])
+            #select platform and device here and write to config file
+            if len(platform) > 1:
+                print "Select platform from the list:"
+                for i in range(len(platform)):
+                    print 'press '+str(i)+' for '+str(platform[i])
+                platnum = int(input('Platform Number: '))
+            else:
+                platnum = 0
+            if len(platform[platnum].get_devices())==0:
+                print "No compatible device, check if your hardware is OpenCL compatible, and that OpenCL is correctly configured..." #this will now break
+            elif len(platform[platnum].get_devices())==1:
+                devnum = 0
+            else:
+                print "Select device from list"
+                for i in range(len(platform[platnum].get_devices())):
+                     print 'press '+str(i)+' for '+str(platform[platnum].get_devices()[i])
+                devnum= int(input('Device number: '))
+            #write settings to config file
+            config.add_section('Platform')
+            config.add_section('Device')
+            config.set('Platform','platnum',platnum)
+            config.set('Platform', 'Platform Name', platform[platnum])
+            config.set('Device','devnum',devnum)
+            config.set('Device', 'Device Name', platform[platnum].get_devices()[devnum])
+            config.write(open(self.cfg_file, 'wb'))
+        self.CLContext = cl.Context(properties=[(cl.context_properties.PLATFORM, platform[platnum])],
+                                          devices=[platform[platnum].get_devices()[devnum]])
         self.CLQueue = cl.CommandQueue(self.CLContext)
-        print platform.get_devices()[0]
-        print (platform.get_devices()[0]).get_info(cl.device_info.DRIVER_VERSION)
+        print (platform[platnum].get_devices()[devnum])
+#.get_info(cl.device_info.DRIVER_VERSION)
 
+    ## ??
     def getOpenCL(self):
         return (self.CLContext, self.CLQueue)
 
-    def setCellStates(self, cellStates):
-        # Set cell states, e.g. from pickle file 
-        self.cellStates = cellStates
+    ## set cell state
 
+    def setCellStates(self, cellStates):
+        #Set cell states, e.g. from pickle file
+        #this sets them on the card too
+        self.cellStates = {}
+        self.cellStates = cellStates
+        self.reg.cellStates = cellStates
+        self.phys.load_from_cellstates(cellStates)
+    
+    ## ??
     def addRenderer(self, renderer):
         self.renderers.append(renderer)
-
+        
+    ## Delete the models, they might be holding up memory/GPU resources?
     def reset(self):
-        # Delete the models, they might be holding up memory/GPU resources?
         if self.phys:
             del self.phys
         if self.sig:
@@ -130,6 +206,8 @@ visualised.
             del self.integ
         if self.reg:
             del self.reg
+        if self.fromPickle == False: #This will take up any changes made in the model file
+            reload(self.module)
         # Lose old cell states
         self.cellStates = {}
         # Recreate models via module setup
@@ -139,6 +217,8 @@ visualised.
         #    self.sig.reset()
         #self.integ.reset()
 
+
+    # Divide a cell to two daughter cells
     def divide(self, pState):
         pState.divideFlag = False
         pid = pState.id
@@ -149,6 +229,10 @@ visualised.
         d1State.id = d1id
         d2State.id = d2id
 
+        #reset cell ages
+        d1State.cellAge = 0
+        d2State.cellAge = 0
+        
         self.lineage[d1id] = pid
         self.lineage[d2id] = pid
 
@@ -171,12 +255,15 @@ visualised.
             self.integ.divide(pState, d1State, d2State)
         self.reg.divide(pState, d1State, d2State)
 
-
-    def addCell(self, cellType=0, **kwargs):
+    ## Add a new cell to the simulator
+    def addCell(self, cellType=0, cellAdh=0.0, length=3.5, **kwargs):
         cid = self.next_id()
         cs = CellState(cid)
-        cs.idx = self.next_idx()
+        cs.length = length
+        cs.oldLen = length
         cs.cellType = cellType
+        cs.cellAdh = cellAdh
+        cs.idx = self.next_idx()
         self.idToIdx[cid] = cs.idx
         self.cellStates[cid] = cs
         if self.integ:
@@ -186,7 +273,16 @@ visualised.
             self.sig.addCell(cs)
         self.phys.addCell(cs, **kwargs)
 
+    #---
+    # Some functions to modify existing cells (e.g. from GUI)
+    # Eventually prob better to have a generic editCell() that deals with this stuff
+    #
+    def moveCell(self, cid, delta_pos):
+        if self.cellStates.has_key(cid):
+            self.phys.moveCell(self.cellStates[cid], delta_pos)
 
+    ## Proceed to the next simulation step
+    # This method is where objects phys, reg, sig and integ are called
     def step(self):
         self.reg.step(self.dt)
         if self.sig:
@@ -206,12 +302,51 @@ visualised.
         self.stepNum += 1
 
 
-    def writePickle(self):
+    ## Import cells from a file to the simulator from csv file. The file contains a list of 7-coordinates {pos,dir,len} (comma delimited) of each cell - also, there should be no cells around - ie run this from an empty model instead of addcell
+    def importCells_file(self, filename):
+        f=open(filename, 'rU')
+        list=csv.reader(f,delimiter=',')
+        for row in list:
+            cpos = [float(row[0]),float(row[1]),float(row[2])]
+            cdir = [float(row[3]),float(row[4]),float(row[5])]
+            clen = float(row[6]) #radius should be removed from this in the analysis
+            ndir = cdir/numpy.linalg.norm(cdir) #normalize cell dir just in case
+            #this should probably also check for overlaps
+            self.addCell(pos=tuple(cpos), dir=tuple(ndir), len=clen)
+
+    ## Write current simulation state to an output file
+    def writePickle(self, csv=False):
         filename = os.path.join(self.pickleDir, 'step-%05i.pickle' % self.stepNum)
         outfile = open(filename, 'wb')
-        if self.integ and self.sig:
-            sigData = (self.sig.gridSize, self.sig.gridOrig, self.integ.gridDim, self.integ.signalLevel.reshape(self.integ.gridDim))
-            data = (self.cellStates, sigData, self.lineage)
-        else:
-            data = (self.cellStates, self.lineage)
+        data = {}
+        data['cellStates'] = self.cellStates
+        data['stepNum'] = self.stepNum
+        data['lineage'] = self.lineage
+        data['moduleStr'] = self.moduleStr
+        data['moduleName'] = self.moduleName
+        if self.integ:
+            data['specData'] = self.integ.levels
+        if self.sig:
+            data['sigData'] = self.integ.cellSigLevels
         cPickle.dump(data, outfile, protocol=-1)
+        #output csv file with cell pos,dir,len - sig?
+
+    def loadFromPickle(self, data):
+        self.setCellStates(data['cellStates'])
+        self.lineage = data['lineage']
+        self.stepNum = data['stepNum']
+        idx_map = {}
+        idmax = 0
+        for id,state in data['cellStates'].iteritems():
+            idx_map[state.id] = state.idx
+            if id>idmax:
+                idmax=id
+        self.idToIdx = idx_map
+        self._next_id = idmax+1
+        self._next_idx = len(data['cellStates'])
+        if data.has_key('sigData'):
+            self.integ.setLevels(data['specData'],data['sigData'])
+        elif data.has_key('specData'):
+            self.integ.setLevels(data['specData'])
+
+

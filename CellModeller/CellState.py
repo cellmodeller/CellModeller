@@ -8,4 +8,5 @@ class CellState:
         self.growthRate = 1.0
         self.color = [0.5,0.5,0.5]
         self.divideFlag = False
-
+        self.cellAge = 0
+        self.effGrowth = 0.0

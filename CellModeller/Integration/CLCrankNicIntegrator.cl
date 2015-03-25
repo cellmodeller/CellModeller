@@ -2,11 +2,11 @@
 
 void userSignalRates(float gridVolume, float area, float volume, const int cellType, float* rates, __global const float* species, __global const float* signals)
 {
-    %s
+    %(sigKernel)s
 }
-void userSpecRates(float gridVolume, float area, float volume, const int cellType, __global float* rates, __global const float* species, __global const float* signals)
+void userSpecRates(float gridVolume, float area, float volume, const int cellType, __global float* rates, __global float* species, __global const float* signals)
 {
-    %s
+    %(specKernel)s
 }
 
 __kernel void gridCells(const float gridOrigx,
@@ -42,7 +42,7 @@ __kernel void gridCells(const float gridOrigx,
                 int4 offset = {i,j,k,0};
                 int4 ind = idx + offset;
                 // Is the neighbourhood node in the grid?
-                int inGrid = (int)(ind.x>=0 && ind.x<gridDimx && ind.y>=0 && ind.y<gridDimy && ind.z>=0 and ind.z<gridDimz);
+                int inGrid = (int)(ind.x>=0 && ind.x<gridDimx && ind.y>=0 && ind.y<gridDimy && ind.z>=0 && ind.z<gridDimz);
                 int flatidx = ind.z + ind.y*gridDimz + ind.x*gridDimz*gridDimy;
                 // if in grid put index, else zero
                 indices[base + k + j*2 + i*4] = inGrid * flatidx;
@@ -128,6 +128,8 @@ __kernel void speciesRates(const int numSignals,
     userSpecRates(gridVolume, areas[id], volumes[id], cellType, rates, species, signals);
 }
 
+
+
 __kernel void signalRates(const int numSignals,
                           const int numSpecies,
                           const float gridVolume,
@@ -149,7 +151,7 @@ __kernel void signalRates(const int numSignals,
     __global const float* species = cellSpecLevels+specbase;
     __global const float* signals = cellSignalLevels+sigbase;
 
-    float cellSigRates[%i];
+    float cellSigRates[%(nSignals)i];
     userSignalRates(gridVolume, areas[id], volumes[id], cellType, cellSigRates, species, signals);
 
     // Iterate over 8 nearest grid nodes
@@ -178,4 +180,150 @@ __kernel void diluteSpecs(const int numSpecies,
   for (int i = 0; i < numSpecies; i++) {
     specRates[base+i] = specRates[base+i]*factor;
   }
+}
+
+__kernel void speciesDT(const int numSpecies,
+                        __global float* cellSpecLevels,
+                        __global const float* specRate,
+                        const float dt)
+{
+  int id = get_global_id(0); 
+  int specbase = id*numSpecies;
+
+  for(int i=0; i < numSpecies; i++)
+  { 
+    cellSpecLevels[specbase+i] += dt * specRate[specbase+i];
+  }
+}
+
+__kernel void setCellSigImplicit(__global const int* indices,
+                                 __global const float* weights,
+                                 __global const float* grid,
+                                 __global const float* transport,
+                                 __global float* levels,
+                                 const int numSignals,
+                                 const int gridTotalSize,
+                                 const int gridDimx,
+                                 const int gridDimy,
+                                 const int gridDimz)
+{
+    int id = get_global_id(0);
+    int idxbase = id*8;
+    int lvlbase = id*numSignals*2;
+
+    for (int s=0; s<numSignals; s++) {
+        levels[lvlbase+s] = 0.0;
+        levels[lvlbase+s+numSignals] = 0.0;
+    }
+
+    // Iterate over 8 nearest grid nodes
+    for (int i=0; i<8; i++) {
+        int ind = idxbase + i;
+        int grid_idx = indices[ind];
+        int ix = grid_idx/(gridDimz*gridDimy);
+        int iy = (grid_idx - ix*gridDimz*gridDimy)/gridDimz;
+        int iz = grid_idx - ix*gridDimz*gridDimy - iy*gridDimz;
+        float wt = weights[ind];
+        // sum weighted grid values
+        for (int s=0; s<numSignals; s++) {
+            size_t gsidx = grid_idx + s*gridTotalSize;
+            levels[lvlbase+s] += grid[gsidx]*wt;
+            levels[lvlbase+s+numSignals] += transport[gsidx]*wt;
+        }
+    }
+}
+
+__kernel void setCellSignalsImplicit(const int numSignals,
+                                     const int gridTotalSize,
+                                     const int gridDimx,
+                                     const int gridDimy,
+                                     const int gridDimz,
+                                     __global const int* indices,
+                                     __global const float* weights,
+                                     __global const float* grid,
+                                     __global const float* transport,
+                                     __global float* levels)
+{
+    int id = get_global_id(0);
+    int idxbase = id*8;
+    int lvlbase = id*numSignals*2;
+
+    for (int s=0; s<numSignals; s++) {
+        levels[lvlbase+s] = 0.0;
+        levels[lvlbase+s+numSignals] = 0.0;
+    }
+
+    // Iterate over 8 nearest grid nodes
+    for (int i=0; i<8; i++) {
+        int ind = idxbase + i;
+        int grid_idx = indices[ind];
+        int ix = grid_idx/(gridDimz*gridDimy);
+        int iy = (grid_idx - ix*gridDimz*gridDimy)/gridDimz;
+        int iz = grid_idx - ix*gridDimz*gridDimy - iy*gridDimz;
+        float wt = weights[ind];
+        // sum weighted grid values
+        for (int s=0; s<numSignals; s++) {
+            size_t gsidx = grid_idx + s*gridTotalSize;
+            levels[lvlbase+s] += grid[gsidx]*wt;
+            levels[lvlbase+s+numSignals] += transport[gsidx]*wt;
+        }
+    }
+}
+
+__kernel void speciesRatesImplicit(const int numSignals,
+                                   const int numSpecies,
+                                   const float gridVolume,
+                                   __global const float* areas,
+                                   __global const float* volumes,
+                                   __global const int* celltype,
+                                   __global float* cellSpecLevels,
+                                   __global const float* cellSignalLevels,
+                                   __global float* specRate)
+{
+    int id = get_global_id(0);
+    int sigbase = id*numSignals*2;
+    int specbase = id*numSpecies;
+    int cellType = celltype[id];
+    __global float* species = cellSpecLevels+specbase;
+    __global const float* signals = cellSignalLevels+sigbase;
+    __global float* rates = specRate+specbase;
+
+    userSpecRates(gridVolume, areas[id], volumes[id], cellType, rates, species, signals);
+}
+
+__kernel void signalRatesImplicit(const int numSignals,
+                          const int numSpecies,
+                          const float gridVolume,
+                          __global const float* areas,
+                          __global const float* volumes,
+                          __global const int* celltype,
+                          __global const float* cellSpecLevels,
+                          __global const float* cellSignalLevels,
+                          __global const float* weights,
+                          __global float* sigRates)
+{
+    int id = get_global_id(0);
+    int base = id*8*numSignals;
+    int wbase = id*8;
+    int sigbase = id*numSignals*2;
+    int specbase = id*numSpecies;
+    int cellType = celltype[id];
+
+    __global const float* species = cellSpecLevels+specbase;
+    __global const float* signals = cellSignalLevels+sigbase;
+
+    float cellSigRates[%(nSignals)i];
+    userSignalRates(gridVolume, areas[id], volumes[id], cellType, cellSigRates, species, signals);
+
+    // Iterate over 8 nearest grid nodes
+    for (int i=0; i<8; i++) {
+        float wt = weights[wbase+i];
+        int gbase = base + numSignals*i;
+        __global float* rates = sigRates+gbase;
+
+        // put cells signal rate
+        for (int s=0; s<numSignals; s++) {
+            rates[s] = cellSigRates[s]*wt;
+        }
+    }
 }
