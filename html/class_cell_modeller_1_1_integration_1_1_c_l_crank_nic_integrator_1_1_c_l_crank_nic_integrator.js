@@ -10,6 +10,7 @@ var class_cell_modeller_1_1_integration_1_1_c_l_crank_nic_integrator_1_1_c_l_cra
     [ "initArrays", "class_cell_modeller_1_1_integration_1_1_c_l_crank_nic_integrator_1_1_c_l_crank_nic_integrator.html#addda3c4a6b9864ad0b5d7945b3c13720", null ],
     [ "initKernels", "class_cell_modeller_1_1_integration_1_1_c_l_crank_nic_integrator_1_1_c_l_crank_nic_integrator.html#af135e0828dcec60c90c5a7c70ab2aea5", null ],
     [ "makeViews", "class_cell_modeller_1_1_integration_1_1_c_l_crank_nic_integrator_1_1_c_l_crank_nic_integrator.html#acdcde15e3dca6a80799eff1dadcce6bd", null ],
+    [ "setLevels", "class_cell_modeller_1_1_integration_1_1_c_l_crank_nic_integrator_1_1_c_l_crank_nic_integrator.html#a67db89059ab9822c3ab991bf220498a7", null ],
     [ "setRegulator", "class_cell_modeller_1_1_integration_1_1_c_l_crank_nic_integrator_1_1_c_l_crank_nic_integrator.html#a711f63ebb06d1517b258b8e7ff9e71e8", null ],
     [ "setSignalling", "class_cell_modeller_1_1_integration_1_1_c_l_crank_nic_integrator_1_1_c_l_crank_nic_integrator.html#a1f5d7b96d83d5bd762ab63618825fdb5", null ],
     [ "step", "class_cell_modeller_1_1_integration_1_1_c_l_crank_nic_integrator_1_1_c_l_crank_nic_integrator.html#a38cd303a53b39c3dadac19c4723003e3", null ],

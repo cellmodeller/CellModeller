@@ -7,6 +7,7 @@ var class_cell_modeller_1_1_g_u_i_1_1_renderers_1_1_g_l_bacterium_renderer =
     [ "render_cell_names", "class_cell_modeller_1_1_g_u_i_1_1_renderers_1_1_g_l_bacterium_renderer.html#a3ca23f7e006c024b5dc69bd3d7bfcc68", null ],
     [ "render_cells", "class_cell_modeller_1_1_g_u_i_1_1_renderers_1_1_g_l_bacterium_renderer.html#a86dd0882d90fd297e37c293bf79ae03a", null ],
     [ "render_gl", "class_cell_modeller_1_1_g_u_i_1_1_renderers_1_1_g_l_bacterium_renderer.html#a3ceef855e3e953e2f6af1f06d736b866", null ],
+    [ "render_selected_cell", "class_cell_modeller_1_1_g_u_i_1_1_renderers_1_1_g_l_bacterium_renderer.html#a70f1694b7ee30150a45ac3ef1df42afd", null ],
     [ "renderNames_gl", "class_cell_modeller_1_1_g_u_i_1_1_renderers_1_1_g_l_bacterium_renderer.html#a73dee41c83bb62bd8c41da8625dec9c6", null ],
     [ "cellcol", "class_cell_modeller_1_1_g_u_i_1_1_renderers_1_1_g_l_bacterium_renderer.html#a63e36bc6b45c8386dc348ecf0f4dc572", null ],
     [ "dlist", "class_cell_modeller_1_1_g_u_i_1_1_renderers_1_1_g_l_bacterium_renderer.html#a8ccb5790eb761edd991e4d66d23c06c0", null ],

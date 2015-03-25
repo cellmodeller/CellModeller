@@ -1,4 +1,6 @@
 var searchData=
 [
-  ['neighbourdiffusion_2epy',['NeighbourDiffusion.py',['../_neighbour_diffusion_8py.html',1,'']]]
+  ['printtiming_2epy',['printTiming.py',['../print_timing_8py.html',1,'']]],
+  ['pyglcmviewer_2epy',['PyGLCMViewer.py',['../_py_g_l_c_m_viewer_8py.html',1,'']]],
+  ['pyglwidget_2epy',['PyGLWidget.py',['../_py_g_l_widget_8py.html',1,'']]]
 ];

@@ -1,7 +1,6 @@
 var NAVTREE =
 [
   [ "Cellmodeller4", "index.html", [
-    [ "Welcome to Cellmodeller 4 documentation", "index.html", null ],
     [ "CellModeller4", "md__r_e_a_d_m_e.html", null ],
     [ "Namespaces", null, [
       [ "Namespace List", "namespaces.html", "namespaces" ],
@@ -30,11 +29,10 @@ var NAVTREE =
 var NAVTREEINDEX =
 [
 "____init_____8py.html",
-"_c_l_bacterium_8py.html#a732f9c2b5ad0cbe705cc64a866174e6d",
-"class_cell_modeller_1_1_biophysics_1_1_bacterial_models_1_1_c_l_bacterium_1_1_c_l_bacterium.html#a1ff91debef1be4f04cb0e3a25725461b",
-"class_cell_modeller_1_1_g_u_i_1_1_renderers_1_1_g_l_cel_bacterium_renderer.html#a60bbad934c0952ca88735ced14034871",
-"class_cell_modeller_1_1_signalling_1_1_grid_diffusion_1_1_grid_diffusion.html#ae92b98bedbf51c690136aab985a7bca5",
-"load_pickle_8py.html#ac814d0e85147387e43bd7a5169fcd27b"
+"class_cell_modeller_1_1_biophysics_1_1_bacterial_models_1_1_c_l_bacterium_1_1_c_l_bacterium.html#a565546f578f12c59da2dedc12f4338bd",
+"class_cell_modeller_1_1_g_u_i_1_1_renderers_1_1_g_l_grid_renderer.html#aed543ccdc4c459ad92751157b4148add",
+"class_regular_grid_1_1_regular_grid.html#ab96675694e9089c619797a274002bdf7",
+"functions_o.html"
 ];
 
 var SYNCONMSG = 'click to disable panel synchronisation';

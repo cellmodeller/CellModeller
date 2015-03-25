@@ -1,7 +1,7 @@
 var class_cell_modeller_1_1_regulation_1_1_module_regulator_1_1_module_regulator =
 [
     [ "__init__", "class_cell_modeller_1_1_regulation_1_1_module_regulator_1_1_module_regulator.html#a4d35995c70f7797ef0bba6d73a6288a3", null ],
-    [ "addCell", "class_cell_modeller_1_1_regulation_1_1_module_regulator_1_1_module_regulator.html#acab404d5051373164a66b3b64b0917b6", null ],
+    [ "addCell", "class_cell_modeller_1_1_regulation_1_1_module_regulator_1_1_module_regulator.html#a229cb322acc9f7fb0edf4c36bc5df2f3", null ],
     [ "divide", "class_cell_modeller_1_1_regulation_1_1_module_regulator_1_1_module_regulator.html#a4ff7ae9898b2e4e8e3169d300febe62b", null ],
     [ "importModule", "class_cell_modeller_1_1_regulation_1_1_module_regulator_1_1_module_regulator.html#a94c5f3b056e2e6e7910fd1782ffc8703", null ],
     [ "initSpeciesLevels", "class_cell_modeller_1_1_regulation_1_1_module_regulator_1_1_module_regulator.html#a44078bec0a33fd3a8bb36dae0adfad4d", null ],

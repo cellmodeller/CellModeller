@@ -1,4 +1,5 @@
 var searchData=
 [
-  ['ui',['ui',['../namespace_cell_modeller_1_1_g_u_i_1_1prototype_py_g_l.html#a0c7cd3ec2e1d8ce63bd240f89bb01ad7',1,'CellModeller::GUI::prototypePyGL']]]
+  ['ui',['ui',['../namespace_cell_modeller_g_u_i.html#a16229e2ca2a72b2a7375f916c211441e',1,'CellModellerGUI']]],
+  ['uifile',['uifile',['../namespace_cell_modeller_g_u_i.html#ae5539e188c01500287e40c401ef9d117',1,'CellModellerGUI']]]
 ];

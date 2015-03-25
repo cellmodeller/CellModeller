@@ -149,11 +149,11 @@ $(document).ready(function(){initNavTree('_s_b_m_l_import_8py_source.html','');}
 <div class="line"><a name="l00040"></a><span class="lineno">   40</span>&#160;    reader = SBMLReader()    </div>
 <div class="line"><a name="l00041"></a><span class="lineno">   41</span>&#160;    document = reader.readSBML(sbmlFile)</div>
 <div class="line"><a name="l00042"></a><span class="lineno">   42</span>&#160;    <span class="keywordflow">if</span> document.getNumErrors()&gt;0:</div>
-<div class="line"><a name="l00043"></a><span class="lineno">   43</span>&#160;        <span class="keywordflow">print</span> <span class="stringliteral">&quot;Errors in reading SBML file...&quot;</span></div>
+<div class="line"><a name="l00043"></a><span class="lineno">   43</span>&#160;    <span class="keywordflow">print</span> <span class="stringliteral">&quot;Errors in reading SBML file...&quot;</span></div>
 <div class="line"><a name="l00044"></a><span class="lineno">   44</span>&#160;    <a class="code" href="namespace_cell_modeller_1_1_regulation_1_1_s_b_m_l_import.html#a99337c9275f3135053bfc0b8d37ffc20">checkSBMLConsistency</a>(document)</div>
 <div class="line"><a name="l00045"></a><span class="lineno">   45</span>&#160;    model = document.getModel()</div>
 <div class="line"><a name="l00046"></a><span class="lineno">   46</span>&#160;    <span class="keywordflow">if</span> <span class="keywordflow">not</span> model:</div>
-<div class="line"><a name="l00047"></a><span class="lineno">   47</span>&#160;        <span class="keywordflow">print</span> <span class="stringliteral">&quot;No model!&quot;</span></div>
+<div class="line"><a name="l00047"></a><span class="lineno">   47</span>&#160;    <span class="keywordflow">print</span> <span class="stringliteral">&quot;No model!&quot;</span></div>
 <div class="line"><a name="l00048"></a><span class="lineno">   48</span>&#160;    <span class="keywordflow">return</span> model</div>
 <div class="line"><a name="l00049"></a><span class="lineno">   49</span>&#160;</div>
 <div class="line"><a name="l00050"></a><span class="lineno">   50</span>&#160;</div>
@@ -233,7 +233,7 @@ $(document).ready(function(){initNavTree('_s_b_m_l_import_8py_source.html','');}
 <div class="line"><a name="l00124"></a><span class="lineno">  124</span>&#160;            <span class="keywordflow">return</span> <span class="stringliteral">&quot;1&quot;</span></div>
 <div class="line"><a name="l00125"></a><span class="lineno">  125</span>&#160;        </div>
 <div class="line"><a name="l00126"></a><span class="lineno">  126</span>&#160;    <span class="keywordflow">else</span>:    </div>
-<div class="line"><a name="l00127"></a><span class="lineno">  127</span>&#160;        <span class="keywordflow">raise</span> Exception(<span class="stringliteral">&quot;Un-supported AST node type: &quot;</span> + str(astNode.isName()) + <span class="stringliteral">&quot;, node: &quot;</span> + str(astNode.getType()))</div>
+<div class="line"><a name="l00127"></a><span class="lineno">  127</span>&#160;    <span class="keywordflow">raise</span> Exception(<span class="stringliteral">&quot;Un-supported AST node type: &quot;</span> + str(astNode.isName()) + <span class="stringliteral">&quot;, node: &quot;</span> + str(astNode.getType()))</div>
 <div class="line"><a name="l00128"></a><span class="lineno">  128</span>&#160;        </div>
 <div class="line"><a name="l00129"></a><span class="lineno">  129</span>&#160;</div>
 <div class="line"><a name="l00130"></a><span class="lineno">  130</span>&#160;<span class="comment"># constructs a python program string from given SBML model.</span></div>
@@ -480,7 +480,7 @@ $(document).ready(function(){initNavTree('_s_b_m_l_import_8py_source.html','');}
 <div id="nav-path" class="navpath"><!-- id is needed for treeview function! -->
   <ul>
     <li class="navelem"><a class="el" href="dir_15c08f5c128f7957cfc684b2d5d24c4f.html">CellModeller</a></li><li class="navelem"><a class="el" href="dir_924fbf7dcec14f9aa37868af86860037.html">Regulation</a></li><li class="navelem"><a class="el" href="_s_b_m_l_import_8py.html">SBMLImport.py</a></li>
-    <li class="footer">Generated on Sat Mar 14 2015 18:42:52 for Cellmodeller4 by
+    <li class="footer">Generated on Wed Mar 25 2015 19:32:32 for Cellmodeller4 by
     <a href="http://www.doxygen.org/index.html">
     <img class="footer" src="doxygen.png" alt="doxygen"/></a> 1.8.9.1 </li>
   </ul>

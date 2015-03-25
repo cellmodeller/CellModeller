@@ -291,7 +291,7 @@ Variables</h2></td></tr>
 <p>Definition at line <a class="el" href="_meristem_8py_source.html#l00017">17</a> of file <a class="el" href="_meristem_8py_source.html">Meristem.py</a>.</p>
 <div class="fragment"><div class="line"><a name="l00017"></a><span class="lineno"><a class="line" href="namespace_meristem.html#aa2615be1e7d4102ae47cbfb9cf50f7c7">   17</a></span>&#160;<span class="keyword">def </span><a class="code" href="namespace_meristem.html#aa2615be1e7d4102ae47cbfb9cf50f7c7">setup</a>(sim):</div>
 <div class="line"><a name="l00018"></a><span class="lineno">   18</span>&#160;    biophys = <a class="code" href="class_cell_modeller_1_1_biophysics_1_1_bacterial_models_1_1_c_l_bacterium_1_1_c_l_bacterium.html">CLBacterium</a>(sim, max_cells=max_cells, max_contacts=32, max_sqs=32**2, jitter_z=<span class="keyword">False</span>, reg_param=2)</div>
-<div class="line"><a name="l00019"></a><span class="lineno">   19</span>&#160;    reg = <a class="code" href="class_cell_modeller_1_1_regulation_1_1_module_regulator_1_1_module_regulator.html">ModuleRegulator</a>(sim, __file__)</div>
+<div class="line"><a name="l00019"></a><span class="lineno">   19</span>&#160;    reg = <a class="code" href="class_cell_modeller_1_1_regulation_1_1_module_regulator_1_1_module_regulator.html">ModuleRegulator</a>(sim, sim.moduleName)</div>
 <div class="line"><a name="l00020"></a><span class="lineno">   20</span>&#160;</div>
 <div class="line"><a name="l00021"></a><span class="lineno">   21</span>&#160;    sim.init(biophys, reg, <span class="keywordtype">None</span>, <span class="keywordtype">None</span>)</div>
 <div class="line"><a name="l00022"></a><span class="lineno">   22</span>&#160;</div>
@@ -303,7 +303,7 @@ Variables</h2></td></tr>
 <div class="line"><a name="l00028"></a><span class="lineno">   28</span>&#160;</div>
 <div class="ttc" id="namespace_meristem_html_aa2615be1e7d4102ae47cbfb9cf50f7c7"><div class="ttname"><a href="namespace_meristem.html#aa2615be1e7d4102ae47cbfb9cf50f7c7">Meristem.setup</a></div><div class="ttdeci">def setup(sim)</div><div class="ttdef"><b>Definition:</b> <a href="_meristem_8py_source.html#l00017">Meristem.py:17</a></div></div>
 <div class="ttc" id="class_cell_modeller_1_1_biophysics_1_1_bacterial_models_1_1_c_l_bacterium_1_1_c_l_bacterium_html"><div class="ttname"><a href="class_cell_modeller_1_1_biophysics_1_1_bacterial_models_1_1_c_l_bacterium_1_1_c_l_bacterium.html">CellModeller.Biophysics.BacterialModels.CLBacterium.CLBacterium</a></div><div class="ttdef"><b>Definition:</b> <a href="_c_l_bacterium_8py_source.html#l00014">CLBacterium.py:14</a></div></div>
-<div class="ttc" id="class_cell_modeller_1_1_regulation_1_1_module_regulator_1_1_module_regulator_html"><div class="ttname"><a href="class_cell_modeller_1_1_regulation_1_1_module_regulator_1_1_module_regulator.html">CellModeller.Regulation.ModuleRegulator.ModuleRegulator</a></div><div class="ttdef"><b>Definition:</b> <a href="_module_regulator_8py_source.html#l00005">ModuleRegulator.py:5</a></div></div>
+<div class="ttc" id="class_cell_modeller_1_1_regulation_1_1_module_regulator_1_1_module_regulator_html"><div class="ttname"><a href="class_cell_modeller_1_1_regulation_1_1_module_regulator_1_1_module_regulator.html">CellModeller.Regulation.ModuleRegulator.ModuleRegulator</a></div><div class="ttdef"><b>Definition:</b> <a href="_module_regulator_8py_source.html#l00006">ModuleRegulator.py:6</a></div></div>
 </div><!-- fragment -->
 </div>
 </div>
@@ -420,7 +420,7 @@ Variables</h2></td></tr>
 <div id="nav-path" class="navpath"><!-- id is needed for treeview function! -->
   <ul>
     <li class="navelem"><a class="el" href="namespace_meristem.html">Meristem</a></li>
-    <li class="footer">Generated on Sat Mar 14 2015 18:42:53 for Cellmodeller4 by
+    <li class="footer">Generated on Wed Mar 25 2015 19:32:33 for Cellmodeller4 by
     <a href="http://www.doxygen.org/index.html">
     <img class="footer" src="doxygen.png" alt="doxygen"/></a> 1.8.9.1 </li>
   </ul>

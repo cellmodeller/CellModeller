@@ -113,20 +113,15 @@ $(document).ready(function(){initNavTree('setup_8py_source.html','');});
 <div class="line"><a name="l00004"></a><span class="lineno">    4</span>&#160;<span class="keyword">from</span> setuptools <span class="keyword">import</span> setup</div>
 <div class="line"><a name="l00005"></a><span class="lineno">    5</span>&#160;</div>
 <div class="line"><a name="l00006"></a><span class="lineno">    6</span>&#160;<a class="code" href="namespacesetup.html">setup</a>(name=<span class="stringliteral">&#39;CellModeller&#39;</span>,</div>
-<div class="line"><a name="l00007"></a><span class="lineno"><a class="line" href="namespacesetup.html#a7cd8314075060c603cd2622ada2c2fbe">    7</a></span>&#160;      install_requires=[<span class="stringliteral">&#39;numpy&#39;</span>, <span class="stringliteral">&#39;scipy&#39;</span>, <span class="stringliteral">&#39;pyopengl&#39;</span>, <span class="stringliteral">&#39;mako&#39;</span>, <span class="stringliteral">&#39;pyopencl&#39;</span>],</div>
-<div class="line"><a name="l00008"></a><span class="lineno"><a class="line" href="namespacesetup.html#a74979483c7ce3990f635d402d9458001">    8</a></span>&#160;      setup_requires=[<span class="stringliteral">&#39;numpy&#39;</span>, <span class="stringliteral">&#39;scipy&#39;</span>, <span class="stringliteral">&#39;pyopengl&#39;</span>, <span class="stringliteral">&#39;mako&#39;</span>, <span class="stringliteral">&#39;pyopencl&#39;</span>],</div>
-<div class="line"><a name="l00009"></a><span class="lineno"><a class="line" href="namespacesetup.html#aada4406eeab94f62c5f72fee617f0b82">    9</a></span>&#160;      packages=[<span class="stringliteral">&#39;CellModeller&#39;</span>,</div>
-<div class="line"><a name="l00010"></a><span class="lineno">   10</span>&#160;                <span class="stringliteral">&#39;CellModeller.Biophysics&#39;</span>,</div>
-<div class="line"><a name="l00011"></a><span class="lineno">   11</span>&#160;                <span class="stringliteral">&#39;CellModeller.Biophysics.BacterialModels&#39;</span>,</div>
-<div class="line"><a name="l00012"></a><span class="lineno">   12</span>&#160;                <span class="stringliteral">&#39;CellModeller.Integration&#39;</span>,</div>
-<div class="line"><a name="l00013"></a><span class="lineno">   13</span>&#160;                <span class="stringliteral">&#39;CellModeller.Regulation&#39;</span>,</div>
-<div class="line"><a name="l00014"></a><span class="lineno">   14</span>&#160;                <span class="stringliteral">&#39;CellModeller.Signalling&#39;</span>,</div>
-<div class="line"><a name="l00015"></a><span class="lineno">   15</span>&#160;                <span class="stringliteral">&#39;CellModeller.GUI&#39;</span>],</div>
-<div class="line"><a name="l00016"></a><span class="lineno"><a class="line" href="namespacesetup.html#a70bdb1bcf207b85481be5718ecf252ea">   16</a></span>&#160;      package_data={<span class="stringliteral">&#39;CellModeller.GUI&#39;</span>:[<span class="stringliteral">&#39;PyGLViewer.ui&#39;</span>],</div>
-<div class="line"><a name="l00017"></a><span class="lineno">   17</span>&#160;                    <span class="stringliteral">&#39;CellModeller.Integration&#39;</span>:[<span class="stringliteral">&#39;CLCrankNicIntegrator.cl&#39;</span>],</div>
-<div class="line"><a name="l00018"></a><span class="lineno">   18</span>&#160;                    <span class="stringliteral">&#39;CellModeller.Integration&#39;</span>:[<span class="stringliteral">&#39;CLEulerIntegrator.cl&#39;</span>],</div>
-<div class="line"><a name="l00019"></a><span class="lineno">   19</span>&#160;                    <span class="stringliteral">&#39;CellModeller.Biophysics.BacterialModels&#39;</span>:[<span class="stringliteral">&#39;CLBacterium.cl&#39;</span>]},</div>
-<div class="line"><a name="l00020"></a><span class="lineno">   20</span>&#160;)</div>
+<div class="line"><a name="l00007"></a><span class="lineno"><a class="line" href="namespacesetup.html#aada4406eeab94f62c5f72fee617f0b82">    7</a></span>&#160;      packages=[<span class="stringliteral">&#39;CellModeller&#39;</span>,</div>
+<div class="line"><a name="l00008"></a><span class="lineno">    8</span>&#160;                <span class="stringliteral">&#39;CellModeller.Biophysics&#39;</span>,</div>
+<div class="line"><a name="l00009"></a><span class="lineno">    9</span>&#160;                <span class="stringliteral">&#39;CellModeller.Biophysics.BacterialModels&#39;</span>,</div>
+<div class="line"><a name="l00010"></a><span class="lineno">   10</span>&#160;                <span class="stringliteral">&#39;CellModeller.Integration&#39;</span>,</div>
+<div class="line"><a name="l00011"></a><span class="lineno">   11</span>&#160;                <span class="stringliteral">&#39;CellModeller.Regulation&#39;</span>,</div>
+<div class="line"><a name="l00012"></a><span class="lineno">   12</span>&#160;                <span class="stringliteral">&#39;CellModeller.Signalling&#39;</span>,</div>
+<div class="line"><a name="l00013"></a><span class="lineno">   13</span>&#160;                <span class="stringliteral">&#39;CellModeller.GUI&#39;</span>],</div>
+<div class="line"><a name="l00014"></a><span class="lineno"><a class="line" href="namespacesetup.html#a70bdb1bcf207b85481be5718ecf252ea">   14</a></span>&#160;      package_data={<span class="stringliteral">&#39;&#39;</span>:[<span class="stringliteral">&#39;*.cl&#39;</span>,<span class="stringliteral">&#39;*.ui&#39;</span>]},</div>
+<div class="line"><a name="l00015"></a><span class="lineno">   15</span>&#160;)</div>
 <div class="ttc" id="namespacesetup_html"><div class="ttname"><a href="namespacesetup.html">setup</a></div><div class="ttdef"><b>Definition:</b> <a href="setup_8py_source.html#l00001">setup.py:1</a></div></div>
 </div><!-- fragment --></div><!-- contents -->
 </div><!-- doc-content -->
@@ -134,7 +129,7 @@ $(document).ready(function(){initNavTree('setup_8py_source.html','');});
 <div id="nav-path" class="navpath"><!-- id is needed for treeview function! -->
   <ul>
     <li class="navelem"><a class="el" href="setup_8py.html">setup.py</a></li>
-    <li class="footer">Generated on Sat Mar 14 2015 18:42:53 for Cellmodeller4 by
+    <li class="footer">Generated on Wed Mar 25 2015 19:32:32 for Cellmodeller4 by
     <a href="http://www.doxygen.org/index.html">
     <img class="footer" src="doxygen.png" alt="doxygen"/></a> 1.8.9.1 </li>
   </ul>

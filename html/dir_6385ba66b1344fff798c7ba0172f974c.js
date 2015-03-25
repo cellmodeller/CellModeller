@@ -1,9 +1,6 @@
 var dir_6385ba66b1344fff798c7ba0172f974c =
 [
     [ "__init__.py", "_g_u_i_2____init_____8py.html", null ],
-    [ "Draw2DPDF.py", "_draw2_d_p_d_f_8py.html", "_draw2_d_p_d_f_8py" ],
-    [ "GeneratePOV.py", "_generate_p_o_v_8py.html", "_generate_p_o_v_8py" ],
-    [ "prototypePyGL.py", "prototype_py_g_l_8py.html", "prototype_py_g_l_8py" ],
     [ "PyGLCMViewer.py", "_py_g_l_c_m_viewer_8py.html", [
       [ "PyGLCMViewer", "class_cell_modeller_1_1_g_u_i_1_1_py_g_l_c_m_viewer_1_1_py_g_l_c_m_viewer.html", "class_cell_modeller_1_1_g_u_i_1_1_py_g_l_c_m_viewer_1_1_py_g_l_c_m_viewer" ],
       [ "RenderInfo", "class_cell_modeller_1_1_g_u_i_1_1_py_g_l_c_m_viewer_1_1_render_info.html", "class_cell_modeller_1_1_g_u_i_1_1_py_g_l_c_m_viewer_1_1_render_info" ]

@@ -165,12 +165,12 @@ Variables</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p>Definition at line <a class="el" href="load_8py_source.html#l00071">71</a> of file <a class="el" href="load_8py_source.html">load.py</a>.</p>
-<div class="fragment"><div class="line"><a name="l00071"></a><span class="lineno"><a class="line" href="namespaceload.html#aef60d46e09b2cc9630901ba540d55d73">   71</a></span>&#160;<span class="keyword">def </span><a class="code" href="namespaceload.html#aef60d46e09b2cc9630901ba540d55d73">divide</a>(parent, d1, d2):</div>
-<div class="line"><a name="l00072"></a><span class="lineno">   72</span>&#160;    d1.targetVol = 2.5 + random.uniform(0.0,0.5)</div>
-<div class="line"><a name="l00073"></a><span class="lineno">   73</span>&#160;    d2.targetVol = 2.5 + random.uniform(0.0,0.5)</div>
-<div class="line"><a name="l00074"></a><span class="lineno">   74</span>&#160;</div>
-<div class="line"><a name="l00075"></a><span class="lineno">   75</span>&#160;<div class="ttc" id="namespaceload_html_aef60d46e09b2cc9630901ba540d55d73"><div class="ttname"><a href="namespaceload.html#aef60d46e09b2cc9630901ba540d55d73">load.divide</a></div><div class="ttdeci">def divide(parent, d1, d2)</div><div class="ttdef"><b>Definition:</b> <a href="load_8py_source.html#l00071">load.py:71</a></div></div>
+<p>Definition at line <a class="el" href="load_8py_source.html#l00078">78</a> of file <a class="el" href="load_8py_source.html">load.py</a>.</p>
+<div class="fragment"><div class="line"><a name="l00078"></a><span class="lineno"><a class="line" href="namespaceload.html#aef60d46e09b2cc9630901ba540d55d73">   78</a></span>&#160;<span class="keyword">def </span><a class="code" href="namespaceload.html#aef60d46e09b2cc9630901ba540d55d73">divide</a>(parent, d1, d2):</div>
+<div class="line"><a name="l00079"></a><span class="lineno">   79</span>&#160;    d1.targetVol = 2.5 + random.uniform(0.0,0.5)</div>
+<div class="line"><a name="l00080"></a><span class="lineno">   80</span>&#160;    d2.targetVol = 2.5 + random.uniform(0.0,0.5)</div>
+<div class="line"><a name="l00081"></a><span class="lineno">   81</span>&#160;</div>
+<div class="line"><a name="l00082"></a><span class="lineno">   82</span>&#160;<div class="ttc" id="namespaceload_html_aef60d46e09b2cc9630901ba540d55d73"><div class="ttname"><a href="namespaceload.html#aef60d46e09b2cc9630901ba540d55d73">load.divide</a></div><div class="ttdeci">def divide(parent, d1, d2)</div><div class="ttdef"><b>Definition:</b> <a href="load_8py_source.html#l00078">load.py:78</a></div></div>
 </div><!-- fragment -->
 </div>
 </div>
@@ -302,7 +302,7 @@ Variables</h2></td></tr>
 <div class="line"><a name="l00013"></a><span class="lineno">   13</span>&#160;    biophys.addPlane((0,0,0.5), (0,0,-1), 1e-4)</div>
 <div class="line"><a name="l00014"></a><span class="lineno">   14</span>&#160;</div>
 <div class="line"><a name="l00015"></a><span class="lineno">   15</span>&#160;</div>
-<div class="line"><a name="l00016"></a><span class="lineno">   16</span>&#160;    regul = <a class="code" href="class_cell_modeller_1_1_regulation_1_1_module_regulator_1_1_module_regulator.html">ModuleRegulator</a>(sim, __file__)  <span class="comment"># use this file for reg too</span></div>
+<div class="line"><a name="l00016"></a><span class="lineno">   16</span>&#160;    regul = <a class="code" href="class_cell_modeller_1_1_regulation_1_1_module_regulator_1_1_module_regulator.html">ModuleRegulator</a>(sim, sim.moduleName)    <span class="comment"># use this file for reg too</span></div>
 <div class="line"><a name="l00017"></a><span class="lineno">   17</span>&#160;    <span class="comment"># Only biophys and regulation</span></div>
 <div class="line"><a name="l00018"></a><span class="lineno">   18</span>&#160;    sim.init(biophys, regul, <span class="keywordtype">None</span>, <span class="keywordtype">None</span>)</div>
 <div class="line"><a name="l00019"></a><span class="lineno">   19</span>&#160;</div>
@@ -310,7 +310,7 @@ Variables</h2></td></tr>
 <div class="line"><a name="l00021"></a><span class="lineno">   21</span>&#160;</div>
 <div class="line"><a name="l00022"></a><span class="lineno">   22</span>&#160;    <span class="comment">#load data from pickle file</span></div>
 <div class="line"><a name="l00023"></a><span class="lineno">   23</span>&#160;    <span class="keyword">import</span> cPickle</div>
-<div class="line"><a name="l00024"></a><span class="lineno">   24</span>&#160;    data = cPickle.load(open(<span class="stringliteral">&#39;/Users/tjr34/LazyLowRe/CellModeller/build/lib/data/lobes-16-06-30-08-12/step-00530.pickle&#39;</span>,<span class="stringliteral">&#39;</span><span class="stringliteral">r&#39;))</span></div>
+<div class="line"><a name="l00024"></a><span class="lineno">   24</span>&#160;    data = cPickle.load(open(<span class="stringliteral">&#39;/home/pakpoom/CellModeller4_private/data/biophysCL_ton1-15-02-06-12-55/step-00090.pickle&#39;</span>,<span class="stringliteral">&#39;</span><span class="stringliteral">r&#39;))</span></div>
 <div class="line"><a name="l00025"></a><span class="lineno">   25</span>&#160;<span class="stringliteral">    cellStates = data[0]</span></div>
 <div class="line"><a name="l00026"></a><span class="lineno">   26</span>&#160;<span class="stringliteral">    </span><span class="keywordflow">print</span> <span class="stringliteral">&quot;Loading %i cells&quot;</span>%len(cellStates)</div>
 <div class="line"><a name="l00027"></a><span class="lineno">   27</span>&#160;    sim.cellStates = cellStates</div>
@@ -340,7 +340,7 @@ Variables</h2></td></tr>
 <div class="line"><a name="l00051"></a><span class="lineno">   51</span>&#160;</div>
 <div class="ttc" id="namespaceload_html_ae2ae76f7e22339b073a05dc8c0376fea"><div class="ttname"><a href="namespaceload.html#ae2ae76f7e22339b073a05dc8c0376fea">load.setup</a></div><div class="ttdeci">def setup(sim)</div><div class="ttdef"><b>Definition:</b> <a href="load_8py_source.html#l00009">load.py:9</a></div></div>
 <div class="ttc" id="class_cell_modeller_1_1_biophysics_1_1_bacterial_models_1_1_c_l_bacterium_1_1_c_l_bacterium_html"><div class="ttname"><a href="class_cell_modeller_1_1_biophysics_1_1_bacterial_models_1_1_c_l_bacterium_1_1_c_l_bacterium.html">CellModeller.Biophysics.BacterialModels.CLBacterium.CLBacterium</a></div><div class="ttdef"><b>Definition:</b> <a href="_c_l_bacterium_8py_source.html#l00014">CLBacterium.py:14</a></div></div>
-<div class="ttc" id="class_cell_modeller_1_1_regulation_1_1_module_regulator_1_1_module_regulator_html"><div class="ttname"><a href="class_cell_modeller_1_1_regulation_1_1_module_regulator_1_1_module_regulator.html">CellModeller.Regulation.ModuleRegulator.ModuleRegulator</a></div><div class="ttdef"><b>Definition:</b> <a href="_module_regulator_8py_source.html#l00005">ModuleRegulator.py:5</a></div></div>
+<div class="ttc" id="class_cell_modeller_1_1_regulation_1_1_module_regulator_1_1_module_regulator_html"><div class="ttname"><a href="class_cell_modeller_1_1_regulation_1_1_module_regulator_1_1_module_regulator.html">CellModeller.Regulation.ModuleRegulator.ModuleRegulator</a></div><div class="ttdef"><b>Definition:</b> <a href="_module_regulator_8py_source.html#l00006">ModuleRegulator.py:6</a></div></div>
 </div><!-- fragment -->
 </div>
 </div>
@@ -360,8 +360,15 @@ Variables</h2></td></tr>
 
 <p>Definition at line <a class="el" href="load_8py_source.html#l00068">68</a> of file <a class="el" href="load_8py_source.html">load.py</a>.</p>
 <div class="fragment"><div class="line"><a name="l00068"></a><span class="lineno"><a class="line" href="namespaceload.html#a831ffd2d2cc4f661b86e74fc6da82ac7">   68</a></span>&#160;<span class="keyword">def </span><a class="code" href="namespaceload.html#a831ffd2d2cc4f661b86e74fc6da82ac7">update</a>(cells):</div>
-<div class="line"><a name="l00069"></a><span class="lineno">   69</span>&#160;    <span class="keywordflow">pass</span></div>
-<div class="line"><a name="l00070"></a><span class="lineno">   70</span>&#160;</div>
+<div class="line"><a name="l00069"></a><span class="lineno">   69</span>&#160;    <span class="keywordflow">for</span> (id, cell) <span class="keywordflow">in</span> cells.iteritems():</div>
+<div class="line"><a name="l00070"></a><span class="lineno">   70</span>&#160;        cell.color = [cell.cellType*0.6+0.1, 1.0-cell.cellType*0.6, 0.3]</div>
+<div class="line"><a name="l00071"></a><span class="lineno">   71</span>&#160;        <span class="comment">#max(cell.startVol*2.0,0.0): #cell.startvol*2: #random.uniform(1.75,2.0):</span></div>
+<div class="line"><a name="l00072"></a><span class="lineno">   72</span>&#160;        <span class="keywordflow">if</span> cell.volume &gt; cell.targetVol:</div>
+<div class="line"><a name="l00073"></a><span class="lineno">   73</span>&#160;            a = 1<span class="comment">#random.uniform(0.95,1.05)</span></div>
+<div class="line"><a name="l00074"></a><span class="lineno">   74</span>&#160;            cell.asymm = [a,1]</div>
+<div class="line"><a name="l00075"></a><span class="lineno">   75</span>&#160;            cell.divideFlag = <span class="keyword">True</span></div>
+<div class="line"><a name="l00076"></a><span class="lineno">   76</span>&#160;</div>
+<div class="line"><a name="l00077"></a><span class="lineno">   77</span>&#160;</div>
 <div class="ttc" id="namespaceload_html_a831ffd2d2cc4f661b86e74fc6da82ac7"><div class="ttname"><a href="namespaceload.html#a831ffd2d2cc4f661b86e74fc6da82ac7">load.update</a></div><div class="ttdeci">def update(cells)</div><div class="ttdef"><b>Definition:</b> <a href="load_8py_source.html#l00068">load.py:68</a></div></div>
 </div><!-- fragment -->
 </div>
@@ -387,7 +394,7 @@ Variables</h2></td></tr>
 <div id="nav-path" class="navpath"><!-- id is needed for treeview function! -->
   <ul>
     <li class="navelem"><a class="el" href="namespaceload.html">load</a></li>
-    <li class="footer">Generated on Sat Mar 14 2015 18:42:53 for Cellmodeller4 by
+    <li class="footer">Generated on Wed Mar 25 2015 19:32:33 for Cellmodeller4 by
     <a href="http://www.doxygen.org/index.html">
     <img class="footer" src="doxygen.png" alt="doxygen"/></a> 1.8.9.1 </li>
   </ul>

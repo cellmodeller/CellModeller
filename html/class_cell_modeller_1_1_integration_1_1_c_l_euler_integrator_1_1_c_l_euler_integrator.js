@@ -8,6 +8,7 @@ var class_cell_modeller_1_1_integration_1_1_c_l_euler_integrator_1_1_c_l_euler_i
     [ "initArrays", "class_cell_modeller_1_1_integration_1_1_c_l_euler_integrator_1_1_c_l_euler_integrator.html#a31997bc440e5fe2f04c90a748fe36b31", null ],
     [ "initKernels", "class_cell_modeller_1_1_integration_1_1_c_l_euler_integrator_1_1_c_l_euler_integrator.html#a7d1372627027f9df8c1ef57c5223bd8c", null ],
     [ "makeViews", "class_cell_modeller_1_1_integration_1_1_c_l_euler_integrator_1_1_c_l_euler_integrator.html#a87a799c9f144558f895fcda2cf8d6dda", null ],
+    [ "setLevels", "class_cell_modeller_1_1_integration_1_1_c_l_euler_integrator_1_1_c_l_euler_integrator.html#a38ee15c13b9b8228bc34221302e74bf7", null ],
     [ "setRegulator", "class_cell_modeller_1_1_integration_1_1_c_l_euler_integrator_1_1_c_l_euler_integrator.html#a7e04d1926a51d8f6d13e2bf12f8b5a2e", null ],
     [ "step", "class_cell_modeller_1_1_integration_1_1_c_l_euler_integrator_1_1_c_l_euler_integrator.html#a39eff0de0bc670a5d5214ac2d3e13039", null ],
     [ "cellStates", "class_cell_modeller_1_1_integration_1_1_c_l_euler_integrator_1_1_c_l_euler_integrator.html#a7f683c7e00cb625c20e72e5df57ae231", null ],

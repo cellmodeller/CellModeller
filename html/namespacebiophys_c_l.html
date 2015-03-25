@@ -254,7 +254,7 @@ Variables</h2></td></tr>
 <p>Definition at line <a class="el" href="biophys_c_l_8py_source.html#l00010">10</a> of file <a class="el" href="biophys_c_l_8py_source.html">biophysCL.py</a>.</p>
 <div class="fragment"><div class="line"><a name="l00010"></a><span class="lineno"><a class="line" href="namespacebiophys_c_l.html#a28b4dd93ffaf2bc18ecebb7260fc346a">   10</a></span>&#160;<span class="keyword">def </span><a class="code" href="namespacebiophys_c_l.html#a28b4dd93ffaf2bc18ecebb7260fc346a">setup</a>(sim):</div>
 <div class="line"><a name="l00011"></a><span class="lineno">   11</span>&#160;    <span class="comment"># Set biophysics, signalling, and regulation models</span></div>
-<div class="line"><a name="l00012"></a><span class="lineno">   12</span>&#160;    biophys = <a class="code" href="class_cell_modeller_1_1_biophysics_1_1_bacterial_models_1_1_c_l_bacterium_1_1_c_l_bacterium.html">CLBacterium</a>(sim, max_substeps=8, max_cells=max_cells, max_contacts=32, max_sqs=192**2, jitter_z=<span class="keyword">False</span>, reg_param=2, gamma=10)</div>
+<div class="line"><a name="l00012"></a><span class="lineno">   12</span>&#160;    biophys = <a class="code" href="class_cell_modeller_1_1_biophysics_1_1_bacterial_models_1_1_c_l_bacterium_1_1_c_l_bacterium.html">CLBacterium</a>(sim, max_substeps=8, max_cells=max_cells, max_contacts=32, max_sqs=192**2, jitter_z=<span class="keyword">True</span>, reg_param=2, gamma=10)</div>
 <div class="line"><a name="l00013"></a><span class="lineno">   13</span>&#160;    <span class="comment">#biophys.addPlane((0,0,-0.5), (0,0,1), 1.0)</span></div>
 <div class="line"><a name="l00014"></a><span class="lineno">   14</span>&#160;    <span class="comment">#biophys.addPlane((0,0,0.5), (0,0,-1), math.sqrt(7.5e-4))</span></div>
 <div class="line"><a name="l00015"></a><span class="lineno">   15</span>&#160;</div>
@@ -278,7 +278,7 @@ Variables</h2></td></tr>
 <div class="line"><a name="l00033"></a><span class="lineno">   33</span>&#160;</div>
 <div class="ttc" id="class_cell_modeller_1_1_biophysics_1_1_bacterial_models_1_1_c_l_bacterium_1_1_c_l_bacterium_html"><div class="ttname"><a href="class_cell_modeller_1_1_biophysics_1_1_bacterial_models_1_1_c_l_bacterium_1_1_c_l_bacterium.html">CellModeller.Biophysics.BacterialModels.CLBacterium.CLBacterium</a></div><div class="ttdef"><b>Definition:</b> <a href="_c_l_bacterium_8py_source.html#l00014">CLBacterium.py:14</a></div></div>
 <div class="ttc" id="namespacebiophys_c_l_html_a28b4dd93ffaf2bc18ecebb7260fc346a"><div class="ttname"><a href="namespacebiophys_c_l.html#a28b4dd93ffaf2bc18ecebb7260fc346a">biophysCL.setup</a></div><div class="ttdeci">def setup(sim)</div><div class="ttdef"><b>Definition:</b> <a href="biophys_c_l_8py_source.html#l00010">biophysCL.py:10</a></div></div>
-<div class="ttc" id="class_cell_modeller_1_1_regulation_1_1_module_regulator_1_1_module_regulator_html"><div class="ttname"><a href="class_cell_modeller_1_1_regulation_1_1_module_regulator_1_1_module_regulator.html">CellModeller.Regulation.ModuleRegulator.ModuleRegulator</a></div><div class="ttdef"><b>Definition:</b> <a href="_module_regulator_8py_source.html#l00005">ModuleRegulator.py:5</a></div></div>
+<div class="ttc" id="class_cell_modeller_1_1_regulation_1_1_module_regulator_1_1_module_regulator_html"><div class="ttname"><a href="class_cell_modeller_1_1_regulation_1_1_module_regulator_1_1_module_regulator.html">CellModeller.Regulation.ModuleRegulator.ModuleRegulator</a></div><div class="ttdef"><b>Definition:</b> <a href="_module_regulator_8py_source.html#l00006">ModuleRegulator.py:6</a></div></div>
 </div><!-- fragment -->
 </div>
 </div>
@@ -331,7 +331,7 @@ Variables</h2></td></tr>
 <div id="nav-path" class="navpath"><!-- id is needed for treeview function! -->
   <ul>
     <li class="navelem"><a class="el" href="namespacebiophys_c_l.html">biophysCL</a></li>
-    <li class="footer">Generated on Sat Mar 14 2015 18:42:53 for Cellmodeller4 by
+    <li class="footer">Generated on Wed Mar 25 2015 19:32:32 for Cellmodeller4 by
     <a href="http://www.doxygen.org/index.html">
     <img class="footer" src="doxygen.png" alt="doxygen"/></a> 1.8.9.1 </li>
   </ul>

@@ -4,7 +4,7 @@
 <meta http-equiv="Content-Type" content="text/xhtml;charset=UTF-8"/>
 <meta http-equiv="X-UA-Compatible" content="IE=9"/>
 <meta name="generator" content="Doxygen 1.8.9.1"/>
-<title>Cellmodeller4: CellModeller/batch.py Source File</title>
+<title>Cellmodeller4: Scripts/batch.py Source File</title>
 <link href="tabs.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="jquery.js"></script>
 <script type="text/javascript" src="dynsections.js"></script>
@@ -107,7 +107,7 @@ $(document).ready(function(){initNavTree('batch_8py_source.html','');});
 <div class="title">batch.py</div>  </div>
 </div><!--header-->
 <div class="contents">
-<a href="batch_8py.html">Go to the documentation of this file.</a><div class="fragment"><div class="line"><a name="l00001"></a><span class="lineno"><a class="line" href="namespace_cell_modeller_1_1batch.html">    1</a></span>&#160;<span class="keyword">import</span> os</div>
+<a href="batch_8py.html">Go to the documentation of this file.</a><div class="fragment"><div class="line"><a name="l00001"></a><span class="lineno"><a class="line" href="namespacebatch.html">    1</a></span>&#160;<span class="keyword">import</span> os</div>
 <div class="line"><a name="l00002"></a><span class="lineno">    2</span>&#160;<span class="keyword">import</span> sys</div>
 <div class="line"><a name="l00003"></a><span class="lineno">    3</span>&#160;<span class="keyword">import</span> subprocess</div>
 <div class="line"><a name="l00004"></a><span class="lineno">    4</span>&#160;<span class="keyword">import</span> string</div>
@@ -115,27 +115,27 @@ $(document).ready(function(){initNavTree('batch_8py_source.html','');});
 <div class="line"><a name="l00006"></a><span class="lineno">    6</span>&#160;</div>
 <div class="line"><a name="l00007"></a><span class="lineno">    7</span>&#160;<span class="keyword">from</span> <a class="code" href="namespace_cell_modeller_1_1_simulator.html">CellModeller.Simulator</a> <span class="keyword">import</span> Simulator</div>
 <div class="line"><a name="l00008"></a><span class="lineno">    8</span>&#160;</div>
-<div class="line"><a name="l00009"></a><span class="lineno">    9</span>&#160;sys.path.append(<span class="stringliteral">&#39;Models&#39;</span>)</div>
+<div class="line"><a name="l00009"></a><span class="lineno">    9</span>&#160;sys.path.append(<span class="stringliteral">&#39;../../Models&#39;</span>)</div>
 <div class="line"><a name="l00010"></a><span class="lineno">   10</span>&#160;</div>
-<div class="line"><a name="l00011"></a><span class="lineno"><a class="line" href="namespace_cell_modeller_1_1batch.html#ad2b5b6f5a6662c8a3a7999b94108ec35">   11</a></span>&#160;max_cells = 30000</div>
-<div class="line"><a name="l00012"></a><span class="lineno"><a class="line" href="namespace_cell_modeller_1_1batch.html#a5a1b0db371dd46986dcc47d2932c6e5b">   12</a></span>&#160;cell_buffer = 256</div>
+<div class="line"><a name="l00011"></a><span class="lineno"><a class="line" href="namespacebatch.html#a4107f8a8499c28955f2cf049d58a7b83">   11</a></span>&#160;max_cells = 100000</div>
+<div class="line"><a name="l00012"></a><span class="lineno"><a class="line" href="namespacebatch.html#acc19e1e8bf2e9928990167433677fd19">   12</a></span>&#160;cell_buffer = 256</div>
 <div class="line"><a name="l00013"></a><span class="lineno">   13</span>&#160;</div>
-<div class="line"><a name="l00014"></a><span class="lineno"><a class="line" href="namespace_cell_modeller_1_1batch.html#ad9950be281dbe5b13d7bc35e1e31983e">   14</a></span>&#160;<span class="keyword">def </span><a class="code" href="namespace_cell_modeller_1_1batch.html#ad9950be281dbe5b13d7bc35e1e31983e">simulate</a>(mod_name, steps=50):</div>
-<div class="line"><a name="l00015"></a><span class="lineno">   15</span>&#160;    sim = <a class="code" href="class_cell_modeller_1_1_simulator_1_1_simulator.html">Simulator</a>(mod_name, 0.25)</div>
+<div class="line"><a name="l00014"></a><span class="lineno"><a class="line" href="namespacebatch.html#aa507fc2d1611851527ffbce1ef26ea36">   14</a></span>&#160;<span class="keyword">def </span><a class="code" href="namespacebatch.html#aa507fc2d1611851527ffbce1ef26ea36">simulate</a>(mod_name, steps=50):</div>
+<div class="line"><a name="l00015"></a><span class="lineno">   15</span>&#160;    sim = <a class="code" href="class_cell_modeller_1_1_simulator_1_1_simulator.html">Simulator</a>(mod_name, 0.25, <span class="keywordtype">None</span>)</div>
 <div class="line"><a name="l00016"></a><span class="lineno">   16</span>&#160;    <span class="keywordflow">while</span> len(sim.cellStates) &lt; max_cells-cell_buffer:</div>
 <div class="line"><a name="l00017"></a><span class="lineno">   17</span>&#160;        sim.step()</div>
 <div class="line"><a name="l00018"></a><span class="lineno">   18</span>&#160;</div>
-<div class="line"><a name="l00019"></a><span class="lineno">   19</span>&#160;<a class="code" href="namespace_cell_modeller_1_1batch.html#ad9950be281dbe5b13d7bc35e1e31983e">simulate</a>(sys.argv[1])</div>
-<div class="ttc" id="namespace_cell_modeller_1_1batch_html_ad9950be281dbe5b13d7bc35e1e31983e"><div class="ttname"><a href="namespace_cell_modeller_1_1batch.html#ad9950be281dbe5b13d7bc35e1e31983e">CellModeller.batch.simulate</a></div><div class="ttdeci">def simulate</div><div class="ttdef"><b>Definition:</b> <a href="batch_8py_source.html#l00014">batch.py:14</a></div></div>
-<div class="ttc" id="class_cell_modeller_1_1_simulator_1_1_simulator_html"><div class="ttname"><a href="class_cell_modeller_1_1_simulator_1_1_simulator.html">CellModeller.Simulator.Simulator</a></div><div class="ttdef"><b>Definition:</b> <a href="_simulator_8py_source.html#l00008">Simulator.py:8</a></div></div>
+<div class="line"><a name="l00019"></a><span class="lineno">   19</span>&#160;<a class="code" href="namespacebatch.html#aa507fc2d1611851527ffbce1ef26ea36">simulate</a>(sys.argv[1])</div>
+<div class="ttc" id="class_cell_modeller_1_1_simulator_1_1_simulator_html"><div class="ttname"><a href="class_cell_modeller_1_1_simulator_1_1_simulator.html">CellModeller.Simulator.Simulator</a></div><div class="ttdef"><b>Definition:</b> <a href="_simulator_8py_source.html#l00013">Simulator.py:13</a></div></div>
 <div class="ttc" id="namespace_cell_modeller_1_1_simulator_html"><div class="ttname"><a href="namespace_cell_modeller_1_1_simulator.html">CellModeller.Simulator</a></div><div class="ttdef"><b>Definition:</b> <a href="_simulator_8py_source.html#l00001">Simulator.py:1</a></div></div>
+<div class="ttc" id="namespacebatch_html_aa507fc2d1611851527ffbce1ef26ea36"><div class="ttname"><a href="namespacebatch.html#aa507fc2d1611851527ffbce1ef26ea36">batch.simulate</a></div><div class="ttdeci">def simulate</div><div class="ttdef"><b>Definition:</b> <a href="batch_8py_source.html#l00014">batch.py:14</a></div></div>
 </div><!-- fragment --></div><!-- contents -->
 </div><!-- doc-content -->
 <!-- start footer part -->
 <div id="nav-path" class="navpath"><!-- id is needed for treeview function! -->
   <ul>
-    <li class="navelem"><a class="el" href="dir_15c08f5c128f7957cfc684b2d5d24c4f.html">CellModeller</a></li><li class="navelem"><a class="el" href="batch_8py.html">batch.py</a></li>
-    <li class="footer">Generated on Sat Mar 14 2015 18:42:52 for Cellmodeller4 by
+    <li class="navelem"><a class="el" href="dir_4edcbb236dfd51dd81727243a38df6a0.html">Scripts</a></li><li class="navelem"><a class="el" href="batch_8py.html">batch.py</a></li>
+    <li class="footer">Generated on Wed Mar 25 2015 19:32:32 for Cellmodeller4 by
     <a href="http://www.doxygen.org/index.html">
     <img class="footer" src="doxygen.png" alt="doxygen"/></a> 1.8.9.1 </li>
   </ul>
