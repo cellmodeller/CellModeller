@@ -1,0 +1,4 @@
+var namespace_cell_modeller_1_1_integration_1_1_c_l_crank_nic_integrator =
+[
+    [ "CLCrankNicIntegrator", "class_cell_modeller_1_1_integration_1_1_c_l_crank_nic_integrator_1_1_c_l_crank_nic_integrator.html", "class_cell_modeller_1_1_integration_1_1_c_l_crank_nic_integrator_1_1_c_l_crank_nic_integrator" ]
+];
