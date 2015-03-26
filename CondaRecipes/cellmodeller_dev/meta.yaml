@@ -3,9 +3,8 @@ package:
   version: !!str 4.1.0
 
 source:
-  git_url: http://github.com/HaseloffLab/CellModeller4_private.git
+  git_url: http://github.com/HaseloffLab/CellModeller_private.git
   git_tag: 4.1.0
-#git@github.com:HaseloffLab/CellModeller4_private.git
 #  patches:
    # List any patch files here
    # - fix.patch

@@ -3,9 +3,8 @@ package:
   version: !!str "4.1.0"
 
 source:
-  git_url: http://github.com/HaseloffLab/CellModeller4.git
+  git_url: http://github.com/HaseloffLab/CellModeller.git
   git_tag: 4.1.0
-#  git_url: git@github.com:HaseloffLab/CellModeller4.git
 #  patches:
    # List any patch files here
    # - fix.patch
