@@ -6,7 +6,7 @@ THIS_DIR="`dirname $0`"
 VERSION=`git describe`
 
 # OSX from public repo
-INSTALLERDIR=CellModeller-$VERSION-OSX
+INSTALLERDIR=InstallCellModeller-$VERSION-OSX
 mkdir -p $INSTALLERDIR
 mkdir -p $INSTALLERDIR/PackageFiles
 cp -Rf $THIS_DIR/../Examples $INSTALLERDIR/PackageFiles/
@@ -22,7 +22,7 @@ tar -czf $INSTALLERDIR.tgz $INSTALLERDIR
 rm -rf $INSTALLERDIR
 
 # OSX from private repo
-INSTALLERDIR=CellModeller-$VERSION-OSX-dev
+INSTALLERDIR=InstallCellModeller-$VERSION-OSX-dev
 mkdir -p $INSTALLERDIR
 mkdir -p $INSTALLERDIR/PackageFiles
 cp -Rf $THIS_DIR/../Examples $INSTALLERDIR/PackageFiles/
@@ -38,7 +38,7 @@ tar -czf $INSTALLERDIR.tgz $INSTALLERDIR
 rm -rf $INSTALLERDIR
 
 # Linux 64bit from public repo
-INSTALLERDIR=CellModeller-$VERSION-Linux64
+INSTALLERDIR=InstallCellModeller-$VERSION-Linux64
 mkdir -p $INSTALLERDIR
 mkdir -p $INSTALLERDIR/PackageFiles
 cp -Rf $THIS_DIR/../Examples $INSTALLERDIR/PackageFiles/
@@ -54,7 +54,7 @@ tar -czf $INSTALLERDIR.tgz $INSTALLERDIR
 rm -rf $INSTALLERDIR
 
 # Linux 64bit from private repo
-INSTALLERDIR=CellModeller-$VERSION-Linux64-dev
+INSTALLERDIR=InstallCellModeller-$VERSION-Linux64-dev
 mkdir -p $INSTALLERDIR
 mkdir -p $INSTALLERDIR/PackageFiles
 cp -Rf $THIS_DIR/../Examples $INSTALLERDIR/PackageFiles/
