@@ -76,7 +76,7 @@ BINDIR=$CMDIR/bin
 mkdir -p $CMDIR
 mkdir -p $DATADIR
 mkdir -p $BINDIR
-#mkdir -p $MODELDIR
+mkdir -p $MODELDIR
 #mkdir -p $EXAMPLEDIR
 #mkdir -p $SCRIPTDIR
 #mkdir -p $DOCDIR
@@ -84,7 +84,6 @@ mkdir -p $BINDIR
 # Copy required stuff
 cp -Ri $THIS_DIR/PackageFiles/Scripts $CMDIR
 cp -Ri $THIS_DIR/PackageFiles/Doc $CMDIR
-cp -Ri $THIS_DIR/PackageFiles/Models $CMDIR
 cp -Ri $THIS_DIR/PackageFiles/Examples $CMDIR
 cp $THIS_DIR/PackageFiles/cmpython $BINDIR/
 cp $THIS_DIR/PackageFiles/cmgui $BINDIR/

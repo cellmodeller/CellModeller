@@ -3,7 +3,7 @@
 THIS_DIR="`dirname $0`"
 
 # How to get release version from git tag?
-VERSION=1.0
+VERSION=`git describe`
 
 # OSX from public repo
 INSTALLERDIR=CellModeller-$VERSION-OSX
@@ -11,7 +11,7 @@ mkdir -p $INSTALLERDIR
 mkdir -p $INSTALLERDIR/PackageFiles
 cp -Rf $THIS_DIR/../Examples $INSTALLERDIR/PackageFiles/
 cp -Rf $THIS_DIR/../Scripts $INSTALLERDIR/PackageFiles/
-cp -Rf $THIS_DIR/../Models $INSTALLERDIR/PackageFiles/
+cp -Rf $THIS_DIR/../Examples $INSTALLERDIR/PackageFiles/
 cp -Rf $THIS_DIR/../Doc $INSTALLERDIR/PackageFiles/
 cp $THIS_DIR/cmpython $INSTALLERDIR/PackageFiles/
 cp $THIS_DIR/cmgui $INSTALLERDIR/PackageFiles/
@@ -27,7 +27,7 @@ mkdir -p $INSTALLERDIR
 mkdir -p $INSTALLERDIR/PackageFiles
 cp -Rf $THIS_DIR/../Examples $INSTALLERDIR/PackageFiles/
 cp -Rf $THIS_DIR/../Scripts $INSTALLERDIR/PackageFiles/
-cp -Rf $THIS_DIR/../Models $INSTALLERDIR/PackageFiles/
+cp -Rf $THIS_DIR/../Examples $INSTALLERDIR/PackageFiles/
 cp -Rf $THIS_DIR/../Doc $INSTALLERDIR/PackageFiles/
 cp $THIS_DIR/cmpython $INSTALLERDIR/PackageFiles/
 cp $THIS_DIR/cmgui $INSTALLERDIR/PackageFiles/
@@ -43,7 +43,7 @@ mkdir -p $INSTALLERDIR
 mkdir -p $INSTALLERDIR/PackageFiles
 cp -Rf $THIS_DIR/../Examples $INSTALLERDIR/PackageFiles/
 cp -Rf $THIS_DIR/../Scripts $INSTALLERDIR/PackageFiles/
-cp -Rf $THIS_DIR/../Models $INSTALLERDIR/PackageFiles/
+cp -Rf $THIS_DIR/../Examples $INSTALLERDIR/PackageFiles/
 cp -Rf $THIS_DIR/../Doc $INSTALLERDIR/PackageFiles/
 cp $THIS_DIR/cmpython $INSTALLERDIR/PackageFiles/
 cp $THIS_DIR/cmgui $INSTALLERDIR/PackageFiles/
@@ -59,7 +59,7 @@ mkdir -p $INSTALLERDIR
 mkdir -p $INSTALLERDIR/PackageFiles
 cp -Rf $THIS_DIR/../Examples $INSTALLERDIR/PackageFiles/
 cp -Rf $THIS_DIR/../Scripts $INSTALLERDIR/PackageFiles/
-cp -Rf $THIS_DIR/../Models $INSTALLERDIR/PackageFiles/
+cp -Rf $THIS_DIR/../Examples $INSTALLERDIR/PackageFiles/
 cp -Rf $THIS_DIR/../Doc $INSTALLERDIR/PackageFiles/
 cp $THIS_DIR/cmpython $INSTALLERDIR/PackageFiles/
 cp $THIS_DIR/cmgui $INSTALLERDIR/PackageFiles/
