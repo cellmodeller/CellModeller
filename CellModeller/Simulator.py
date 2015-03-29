@@ -35,6 +35,7 @@ visualised.
         self._next_id = 1
         self._next_idx = 0
         self.idToIdx = {}
+        self.idxToId = {}
         # Map from id to cell state
         self.cellStates = {}
         self.reg = None
@@ -244,8 +245,10 @@ visualised.
         # Update indexing, reuse parent index for d1
         d1State.idx = pState.idx
         self.idToIdx[d1id] = pState.idx
+        self.idxToId[pState.idx] = d1id
         d2State.idx = self.next_idx()
         self.idToIdx[d2id] = d2State.idx
+        self.idxToId[d2State.idx] = d2id
         del self.idToIdx[pid]
 
         # Divide the cell in each model
@@ -265,6 +268,7 @@ visualised.
         cs.cellAdh = cellAdh
         cs.idx = self.next_idx()
         self.idToIdx[cid] = cs.idx
+        self.idxToId[cs.idx] = cid
         self.cellStates[cid] = cs
         if self.integ:
             self.integ.addCell(cs)
@@ -272,6 +276,7 @@ visualised.
         if self.sig:
             self.sig.addCell(cs)
         self.phys.addCell(cs, **kwargs)
+        return cid, cs
 
     #---
     # Some functions to modify existing cells (e.g. from GUI)
