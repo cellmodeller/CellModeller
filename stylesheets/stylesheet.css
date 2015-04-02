@@ -58,7 +58,7 @@ a {
   text-align: center;
   background-color: #159957;
   background-image: url("../OtherImages/boundary.png")/*linear-gradient(120deg, #155799, #159957)*/;
-  background-size: contain; }
+  background-size: 100%; }
 
 @media screen and (min-width: 64em) {
   .page-header {
