@@ -57,7 +57,7 @@ a {
   color: #fff;
   text-align: center;
   background-color: #159957;
-  background-image: url("../OtherImages/colors.jpg")/*linear-gradient(120deg, #155799, #159957)*/;
+  background-image: url("../OtherImages/boundary.png")/*linear-gradient(120deg, #155799, #159957)*/;
   background-size: contain; }
 
 @media screen and (min-width: 64em) {
