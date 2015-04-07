@@ -1,38 +1,50 @@
+import os
 import sys
 import math
-import cPickle
 import string
+
 from reportlab.pdfgen.canvas import Canvas
 from reportlab.lib import units
-import numpy
 from reportlab.lib.colors import Color
-import math
 
+import numpy
+import cPickle
 
 class CellModellerPDFGenerator(Canvas):
     # ---
     # Class that extends reportlab pdf canvas to draw CellModeller simulations
     # ---
-    def __init__(self, name, data):
+    def __init__(self, name, data, bg_color):
         self.name = name
         self.states = data.get('cellStates')
         self.signals = data.get('signals')
         self.parents = data.get('lineage')
         self.data = data
+        self.bg_color = bg_color
         Canvas.__init__(self, name)
 
-    def setup_canvas(self, name, world, page, page_center, bg_color):
-        #c = canvas.Canvas(name)
+    # ----
+    # Inherit this class and override the following method to change
+    # how cell color is computed from current CellState.
+    # Default behaviour is to use CellState.color, and outline in black
+    # ----
+    def calc_cell_colors(self, state):
+        # Generate Color objects from cellState, with black outline
+        (r,g,b) = state.color
+        # Return value is tuple of colors, (fill, stroke)
+        return [Color(r,g,b,alpha=1.0) , Color(0,0,0,alpha=1.0)]
+    # ----
+
+    def setup_canvas(self, name, world, page, page_center):
         worldx,worldy = world
         pagex,pagey = page
         page_centx,page_centy = page_center
         self.setPageSize((pagex*units.cm, pagey*units.cm))
-        self.setFillColor(bg_color)
+        self.setFillColor(self.bg_color)
         self.rect(0, 0, pagex*units.cm, pagey*units.cm, fill=1)
         self.translate(pagex*units.cm/2.0, pagey*units.cm/2.0)
         self.translate(page_centx*units.cm, page_centy*units.cm)
         self.scale(float(pagex*units.cm)/worldx, float(pagey*units.cm)/worldy)
-        #return c
 
     def capsule_path(self, l, r):
         path = self.beginPath()
@@ -45,11 +57,6 @@ class CellModellerPDFGenerator(Canvas):
         path.arc(-l/2.0-r, -r, -l/2.0+r, r, 90, 180)
         #path.close()
         return path
-
-    def calc_cell_colors(self, state):
-        # Generate Color object from cellState, with black outline
-        (r,g,b) = state.color
-        return [Color(r,g,b,alpha=1.0) , Color(0,0,0,alpha=1.0)]
 
     def draw_capsule(self, p, d, l, r, fill_color, stroke_color):
         self.saveState()
@@ -93,8 +100,8 @@ class CellModellerPDFGenerator(Canvas):
                 self.setFillColorRGB(1.0-lvl, 1.0-lvl, 1.0-lvl)
                 self.rect(x-l[0]/2.0, y-l[1]/2.0, l[0], l[1], stroke=0, fill=1)
 
-    def draw_frame(self, name, world, page, center, bg_color):
-        self.setup_canvas(name, world, page, center, bg_color)
+    def draw_frame(self, name, world, page, center):
+        self.setup_canvas(name, world, page, center)
         #draw_chamber(c)
         if self.signals: 
             self.draw_signals()
@@ -106,7 +113,6 @@ class CellModellerPDFGenerator(Canvas):
         while id not in founders:
             id = parents[id]
         return id
-
 
     def computeBox(self):
         # Find bounding box of colony, minimum size = (40,40)
@@ -131,14 +137,29 @@ def importPickle(fname):
     if fname[-7:]=='.pickle':
         print 'Importing CellModeller pickle file: %s'%fname
         data = cPickle.load(open(fname, 'rb'))
+
+        # Check for old-style pickle that is tuple, 
+        # just extract cellStates from 1st element
+        if isinstance(data, tuple):
+            data = {'cellStates':data[0]}
+        # Return dictionary of simulation data
         return data
     else:
         return None
 
+# Define a pdf generator class with cell outline color same as fill color
+class MyPDFGenerator(CellModellerPDFGenerator):
+    def calc_cell_colors(self, state):
+        # Generate Color objects from cellState, fill=stroke
+        (r,g,b) = state.color
+        # Return value is tuple of colors, (fill, stroke)
+        fcol = Color(r,g,b,alpha=1.0)
+        scol = Color(r*0.5,g*0.5,b*0.5,alpha=1.0)
+        return [fcol,scol]
 
 def main():
     # To do: parse some useful arguments as rendering options here
-    # e.g. outline color, page size, etself.
+    # e.g. outline color, page size, etc.
     #
     # For now, put these options into variables here:
     bg_color = Color(1.0,1.0,1.0,alpha=1.0)
@@ -147,10 +168,13 @@ def main():
     infns = sys.argv[1:]
     for infn in infns:
         # File names
-        if infn[-4:]=='.pdf': continue
-        frameno = int(infn[-11:-7])/10
-        outfn = string.replace(infn, '.pickle', '-1um.pdf')
-        print 'Frame %d: Processing %s to generate %s'%(frameno,infn,outfn)
+        if infn[-7:]!='.pickle':
+            print 'Ignoring file %s, because its not a pickle...'%(infn)
+            continue
+
+        outfn = string.replace(infn, '.pickle', '.pdf')
+        outfn = os.path.basename(outfn) # Put output in this dir
+        print 'Processing %s to generate %s'%(infn,outfn)
         
         # Import data
         data = importPickle(infn)
@@ -159,13 +183,15 @@ def main():
             return
 
         # Create a pdf canvas thing
-        pdf = CellModellerPDFGenerator(outfn, data)
+        pdf = MyPDFGenerator(outfn, data, bg_color)
 
         # Get the bounding square of the colony to size the image
         # This will resize the image to fit the page...
         # ** alternatively you can specify a fixed world size here
-        (w,h) = pdf.computeBox()
-        world = (w,h)
+        '''(w,h) = pdf.computeBox()
+        sqrt2 = math.sqrt(2)
+        world = (w/sqrt2,h/sqrt2)'''
+        world = (250,250)
 
         # Page setup
         page = (20,20)
@@ -173,7 +199,7 @@ def main():
 
         # Render pdf
         print 'Rendering PDF output to %s'%outfn
-        pdf.draw_frame(outfn, world, page, center, bg_color)
+        pdf.draw_frame(outfn, world, page, center)
 
 if __name__ == "__main__": 
     main()
