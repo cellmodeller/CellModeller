@@ -4,14 +4,21 @@
 # The easiest way to install on OSX is to install homebrew package manager
 # and then "brew install imagemagick" etc.
 
-#for f in $( ls *.pickle ); do
-for f in $( ls *.pdf ); do
+# Run Draw2DPDF to generate pdf files
+for f in $( ls *.pickle ); do
     echo Processing: $f
-#    cmpython ../../Scripts/Draw2DPDF.py $f
-#    NAME=`basename $f .pickle`
-    NAME=`basename $f .pdf`
-#    convert $NAME-1um.pdf -resize 1024x1024 $NAME.png
-    convert $NAME.pdf -resize 1024x1024 $NAME.png
+    $CMPATH/bin/cmpython $CMPATH/Scripts/Draw2DPDF.py $f
 done
 
-ffmpeg -r 24 -i step-%04d0.png video.mp4
+# Convert and resize etc. pdf files into jpegs
+for f in $( ls *.pdf ); do
+    NAME=`basename $f .pdf`
+    convert \
+           -verbose       \
+           -density 300   \
+            $NAME.pdf      \
+            $NAME.jpg
+done
+
+# Run ffmpeg to generate video file
+ffmpeg -framerate 24 -i step-%04d0.jpg -resize 1920x1080 -r 24 $1
