@@ -28,7 +28,7 @@ ui.raise_()
 cmv = ui.PyGLCMViewer
 
 # Load a model if specified
-if len(sys.argv) > 1: cmv.loadFile(sys.argv[1])
+if len(sys.argv) > 1: cmv.loadModelFile(sys.argv[1])
 
 # Launch app main loop
 sys.exit(qapp.exec_())

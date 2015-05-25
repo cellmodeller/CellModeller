@@ -5,12 +5,18 @@ from CellModeller.GUI import Renderers
 import numpy
 import math
 
-max_cells = 400000
+max_cells = 2**15
 
 def setup(sim):
     # Set biophysics, signalling, and regulation models
-    biophys = CLBacterium(sim, max_substeps=8, max_cells=max_cells, max_contacts=32, max_sqs=192**2, jitter_z=False, reg_param=2, gamma=10)
- 
+    biophys = CLBacterium(sim, \
+                            max_substeps=8, \
+                            max_cells=max_cells, \
+                            max_contacts=32, \
+                            max_sqs=192**2, \
+                            jitter_z=False, \
+                            reg_param=2, \
+                            gamma=10)
 
     # use this file for reg too
     regul = ModuleRegulator(sim, sim.moduleName)	
@@ -32,24 +38,15 @@ def init(cell):
     # Specify growth rate of cells
     cell.growthRate = 2.0
 
-def numSignals(): # We leave this part empty as we do not simulate cell-cell signaling here
-    return 0
-
-def numSpecies(): # We leave this part empty as we do not simulate intracellular gene network here
-    return 0
-
 def update(cells):
     #Iterate through each cell and flag cells that reach target size for division
     for (id, cell) in cells.iteritems():
         cell.color = [cell.cellType*0.6+0.1, 1.0-cell.cellType*0.6, 0.3]
         if cell.volume > cell.targetVol:
-            a = 1
-            cell.asymm = [a,1]
             cell.divideFlag = True
 
 def divide(parent, d1, d2):
     # Specify target cell size that triggers cell division
     d1.targetVol = 2.5 + random.uniform(0.0,0.5)
     d2.targetVol = 2.5 + random.uniform(0.0,0.5)
-    #d1.species[0] = 0.75*parent
 

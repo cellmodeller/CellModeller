@@ -5,13 +5,20 @@ from CellModeller.GUI import Renderers
 import numpy
 import math
 
-max_cells = 400000
+max_cells = 2**15
 
 def setup(sim):
     # Set biophysics, signalling, and regulation models
-    biophys = CLBacterium(sim, max_substeps=8, max_cells=max_cells, max_contacts=32, max_sqs=128**2, jitter_z=False, reg_param=2, gamma=10)
+    biophys = CLBacterium(sim, \
+                            max_substeps=8, \
+                            max_cells=max_cells, \
+                            max_contacts=32, \
+                            max_sqs=128**2, \
+                            jitter_z=False, \
+                            reg_param=2, \
+                            gamma=10)
 
-    regul = ModuleRegulator(sim, sim.moduleName)	# use this file for reg too
+    regul = ModuleRegulator(sim)	# use this file for reg too
     # Only biophys and regulation
     sim.init(biophys, regul, None, None)
 
@@ -28,19 +35,10 @@ def init(cell):
     cell.n_a = 3
     cell.n_b = 3
 
-def numSignals():
-    return 0
-
-def numSpecies():
-    return 0
-
 def update(cells):
     for (id, cell) in cells.iteritems():
         cell.color = [0.1, cell.n_a/3.0, cell.n_b/3.0]
-        #max(cell.startVol*2.0,0.0): #cell.startvol*2: #random.uniform(1.75,2.0):
         if cell.volume > cell.targetVol:
-            a = 1#random.uniform(0.95,1.05)
-            cell.asymm = [a,1]
             cell.divideFlag = True
 
 def divide(parent, d1, d2):

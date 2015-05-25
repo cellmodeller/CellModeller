@@ -10,7 +10,8 @@ from CellModeller.Signalling.GridDiffusion import GridDiffusion #add
 
 
 
-max_cells = 400000
+max_cells = 2**15
+
 #Specify parameter for solving diffusion dynamics #Add
 grid_size = (4, 4, 4) # grid size
 grid_dim = (64, 8, 12) # dimension of diffusion space, unit = number of grid
@@ -19,25 +20,29 @@ grid_orig = (-128, -14, -8) # where to place the diffusion space onto simulation
 
 def setup(sim):
     # Set biophysics, signalling, and regulation models
-    biophys = CLBacterium(sim, max_substeps=8, max_cells=max_cells, max_contacts=32, max_sqs=192**2, jitter_z=False, reg_param=2, gamma=10)
+    biophys = CLBacterium(sim, \
+                            max_substeps=8, \
+                            max_cells=max_cells, \
+                            max_contacts=32, \
+                            max_sqs=192**2, \
+                            jitter_z=False, \
+                            reg_param=2, \
+                            gamma=10)
  
     # add the planes to set physical  boundaries of cell growth
     biophys.addPlane((0,-16,0), (0,1,0), 1)
     biophys.addPlane((0,16,0), (0,-1,0), 1)
 
     sig = GridDiffusion(sim, 1, grid_dim, grid_size, grid_orig, [10.0])
-    integ = CLCrankNicIntegrator(sim, 1, 5, max_cells, sig, boundcond='reflect')
+    integ = CLCrankNicIntegrator(sim, 1, 2, max_cells, sig, boundcond='reflect')
 
     # use this file for reg too
     regul = ModuleRegulator(sim, sim.moduleName)	
     # Only biophys and regulation
     sim.init(biophys, regul, sig, integ)
 
-
     # Specify the initial cell and its location in the simulation
     sim.addCell(cellType=0, pos=(0,0,0)) 
-
-
 
     # Add some objects to draw the models
     therenderer = Renderers.GLBacteriumRenderer(sim)
@@ -58,13 +63,6 @@ def init(cell):
     cell.species[:] = [0]
     # Specify initial concentration of signaling molecules 
     cell.signals[:] = [0]
-
-
-def numSignals(): 
-    return 0
-
-def numSpecies(): 
-    return 0
 
 def specRateCL(): # Add
     return '''
@@ -94,8 +92,6 @@ def update(cells):
     for (id, cell) in cells.iteritems():
         cell.color = [0.1+cell.species[0]/20.0, 0.1, 0.1]
         if cell.volume > cell.targetVol:
-            a = 1
-            cell.asymm = [a,1]
             cell.divideFlag = True
 
 def divide(parent, d1, d2):

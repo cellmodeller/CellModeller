@@ -1,10 +1,10 @@
 package:
   name: cellmodeller
-  version: !!str "4.1.0"
+  version: !!str "4.2.0"
 
 source:
   git_url: http://github.com/HaseloffLab/CellModeller.git
-  git_tag: 4.1.0
+  git_tag: 4.2.0
 #  patches:
    # List any patch files here
    # - fix.patch

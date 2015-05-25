@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
- <class>CellModeller4</class>
- <widget class="QMainWindow" name="CellModeller4">
+ <class>CellModeller</class>
+ <widget class="QMainWindow" name="CellModeller">
   <property name="geometry">
    <rect>
     <x>0</x>
@@ -11,7 +11,7 @@
    </rect>
   </property>
   <property name="windowTitle">
-   <string>CellModeller4</string>
+   <string>CellModeller</string>
   </property>
   <widget class="QWidget" name="centralwidget">
    <layout class="QGridLayout" name="gridLayout">

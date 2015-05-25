@@ -1,6 +1,6 @@
 #define EPSILON 0.1f
-#define MARGIN 0.01f
-#define RHS_FRAC 0.5f
+#define MARGIN 0.f
+#define RHS_FRAC 1.f 
 #define ANG_LIMIT ((float)(5.f*3.14159f/180.f))
 #define ISQRT2 ((float)(1.f/sqrt(2.f)))
 #define POINT 0.01f

@@ -9,6 +9,7 @@ import numpy
 import inspect
 import imp
 import ConfigParser
+import importlib
 
 class Simulator:
     """
@@ -30,66 +31,98 @@ visualised.
     ## Construct an empty simulator object. This object will not be able to
     # do anything yet unti we use 'init' method to specify the models for
     # physical interaction, genetic circuit, diffusion and integrator.
-    def __init__(self, moduleName, dt, invar=False, pickleSteps=50, pickleFileRoot=False, fromPickle=False):
-        self.dt = dt
-        self._next_id = 1
-        self._next_idx = 0
-        self.idToIdx = {}
-        # Map from id to cell state
-        self.cellStates = {}
+    def __init__(self, \
+                    moduleName, \
+                    dt, \
+                    outputSteps=50, \
+                    outputFileDir=None, \
+                    moduleStr=None, \
+                    saveOutput=True, \
+                    clPlatformNum=0, \
+                    clDeviceNum=0):
+        # No models specified yet
         self.reg = None
         self.phys = None
         self.sig = None
         self.integ = None
+
+        # No cells yet, initialise indices and empty lists/dicts, zero counters
+        self._next_id = 1
+        self._next_idx = 0
+        self.idToIdx = {}
+        self.cellStates = {}
         self.renderers = []
         self.stepNum = 0
-        self.savePickle = True
-        self.pickleSteps = pickleSteps
         self.lineage = {}
-        if fromPickle == False:
-            self.fromPickle = False
-        else:
-            self.fromPickle = True
+
+        # Time step
+        self.dt = dt
 
         if "CMPATH" in os.environ:
             self.cfg_file = os.path.join(os.environ["CMPATH"], 'CMconfig.cfg')
         else:
             self.cfg_file = 'CellModeller/CMconfig.cfg'
-        self.init_cl()
+        if not self.init_cl(platnum=clPlatformNum, devnum=clDeviceNum):
+            print "Couldn't initialise OpenCL context"
+            return
 
-        self.moduleName = moduleName
-        print moduleName
-        if fromPickle:
-            self.moduleStr = fromPickle
+        # Two ways to specify a module (model):
+        self.moduleName = moduleName # Import via standard python
+        self.moduleStr = moduleStr # Import stored python code string (from a pickle usually)
+        if self.moduleStr:
+            print "Importing model %s from string"%(self.moduleName)
             self.module = imp.new_module(moduleName)
-            exec fromPickle in self.module.__dict__
+            exec moduleStr in self.module.__dict__
         else:
-            self.module = __import__(self.moduleName, globals(), locals(), [], -1)
-        #setup the simulation here:
-        if invar:
-            self.module.setup(self, invar)
-        else:
-            self.module.setup(self)
-
-        import time
-        self.startTime = time.localtime()
-        self.pickleFileRoot = pickleFileRoot if pickleFileRoot else self.moduleName + '-' + time.strftime('%y-%m-%d-%H-%M', self.startTime)
-        self.pickleDir = os.path.join('data', self.pickleFileRoot)
-        if "CMPATH" in os.environ:
-            self.pickleDir = os.path.join(os.environ["CMPATH"], self.pickleDir)
-        label = 2
-        while os.path.exists(self.pickleDir):
-            if label>2:
-                self.pickleDir = self.pickleDir[:-2]+"_"+str(label)
+            print "Importing model %s"%(self.moduleName)
+            if self.moduleName in sys.modules:
+                self.module = sys.modules[self.moduleName]
+                reload(self.module)
             else:
-                self.pickleDir = self.pickleDir+"_"+str(label)
+                self.module = __import__(self.moduleName, globals(), locals(), [], -1)
+            
+
+        # TJR: What is this invar thing? I have never seen this used...
+        #setup the simulation here:
+        #if invar:
+        #    self.module.setup(self, invar)
+        #else:
+
+        # Set up the data output directory
+        self.saveOutput = saveOutput
+        if self.saveOutput:
+            self.outputSteps = outputSteps
+            self.init_data_output(outputFileDir)
+        
+        # Call the user-defined setup function on ourself
+        self.module.setup(self)
+
+    def init_data_output(self, outputDir):
+        import time
+        startTime = time.localtime()
+        outputFileRoot = outputDir if outputDir else self.moduleName + '-' + time.strftime('%y-%m-%d-%H-%M', startTime)
+        self.outputDir = os.path.join('data', outputFileRoot)
+        if 'CMPATH' in os.environ:
+            self.outputDir = os.path.join(os.environ["CMPATH"], self.outputDir)
+
+        # Add a number to end of dir name if it already exists 
+        label = 2
+        while os.path.exists(self.outputDir):
+            if label>2:
+                self.outputDir = self.outputDir[:-2]+"_"+str(label)
+            else:
+                self.outputDir = self.outputDir+"_"+str(label)
             label+=1
-        os.mkdir(self.pickleDir)
+        os.mkdir(self.outputDir)
+
         # write a copy of the model into the dir (for reference), 
         # this goes in the pickle too (and gets loaded when a pickle is loaded)
-        if not self.fromPickle:
-            self.moduleStr = inspect.getsource(self.module)
-        open(os.path.join(self.pickleDir, self.moduleName), 'w').write(self.moduleStr)
+        if self.moduleStr:
+            self.moduleOutput = self.moduleStr
+        else:
+            self.moduleOutput = inspect.getsource(self.module)
+
+        open(os.path.join(self.outputDir, self.moduleName), 'w').write(self.moduleOutput)
 
 
     ## Get an id for the next cell to be created
@@ -97,6 +130,7 @@ visualised.
         id = self._next_id
         self._next_id += 1
         return id
+
     ## Get the index (into flat arrays) of the next cell to be created
     def next_idx(self):
         idx = self._next_idx
@@ -138,52 +172,43 @@ visualised.
 
 
     ## Set up the OpenCL contex, the configuration is set up the first time, and is saved in the config file
-    def init_cl(self):
-        #if config file exists read and set everything
-        config = ConfigParser.RawConfigParser()
-        platform = cl.get_platforms()
-        if os.path.isfile(self.cfg_file):
-            config.read(self.cfg_file)
-            platnum = int(config.get('Platform','platnum'))
-            devnum = int(config.get('Device','devnum'))
+    def init_cl(self, platnum, devnum):
+        # Check that specified platform exists
+        platforms = cl.get_platforms()
+        if len(platforms)<=platnum:
+            print "Specified OpenCL platform number (%d) does not exist."
+            print "Options are:"
+            for p in range(len(platforms)):
+                print "%d: %s"%(p, str(platforms[p])) 
+            return False
         else:
-            #select platform and device here and write to config file
-            if len(platform) > 1:
-                print "Select platform from the list:"
-                for i in range(len(platform)):
-                    print 'press '+str(i)+' for '+str(platform[i])
-                platnum = int(input('Platform Number: '))
-            else:
-                platnum = 0
-            if len(platform[platnum].get_devices())==0:
-                print "No compatible device, check if your hardware is OpenCL compatible, and that OpenCL is correctly configured..." #this will now break
-            elif len(platform[platnum].get_devices())==1:
-                devnum = 0
-            else:
-                print "Select device from list"
-                for i in range(len(platform[platnum].get_devices())):
-                     print 'press '+str(i)+' for '+str(platform[platnum].get_devices()[i])
-                devnum= int(input('Device number: '))
-            #write settings to config file
-            config.add_section('Platform')
-            config.add_section('Device')
-            config.set('Platform','platnum',platnum)
-            config.set('Platform', 'Platform Name', platform[platnum])
-            config.set('Device','devnum',devnum)
-            config.set('Device', 'Device Name', platform[platnum].get_devices()[devnum])
-            config.write(open(self.cfg_file, 'wb'))
-        self.CLContext = cl.Context(properties=[(cl.context_properties.PLATFORM, platform[platnum])],
-                                          devices=[platform[platnum].get_devices()[devnum]])
-        self.CLQueue = cl.CommandQueue(self.CLContext)
-        print (platform[platnum].get_devices()[devnum])
-#.get_info(cl.device_info.DRIVER_VERSION)
+            platform = platforms[platnum]
 
-    ## ??
+        # Check that specified device exists on that platform
+        devices = platforms[platnum].get_devices()
+        if len(devices)<=devnum:
+            print "Specified OpenCL device number (%d) does not exist on platform %s."%(devnum,platform)
+            print "Options are:"
+            for d in range(len(devices)):
+                print "%d: %s"%(d, str(devices[d])) 
+            return False
+        else:
+            device = devices[devnum]
+
+        # Create a context and queue
+        self.CLContext = cl.Context(properties=[(cl.context_properties.PLATFORM, platform)],
+                                          devices=[device])
+        self.CLQueue = cl.CommandQueue(self.CLContext)
+        print "Set up OpenCL context:"
+        print "  Platform: %s"%(str(platform.name))
+        print "  Device: %s"%(str(device.name))
+        return True
+        
+    ## Get the OpenCL context and queue for running kernels 
     def getOpenCL(self):
         return (self.CLContext, self.CLQueue)
 
-    ## set cell state
-
+    ## set cell states from a given dict
     def setCellStates(self, cellStates):
         #Set cell states, e.g. from pickle file
         #this sets them on the card too
@@ -192,12 +217,13 @@ visualised.
         self.reg.cellStates = cellStates
         self.phys.load_from_cellstates(cellStates)
     
-    ## ??
+    ## Add a graphics renderer - this should not be here --> GUI
     def addRenderer(self, renderer):
         self.renderers.append(renderer)
         
-    ## Delete the models, they might be holding up memory/GPU resources?
+    ## Reset the simulation back to initial conditions
     def reset(self):
+        # Delete existing models
         if self.phys:
             del self.phys
         if self.sig:
@@ -206,16 +232,18 @@ visualised.
             del self.integ
         if self.reg:
             del self.reg
-        if self.fromPickle == False: #This will take up any changes made in the model file
+
+        if not self.moduleStr: 
+            #This will take up any changes made in the model file
             reload(self.module)
+        else:
+            # TJR: Module loaded from pickle, cannot reset?
+            pass
+
         # Lose old cell states
         self.cellStates = {}
         # Recreate models via module setup
         self.module.setup(self)
-        #self.phys.reset()
-        #if self.sig:
-        #    self.sig.reset()
-        #self.integ.reset()
 
 
     # Divide a cell to two daughter cells
@@ -224,8 +252,8 @@ visualised.
         pid = pState.id
         d1id = self.next_id()
         d2id = self.next_id()
-        d1State = copy.copy(pState)
-        d2State = copy.copy(pState)
+        d1State = copy.deepcopy(pState)
+        d2State = copy.deepcopy(pState)
         d1State.id = d1id
         d2State.id = d2id
 
@@ -284,10 +312,11 @@ visualised.
     ## Proceed to the next simulation step
     # This method is where objects phys, reg, sig and integ are called
     def step(self):
+        if not self.phys.step(self.dt):
+            return False
         self.reg.step(self.dt)
         if self.sig:
             self.sig.step(self.dt)
-        self.phys.step(self.dt)
         if self.integ:
             self.integ.step(self.dt)
 
@@ -296,13 +325,14 @@ visualised.
             if state.divideFlag:
                 self.divide(state)
 
-        if self.savePickle and self.stepNum%self.pickleSteps==0:
+        if self.saveOutput and self.stepNum%self.outputSteps==0:
             self.writePickle()
 
         self.stepNum += 1
+        return True
 
 
-    ## Import cells from a file to the simulator from csv file. The file contains a list of 7-coordinates {pos,dir,len} (comma delimited) of each cell - also, there should be no cells around - ie run this from an empty model instead of addcell
+    ## Import cells to the simulator from csv file. The file contains a list of 7-coordinates {pos,dir,len} (comma delimited) of each cell - also, there should be no cells around - ie run this from an empty model instead of addcell
     def importCells_file(self, filename):
         f=open(filename, 'rU')
         list=csv.reader(f,delimiter=',')
@@ -316,13 +346,13 @@ visualised.
 
     ## Write current simulation state to an output file
     def writePickle(self, csv=False):
-        filename = os.path.join(self.pickleDir, 'step-%05i.pickle' % self.stepNum)
+        filename = os.path.join(self.outputDir, 'step-%05i.pickle' % self.stepNum)
         outfile = open(filename, 'wb')
         data = {}
         data['cellStates'] = self.cellStates
         data['stepNum'] = self.stepNum
         data['lineage'] = self.lineage
-        data['moduleStr'] = self.moduleStr
+        data['moduleStr'] = self.moduleOutput
         data['moduleName'] = self.moduleName
         if self.integ:
             data['specData'] = self.integ.levels
@@ -331,6 +361,7 @@ visualised.
         cPickle.dump(data, outfile, protocol=-1)
         #output csv file with cell pos,dir,len - sig?
 
+    # Populate simulation from saved data pickle
     def loadFromPickle(self, data):
         self.setCellStates(data['cellStates'])
         self.lineage = data['lineage']

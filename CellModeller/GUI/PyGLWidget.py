@@ -225,23 +225,26 @@ class PyGLWidget(QtOpenGL.QGLWidget):
         _event.accept()
 
     def selectName(self, point):
-        glSelectBuffer(50) # allocate a selection buffer of SIZE elements
+        glSelectBuffer(500) # allocate a selection buffer of SIZE elements
         glRenderMode(GL_SELECT)
         
         glMatrixMode( GL_PROJECTION )
         glPushMatrix()
         self.set_pick_projection( point.x(), point.y(), self.near_, self.far_, self.fovy_ );
         
-        self.paintGL()
+        #self.paintGL()
         self.drawWithNames()
 
         buf = glRenderMode(GL_RENDER)
         selectedName = -1
+        closest_z = 1.0
         for hit_record in buf:
             min_depth, max_depth, names = hit_record
-            for name in names:
-                if name:
-                    selectedName = name
+            if min_depth < closest_z:
+                closest_z = min_depth
+                for name in names:
+                    if name:
+                        selectedName = name
         glMatrixMode( GL_PROJECTION )
         glPopMatrix()
         return selectedName
@@ -325,11 +328,11 @@ class PyGLWidget(QtOpenGL.QGLWidget):
         # trigger redraw
         self.updateGL()
 
-        def mouseReleaseEvent(self, _event):
-            if (isInRotation_):
-                isInRotation_ = false
-                self.rotationEndEvent.emit()
-            last_point_ok_ = False
+    def mouseReleaseEvent(self, _event):
+        if (self.isInRotation_):
+            self.isInRotation_ = False
+            self.rotationEndEvent.emit()
+        last_point_ok_ = False
 
 #===============================================================================
 #

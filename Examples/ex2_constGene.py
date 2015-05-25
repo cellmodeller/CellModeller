@@ -8,7 +8,7 @@ import math
 #Import Euler integrator for solving ODE system of chemical species inside the cells
 from CellModeller.Integration.CLEulerIntegrator import CLEulerIntegrator
 
-max_cells = 400000
+max_cells = 2**15
 
 
 def setup(sim):
@@ -18,16 +18,12 @@ def setup(sim):
     
     integ = CLEulerIntegrator(sim, 1, max_cells)
 
-    # use this file for reg too
     regul = ModuleRegulator(sim, sim.moduleName)	
     # Only biophys and regulation
     sim.init(biophys, regul, None, integ)
 
-
     # Specify the initial cell and its location in the simulation
     sim.addCell(cellType=0, pos=(0,0,0)) 
-
-
 
     # Add some objects to draw the models
     therenderer = Renderers.GLBacteriumRenderer(sim)
@@ -45,14 +41,6 @@ def init(cell):
     # Specify initial concentration of chemical species
     cell.species[:] = [0]
 
-
-
-def numSignals(): # Add 1
-    return 0
-
-def numSpecies(): 
-    return 1
-
 def specRateCL(): # Add
     return '''
     const float k1 = 1.f;
@@ -67,8 +55,6 @@ def update(cells):
     for (id, cell) in cells.iteritems():
         cell.color = [0.1+cell.species[0]/20.0, 0.1, 0.1] # Add/change
         if cell.volume > cell.targetVol:
-            a = 1
-            cell.asymm = [a,1]
             cell.divideFlag = True
 
 def divide(parent, d1, d2):

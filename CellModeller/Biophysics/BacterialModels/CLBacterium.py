@@ -25,6 +25,7 @@ class CLBacterium:
                  grid_spacing=5.0,
                  muA=1.0,
                  gamma=10.0,
+                 dt=None,
                  cgs_tol=1e-3,
                  reg_param=1.0,
                  jitter_z=True,
@@ -42,6 +43,7 @@ class CLBacterium:
         self.grid_spacing = grid_spacing
         self.muA = muA
         self.gamma = gamma
+        self.dt = dt
         self.cgs_tol = cgs_tol
         self.reg_param = numpy.float32(reg_param)
 
@@ -68,6 +70,8 @@ class CLBacterium:
         self.jitter_z = jitter_z
         self.alternate_divisions = alternate_divisions
         self.printing = printing
+        self.progress_initialised = False
+        self.sub_tick_initialised = False
 
     # Biophysical Model interface
     def reset(self):
@@ -387,39 +391,39 @@ class CLBacterium:
 
     def get_cells(self):
         """Copy cell centers, dirs, lens, and rads from the device."""
-        self.cell_centers = self.cell_centers_dev.get()
-        self.cell_dirs = self.cell_dirs_dev.get()
-        self.cell_lens = self.cell_lens_dev.get()
-        self.cell_rads = self.cell_rads_dev.get()
-        self.cell_dlens = self.cell_dlens_dev.get()
-        self.cell_dcenters = self.cell_dcenters_dev.get()
-        self.cell_dangs = self.cell_dangs_dev.get()
+        self.cell_centers[0:self.n_cells] = self.cell_centers_dev[0:self.n_cells].get()
+        self.cell_dirs[0:self.n_cells] = self.cell_dirs_dev[0:self.n_cells].get()
+        self.cell_lens[0:self.n_cells] = self.cell_lens_dev[0:self.n_cells].get()
+        self.cell_rads[0:self.n_cells] = self.cell_rads_dev[0:self.n_cells].get()
+        self.cell_dlens[0:self.n_cells] = self.cell_dlens_dev[0:self.n_cells].get()
+        self.cell_dcenters[0:self.n_cells] = self.cell_dcenters_dev[0:self.n_cells].get()
+        self.cell_dangs[0:self.n_cells] = self.cell_dangs_dev[0:self.n_cells].get()
 
     def set_cells(self):
         """Copy cell centers, dirs, lens, and rads to the device from local."""
-        self.cell_centers_dev.set(self.cell_centers)
-        self.cell_dirs_dev.set(self.cell_dirs)
-        self.cell_lens_dev.set(self.cell_lens)
-        self.cell_rads_dev.set(self.cell_rads)
-        self.cell_dlens_dev.set(self.cell_dlens)
-        self.cell_dcenters_dev.set(self.cell_dcenters)
-        self.cell_dangs_dev.set(self.cell_dangs)
+        self.cell_centers_dev[0:self.n_cells].set(self.cell_centers[0:self.n_cells])
+        self.cell_dirs_dev[0:self.n_cells].set(self.cell_dirs[0:self.n_cells])
+        self.cell_lens_dev[0:self.n_cells].set(self.cell_lens[0:self.n_cells])
+        self.cell_rads_dev[0:self.n_cells].set(self.cell_rads[0:self.n_cells])
+        self.cell_dlens_dev[0:self.n_cells].set(self.cell_dlens[0:self.n_cells])
+        self.cell_dcenters_dev[0:self.n_cells].set(self.cell_dcenters[0:self.n_cells])
+        self.cell_dangs_dev[0:self.n_cells].set(self.cell_dangs[0:self.n_cells])
 
     def set_planes(self):
         """Copy plane pts, norms, and coeffs to the device from local."""
-        self.plane_pts_dev.set(self.plane_pts)
-        self.plane_norms_dev.set(self.plane_norms)
-        self.plane_coeffs_dev.set(self.plane_coeffs)
+        self.plane_pts_dev[0:self.n_planes].set(self.plane_pts[0:self.n_planes])
+        self.plane_norms_dev[0:self.n_planes].set(self.plane_norms[0:self.n_planes])
+        self.plane_coeffs_dev[0:self.n_planes].set(self.plane_coeffs[0:self.n_planes])
 
 
     def get_cts(self):
         """Copy contact froms, tos, dists, pts, and norms from the device."""
-        self.ct_frs = self.ct_frs_dev.get()
-        self.ct_tos = self.ct_tos_dev.get()
-        self.ct_dists = self.ct_dists_dev.get()
-        self.ct_pts = self.ct_pts_dev.get()
-        self.ct_norms = self.ct_norms_dev.get()
-        self.cell_n_cts = self.cell_n_cts_dev.get()
+        self.ct_frs[0:self.n_cts] = self.ct_frs_dev[0:self.n_cts].get()
+        self.ct_tos[0:self.n_cts] = self.ct_tos_dev[0:self.n_cts].get()
+        self.ct_dists[0:self.n_cts] = self.ct_dists_dev[0:self.n_cts].get()
+        self.ct_pts[0:self.n_cts] = self.ct_pts_dev[0:self.n_cts].get()
+        self.ct_norms[0:self.n_cts] = self.ct_norms_dev[0:self.n_cts].get()
+        self.cell_n_cts[0:self.n_cells] = self.cell_n_cts_dev[0:self.n_cells].get()
 
     def matrixTest(self):
         x_dev = cl_array.zeros(self.queue, (self.n_cells,), vec.float8)
@@ -467,45 +471,51 @@ class CLBacterium:
             for state in self.simulator.cellStates.values():
                 self.updateCellState(state)
 
-    def step(self, dt):
-        """Step forward dt units of time.
-
-        Assumes that:
-        cell_centers is up to date when it starts.
-        """
-
+    def progress_init(self, dt):
         self.set_cells()
+        # NOTE: by default self.dt=None, and time step == simulator time step (dt) 
+        if self.dt:
+            self.n_ticks = int(math.ceil(dt/self.dt)) 
+        else:
+            self.n_ticks = 1 
+        #print "n_ticks = %d"%(self.n_ticks)
+        self.actual_dt = dt / float(self.n_ticks)
+        self.progress_initialised = True
 
-        # Take dt/10 because this was what worked with EdgeDetector, need to 
-        # make timescales consistent at some point
-        dt = dt*0.1
+    def progress(self):
+        if self.n_ticks:
+            if self.tick(self.actual_dt):
+                self.n_ticks -= 1
+            return False
+        else:
+            return True
 
-        # Choose good time-step for biophysics to work nicely, then do multiple 
-        # ticks to integrate over dt
-        #delta_t = 0.1/math.sqrt(self.n_cells)
-        #delta_t = 0.05/math.sqrt(self.n_cells)
-        #delta_t = 5*0.1/self.n_cells
-        delta_t = 0.005
-        n_ticks = int(math.ceil(dt/delta_t))
-        actual_dt = dt / float(n_ticks)
-        #print 'delta_t %f  nticks %f  actual_dt %f'%(delta_t,n_ticks,actual_dt)
-        for i in range(n_ticks):
-            self.tick(actual_dt)
-
+    def progress_finalise(self):
         self.frame_no += 1
+        self.progress_initialised = False
         if self.frame_no % 10 == 0:
-            #self.dump_cell_data(frame_no/100)
             print '% 8i    % 8i cells    % 8i contacts' % (self.frame_no, self.n_cells, self.n_cts)
-
         # pull cells from the device and update simulator
         if self.simulator:
             self.get_cells()
             for state in self.simulator.cellStates.values():
                 self.updateCellState(state)
 
+    def step(self, dt):
+        """Step forward dt units of time.
 
+        Assumes that:
+        cell_centers is up to date when it starts.
+        """
+        if not self.progress_initialised:
+            self.progress_init(dt)
+        if self.progress():
+            self.progress_finalise()
+            return True
+        else:
+            return False
 
-    def tick(self, dt):
+    def sub_tick_init(self, dt):
         # set target dlens (taken from growth rates set by updateCellStates)
         #self.cell_target_dlens_dev.set(dt*self.cell_growth_rates)
         #self.cell_dlens_dev.set(dt*self.cell_dlens)
@@ -524,31 +534,44 @@ class CLBacterium:
         self.sorted_ids_dev.set(self.sorted_ids) # push changes to the device
         self.sq_inds_dev.set(self.sq_inds)
 
-        new_cts = 1
         self.n_cts = 0
         self.vcleari(self.cell_n_cts_dev) # clear the accumulated contact count
-        i=0
-        while new_cts>0 and i<self.max_substeps:
-            old_n_cts = self.n_cts
-            self.predict()
-            # find all contacts
-            self.find_contacts()
-            # place 'backward' contacts in cells
-            self.collect_tos()
+        self.sub_tick_i=0
+        self.sub_tick_initialised=True
 
-            new_cts = self.n_cts - old_n_cts
-            if new_cts>0 or i==0:
-                self.build_matrix() # Calculate entries of the matrix
-                #print "max cell contacts = %i"%cl_array.max(self.cell_n_cts_dev).get()
-                self.CGSSolve(dt) # invert MTMx to find deltap
-                self.add_impulse()
-            i += 1
+    def tick(self, dt):
+        if not self.sub_tick_initialised:
+            self.sub_tick_init(dt)
+        if self.sub_tick(dt):
+            self.sub_tick_finalise()
+            return True
+        else:
+            return False
 
+    def sub_tick(self, dt):
+        old_n_cts = self.n_cts
+        self.predict()
+        # find all contacts
+        self.find_contacts()
+        # place 'backward' contacts in cells
+        self.collect_tos()
 
+        self.sub_tick_i += 1
+        new_cts = self.n_cts - old_n_cts
+        if (new_cts>0 or self.sub_tick_i==0) and self.sub_tick_i<self.max_substeps:
+            self.build_matrix() # Calculate entries of the matrix
+            #print "max cell contacts = %i"%cl_array.max(self.cell_n_cts_dev).get()
+            self.CGSSolve(dt) # invert MTMx to find deltap
+            self.add_impulse()
+            return False
+        else:
+            return True
+
+    def sub_tick_finalise(self):
+        #print "Substeps = %d"%self.sub_tick_i
         self.integrate()
-
         self.calc_cell_geom()
-
+        self.sub_tick_initialised=False
 
     def initCellState(self, state):
         cid = state.id
@@ -645,7 +668,7 @@ class CLBacterium:
         Calculates local sorted_ids and sq_inds.
         """
         self.sorted_ids.put(numpy.arange(self.n_cells), numpy.argsort(self.cell_sqs[:self.n_cells]))
-        self.sorted_ids_dev.set(self.sorted_ids)
+        self.sorted_ids_dev[0:self.n_cells].set(self.sorted_ids[0:self.n_cells])
 
         # find the start of each sq in the list of sorted cell ids and send to the device
         sorted_sqs = numpy.sort(self.cell_sqs[:self.n_cells])
@@ -824,12 +847,12 @@ class CLBacterium:
                                       self.Minvx_dev.data).wait()
 
         #this was altered from dt*reg_param
-        self.vaddkx(Ax, self.reg_param/numpy.sqrt(self.n_cells), Ax, self.Minvx_dev).wait()
+        self.vaddkx(Ax, self.reg_param, Ax, self.Minvx_dev).wait()
         # 1/math.sqrt(self.n_cells) removed from the reg_param NB
     
         #print(self.Minvx_dev)
 
-    def CGSSolve(self, dt):
+    def CGSSolve(self, dt, substep=False):
         # Solve A^TA\deltap=A^Tb (Ax=b)
 
         # There must be a way to do this using built in pyopencl - what
@@ -850,9 +873,8 @@ class CLBacterium:
                                     self.ct_reldists_dev.data,
                                     self.rhs_dev.data).wait()
 
-        self.calculate_Ax(self.MTMx_dev, self.deltap_dev, dt)
-
         # res = b-Ax
+        self.calculate_Ax(self.MTMx_dev, self.deltap_dev, dt)
         self.vsub(self.res_dev, self.rhs_dev, self.MTMx_dev)
 
         # p = res
@@ -860,13 +882,18 @@ class CLBacterium:
 
         # rsold = l2norm(res)
         rsold = self.vdot(self.res_dev, self.res_dev).get()
+        rsfirst = rsold
         if math.sqrt(rsold/self.n_cells) < self.cgs_tol:
+            if self.printing and self.frame_no%10==0:
+                print '% 5i'%self.frame_no + '% 6i cells  % 6i cts  % 6i iterations  residual = %f' % (self.n_cells,
+            self.n_cts, 0, rsold)
             return (0.0, rsold)
 
         # iterate
         # max iters = matrix dimension = 7 (dofs) * num cells
         #dying=False
         max_iters = self.n_cells*7
+            
         for iter in range(max_iters):
             # Ap
             self.calculate_Ax(self.Ap_dev, self.p_dev, dt)
@@ -887,7 +914,8 @@ class CLBacterium:
             rsnew = self.vdot(self.res_dev, self.res_dev).get()
 
             # Test for convergence
-            if math.sqrt(rsnew/self.n_cts) < self.cgs_tol:
+            if math.sqrt(rsnew/self.n_cells) < self.cgs_tol:
+            #if math.sqrt(rsnew/rsfirst) < self.cgs_tol:
                 break
 
             # Stopped converging -> terminate
@@ -900,9 +928,9 @@ class CLBacterium:
             rsold = rsnew
             #print '        ',iter,rsold
 
-        if self.printing and self.frame_no%100==0:
+        if self.printing and self.frame_no%10==0:
             print '% 5i'%self.frame_no + '% 6i cells  % 6i cts  % 6i iterations  residual = %f' % (self.n_cells, self.n_cts, iter+1, rsnew)
-        return (iter+1, rsnew)
+        return (iter+1, math.sqrt(rsnew/self.n_cells))
 
 
     def predict(self):
@@ -1019,11 +1047,11 @@ class CLBacterium:
 
         self.parents[b] = a
 
-        vols = self.cell_vols_dev.get()
+        vols = self.cell_vols_dev[0:self.n_cells].get()
         daughter_vol = vols[i] / 2.0
         vols[a] = daughter_vol
         vols[b] = daughter_vol
-        self.cell_vols_dev.set(vols)
+        self.cell_vols_dev[0:self.n_cells].set(vols)
 
         # Inherit velocities from parent (conserve momentum)
         parent_dlin = self.cell_dcenters[i]
@@ -1041,12 +1069,16 @@ class CLBacterium:
     def calc_cell_geom(self):
         """Calculate cell geometry using lens/rads on card."""
         # swap cell vols and cell_vols old
-        tmp = self.cell_old_vols_dev
-        self.cell_old_vols_dev = self.cell_vols_dev
-        self.cell_vols_dev = tmp
+        tmp = self.cell_old_vols_dev[0:self.n_cells]
+        self.cell_old_vols_dev[0:self.n_cells] = self.cell_vols_dev[0:self.n_cells]
+        self.cell_vols_dev[0:self.n_cells] = tmp
         # update geometry
-        self.calc_cell_area(self.cell_areas_dev, self.cell_rads_dev, self.cell_lens_dev)
-        self.calc_cell_vol(self.cell_vols_dev, self.cell_rads_dev, self.cell_lens_dev)
+        self.calc_cell_area(self.cell_areas_dev[0:self.n_cells], \
+                            self.cell_rads_dev[0:self.n_cells], \
+                            self.cell_lens_dev[0:self.n_cells])
+        self.calc_cell_vol(self.cell_vols_dev[0:self.n_cells], \
+                            self.cell_rads_dev[0:self.n_cells], \
+                            self.cell_lens_dev[0:self.n_cells])
 
 
     def profileGrid(self):

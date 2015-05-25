@@ -3,6 +3,7 @@ from OpenGL.GLU import *
 from OpenGL.arrays import vbo
 import math
 import numpy
+import numpy.linalg as la
 import random
 
 class GLGridRenderer:
@@ -210,6 +211,8 @@ class GLBacteriumRenderer:
     def __init__(self, sim, properties=None, scales = None):
         self.ncells_list = 0
         self.ncells_names_list = 0
+        self.names_list_step = -1
+        self.list_step = -1
         self.dlist = None
         self.dlist_names = None
         self.cellcol = [1, 1, 1] 
@@ -241,21 +244,54 @@ class GLBacteriumRenderer:
 
     def render_gl(self, selection=None):
         # Uncomment this to directly draw all cells each frame
-        self.render_cells()
-        '''# This uses a display list, but only updates when num cells changes
+        #self.render_cells()
+
         cells = self.sim.cellStates.values()
-        if len(cells)!=self.ncells_list:
+        if self.sim.stepNum > self.list_step:
             self.build_list(cells)
-            self.ncells_list = len(cells)
+            #self.ncells_list = len(cells)
+            self.list_step = self.sim.stepNum
+
         glCallList(self.dlist)
-        '''
+        
         if self.sim.cellStates.has_key(selection):
             self.render_selected_cell(selection)
+        self.render_constraints()
 	
+    def render_constraints(self):
+        phys = self.sim.phys
+        glDisable(GL_LIGHTING)
+        glEnable(GL_DEPTH_TEST)
+        glEnable(GL_LINE_SMOOTH)
+        glLineWidth(1.0)
+        #glBegin(GL_LINES)
+        glColor3f(1,0,0)
+        for i in range(phys.n_planes):
+            p = phys.plane_pts[i]
+            nn = phys.plane_norms[i]
+            n = [nn[i] for i in range(3)]
+
+            # Make an orthonormal basis in the plane
+            v1 = numpy.cross([0,0,1],n)
+            if la.norm(v1)<1e-6:
+                v1 = numpy.cross([0,1,0],n)
+            v2 = numpy.cross(v1,n)
+
+            glBegin(GL_LINE_STRIP)
+            glVertex3f(p[0], p[1], p[2])
+            #glVertex3f(p[0]+n[0]*5, p[1]+n[1]*5, p[2]+n[2]*5)
+            glVertex3f(p[0]+v1[0]*5, p[1]+v1[1]*5, p[2]+v1[2]*5)
+            glVertex3f(p[0]+(v1[0]+v2[0])*5, p[1]+(v1[1]+v2[1])*5, p[2]+(v1[2]+v2[2])*5)
+            glVertex3f(p[0]+v2[0]*5, p[1]+v2[1]*5, p[2]+v2[2]*5)
+            glVertex3f(p[0], p[1], p[2])
+            glEnd()
+        #glEnd()
+        glEnable(GL_LIGHTING)
+        glDisable(GL_DEPTH_TEST)
 
 
     def render_selected_cell(self, selection):
-        #glDisable(GL_DEPTH_TEST)
+        glEnable(GL_DEPTH_TEST)
         cellcol = [1,0,0]
         cell = self.sim.cellStates[selection]
         l = cell.length
@@ -293,22 +329,27 @@ class GLBacteriumRenderer:
         gluSphere(self.quad, r, 8, 8)
         glPopMatrix() 
 
-        #glEnable(GL_DEPTH_TEST)
+        glDisable(GL_DEPTH_TEST)
 
 
 
     def renderNames_gl(self, selection=None):
+        #self.render_cell_names()
         cells = self.sim.cellStates.values()
-        if len(cells)!=self.ncells_names_list:
+        if self.sim.stepNum > self.names_list_step:
             self.build_list_names(cells)
-            self.ncells_names_list = len(cells)
+            self.names_list_step = self.sim.stepNum
         glCallList(self.dlist_names)
-        #for cell in cells: self.render_cell_name(cell, selection)
-
 
     def render_cell_names(self):
-       # glDisable(GL_DEPTH_TEST)
+        glEnable(GL_DEPTH_TEST)
         glDisable(GL_LIGHTING)
+        glDepthFunc(GL_LESS)
+        glDisable(GL_CULL_FACE)
+        glPolygonMode(GL_FRONT, GL_FILL)
+        glDisable(GL_LINE_SMOOTH)
+        glDisable(GL_BLEND)
+
         for cell in self.sim.cellStates.values():
             l = cell.length
             r = cell.radius
@@ -321,8 +362,8 @@ class GLBacteriumRenderer:
             rotaxis = numpy.cross(caxis, zaxis)
             rotangle = numpy.arccos(numpy.dot(caxis,zaxis))
 	    
-	    cid = cell.id
-	    glPushName(cid) 
+            cid = cell.id
+            glPushName(cid) 
 	
             glMatrixMode(GL_MODELVIEW)
             glPushMatrix()
@@ -338,11 +379,14 @@ class GLBacteriumRenderer:
 
 	    glPopName()
 
-            glEnable(GL_LIGHTING)
+        glEnable(GL_LIGHTING)
+        glDisable(GL_DEPTH_TEST)
 
 
     def render_cells(self, selection=None):
+        glEnable(GL_DEPTH_TEST)
         glDisable(GL_LIGHTING)
+
         cells = self.sim.cellStates.values()
         for cell in cells:
             l = cell.length
@@ -395,43 +439,27 @@ class GLBacteriumRenderer:
             gluSphere(self.quad, r, 8, 8)
             glPopMatrix() 
 
+            glDepthFunc(GL_LESS)
+            glDisable(GL_CULL_FACE)
+            glPolygonMode(GL_FRONT, GL_FILL)
+            glDisable(GL_LINE_SMOOTH)
+            glDisable(GL_BLEND)
 
-	    glDepthFunc(GL_LESS)
-	    glDisable(GL_CULL_FACE)
-	    glPolygonMode(GL_FRONT, GL_FILL)
-	    glDisable(GL_LINE_SMOOTH)
-	    glDisable(GL_BLEND)
-
-	    glColor3fv(cellcol)
+            glColor3fv(cellcol)
             glMatrixMode(GL_MODELVIEW)
             glPushMatrix()
             glTranslatef(e1[0],e1[1],e1[2])
-	    glScalef(0.8,0.8,0.8)
+            glScalef(0.8,0.8,0.8)
             gluSphere(self.quad, r, 8, 8)
-	    #glScalef(1.25,1.0,1.0)
+            #glScalef(1.25,1.0,1.0)
             glRotatef(-rotangle*180.0/numpy.pi, rotaxis[0], rotaxis[1], rotaxis[2])
             gluCylinder(self.quad, r, r , l*1.25, 8, 1)
             glPopMatrix() 
             glPushMatrix()
             glTranslatef(e2[0],e2[1],e2[2])
-	    glScalef(0.8,0.8,0.8)
+            glScalef(0.8,0.8,0.8)
             gluSphere(self.quad, r, 8, 8)
             glPopMatrix() 
-
-#            glColor3f(68.0 / 256, 81.0 / 256, 44.0 / 256)
-#            glLineWidth(2)
-#            glBegin(GL_LINES)
-#            glVertex3f(e1[0], e1[1], e1[2])
-#            glVertex3f(e2[0], e2[1], e2[2])
-#            glEnd()    
-#            
-#            glColor3f(1.0, 1.0, 0.0)
-#            glPointSize(3)
-#            glBegin(GL_POINTS)
-#            glVertex3f(e1[0], e1[1], e1[2])
-#            glVertex3f(e2[0], e2[1], e2[2])
-#            glEnd()  
-	    
 	
 	# draw contact points
 	if False: #hasattr(cells[0], 'contacts'):

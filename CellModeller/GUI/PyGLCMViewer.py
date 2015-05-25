@@ -1,7 +1,7 @@
 import PyQt4
 from PyQt4 import QtCore, QtGui
 from PyQt4.Qt import Qt
-from PyQt4.QtCore import QObject, QTimer, pyqtSignal, pyqtSlot
+from PyQt4.QtCore import QObject, QTimer, pyqtSignal, pyqtSlot, QStringList
 from PyGLWidget import PyGLWidget
 from OpenGL.GL import *
 from OpenGL.GLU import *
@@ -12,64 +12,130 @@ from CellModeller.CellState import CellState
 import os
 import sys
 import cPickle
+import pyopencl as cl
 
 class PyGLCMViewer(PyGLWidget):
 
-    selectedCell = pyqtSignal(str)#CellState, name='selectedCell')
+    selectedCell = pyqtSignal(str) #emit selected cell info
     selectedName = -1
-    dt = 0.25 
+    dt = 0.1 
 
     def __init__(self, parent = None):
         PyGLWidget.__init__(self,parent)
         self.animTimer = QTimer()
         self.animTimer.timeout.connect(self.animate)
+        self.animTimer.start(0)
         self.renderInfo = None
-        self.sim= None
-        self.modfile = None
-        self.set_radius(32)
+        self.sim = None
+        self.run = False
         self.frameNo = 0
-        self.fromP = False
+        self.loadingFromPickle = False
+        self.clPlatformNum=0
+        self.clDeviceNum=0
+
+        # Initial view setup
+        self.set_radius(32)
+        self.rotate([0,0,1],-45)
+        self.translate([0,0,20])
+        self.rotate([1,0,0],-45)
 
     def help(self):
         pass
 
     def setSimulator(self, sim):
+        if self.sim:
+            del self.sim
         self.sim = sim
+
+    def getOpenCLPlatDev(self):
+        return self.getOpenCLPlatform() and self.getOpenCLDevice()
+
+    def getOpenCLPlatform(self):
+        # Pop dialogs to get user to choose OpenCL platform 
+        platforms = cl.get_platforms()
+
+        platlist = QStringList([str(p.name) for p in platforms])
+        platdict = dict(zip(platlist, range(len(platlist))))
+
+        qsPlatformName, ok = QtGui.QInputDialog.getItem(self, \
+                                            'Choose OpenCL platform', \
+                                            'Available platforms:', \
+                                            platlist, \
+                                            editable=False)
+        if not ok:
+            print "You didn't select a OpenCL platform..."
+            return False
+        else:
+            self.clPlatformNum = platdict[qsPlatformName]
+            return True
+
+    def getOpenCLDevice(self):
+        # Pop dialogs to get user to choose OpenCL platform and device
+        platforms = cl.get_platforms()
+        devices = platforms[self.clPlatformNum].get_devices()
+
+        devlist = QStringList([str(d.name) for d in devices])
+        devdict = dict(zip(devlist, range(len(devlist))))
+
+        qsDeviceName, ok = QtGui.QInputDialog.getItem(self, \
+                                            'Choose OpenCL device', \
+                                            'Available devices:', \
+                                            devlist, \
+                                            editable=False)
+        if not ok:
+            print "You didn't select a OpenCL device..."
+            return False
+        else:
+            self.clDeviceNum = devdict[qsDeviceName]
+            return True
+
 
     @pyqtSlot(bool)
     def toggleRun(self, run):
+        self.run = run
         if run:
-            self.animTimer.start(0)
-        else:
-            self.animTimer.stop()
+            self.frameNo += 1
 
     @pyqtSlot()
     def reset(self):
-        if self.fromP==False:
+        # Note: we don't ask user to choose OpenCL platform/device on reset, only load
+        if not self.loadingFromPickle:
             reload(self.sim.module)
-        del self.sim
 
-        if self.fromP==True:
-            self.sim = Simulator(self.modname, self.dt, fromPickle=self.moduleStr)
+        if self.loadingFromPickle:
+            sim = Simulator(self.modName, \
+                            self.dt, \
+                            moduleStr=self.moduleStr, \
+                            clPlatformNum=self.clPlatformNum, \
+                            clDeviceNum=self.clDeviceNum) 
+            self.setSimulator(sim) 
         else:
-            self.sim = Simulator(self.modname, self.dt)
+            sim = Simulator(self.modName, \
+                                self.dt, \
+                                clPlatformNum=self.clPlatformNum, \
+                                clDeviceNum=self.clDeviceNum) 
+            self.setSimulator(sim) 
         self.frameNo = 0
+        self.updateGL()
 
     @pyqtSlot()
     def loadPickle(self):
         qs = QtGui.QFileDialog.getOpenFileName(self, 'Load pickle file', '', '*.pickle')
-        if qs:
-            self.loadedPickle = str(qs)
-            data = cPickle.load(open(self.loadedPickle,'rb'))
+        if qs and self.getOpenCLPlatDev():
+            filename = str(qs)
+            data = cPickle.load(open(filename,'rb'))
             if isinstance(data, dict):
-                if self.sim:
-                    del self.sim
-                self.modname = data['moduleName']
+                self.modName = data['moduleName']
                 self.moduleStr = data['moduleStr']
-                self.sim = Simulator(self.modname, self.dt, fromPickle=self.moduleStr)
-                self.fromP = True
+                sim = Simulator(self.modName, \
+                                    self.dt, \
+                                    moduleStr=self.moduleStr, \
+                                    clPlatformNum=self.clPlatformNum, \
+                                    clDeviceNum=self.clDeviceNum) 
+                self.setSimulator(sim) 
+                self.loadingFromPickle = True
                 self.sim.loadFromPickle(data)
-                self.paintGL()
+                self.updateGL()
             else:
                 print "Pickle is in an unsupported format, sorry"
 
@@ -77,27 +143,30 @@ class PyGLCMViewer(PyGLWidget):
     def load(self):
         qs = QtGui.QFileDialog.getOpenFileName(self, 'Load Python module', '', '*.py')
         if qs:
-            self.modfile = str(qs)
-            self.loadFile(self.modfile)
-            self.fromP = False
+            modfile = str(qs)
+            self.loadModelFile(modfile)
 
-    def loadFile(self, modstr):
-        (path,name) = os.path.split(modstr)
-        modname = str(name).split('.')[0]
-        self.modname = modname
-        sys.path.append(path)
-        if self.sim:
-            del self.sim
-        self.sim = Simulator(modname, self.dt)
-        #self.draw()
-        self.paintGL()
+    def loadModelFile(self, modname):
+        if self.getOpenCLPlatDev():
+            self.loadingFromPickle=False
+            (path,name) = os.path.split(modname)
+            self.modName = str(name).split('.')[0]
+            sys.path.append(path)
+            sim = Simulator(self.modName, \
+                                    self.dt, \
+                                    clPlatformNum=self.clPlatformNum, \
+                                    clDeviceNum=self.clDeviceNum) 
+            self.setSimulator(sim)
+            self.updateGL()
 
 
     def animate(self):
         if self.sim:
-            self.sim.step()
-            self.updateSelectedCell()
-            self.frameNo += 1
+            if self.frameNo > self.sim.stepNum:
+                if self.sim.step():
+                    self.updateSelectedCell()
+                    if self.run:
+                        self.frameNo += 1
     
     def updateSelectedCell(self):
         if self.sim:
@@ -105,14 +174,14 @@ class PyGLCMViewer(PyGLWidget):
             cid = self.selectedName
             txt = ''
             if states.has_key(cid):
+                txt += 'Selected Cell (id = %d)\n---\n'%(cid)
                 s = states[cid]
                 for (name,val) in s.__dict__.items():
                     if name not in CellState.excludeAttr:
-                        vals = str(val)
-                        #if len(vals)>6: vals = vals[0:6]
-                        txt = txt + name + ': ' + vals + '\n'
+                        txt += name + ': '
+                        txt += str(val)
+                        txt += '\n'
             self.selectedCell.emit(txt)
-            #if self.sim.stepNum%100==0:
             self.updateGL()
 
     def postSelection(self, name):
@@ -150,6 +219,37 @@ class PyGLCMViewer(PyGLWidget):
         glPushMatrix()
         #s = self.renderInfo.scale
         #glScalef(s,s,s)
+
+        # Draw a grid in xy plane
+        glDisable(GL_LIGHTING)
+        glColor3f(1.0, 1.0, 1.0)
+        glEnable(GL_LINE_SMOOTH)
+        glLineWidth(1.0)
+        glBegin(GL_LINES)
+        for i in range(5):
+            glVertex(-20, (i-2)*10)
+            glVertex(20, (i-2)*10)
+            glVertex((i-2)*10, -20)
+            glVertex((i-2)*10, 20)
+        glEnd()
+
+        # Draw x,y,z axes
+        glDisable(GL_DEPTH_TEST)
+        glBegin(GL_LINES)
+        glColor3f(1.0,0.0,0.0)
+        glVertex(0,0,0)
+        glVertex(5,0,0)
+        glColor3f(0.0,1.0,0.0)
+        glVertex(0,0,0)
+        glVertex(0,5,0)
+        glColor3f(0.0,0.0,1.0)
+        glVertex(0,0,0)
+        glVertex(0,0,5)
+        glEnd()
+        glEnable(GL_DEPTH_TEST)
+        glEnable(GL_LIGHTING)
+
+        # Draw model
         if self.sim:
             for r in self.sim.renderers:
                 if r != None:

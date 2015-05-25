@@ -21,4 +21,4 @@ for f in $( ls *.pdf ); do
 done
 
 # Run ffmpeg to generate video file
-ffmpeg -framerate 24 -i step-%04d0.jpg -resize 1920x1080 -r 24 $1
+ffmpeg -framerate 24 -i step-%04d0.jpg -vf scale=1920:1080 -r 24 $1

@@ -4,45 +4,19 @@ import sys
 import imp
 
 class ModuleRegulator:
-    def __init__(self, sim, modName, biophys=None, signalling=None):
-        self.modName = modName
+    def __init__(self, sim, biophys=None, signalling=None):
+        self.modName = sim.moduleName
+        self.modStr = sim.moduleStr
         self.sim = sim
         self.cellStates = sim.cellStates
         self.biophys = biophys
         self.signal = signalling
-        self.module = None
-        self.reset()
+        # Simulator is responsible for loading the model as a python module
+        # This class uses the module imported by Simulator
+        self.module = sim.module 
 
     def addCell(self, cellState, **kwargs):
         self.module.init(cellState, **kwargs)
-
-    def importModule(self):
-        # modName may be a full path to file
-        # if so, add the path, and split out
-        # the module name
-        (path,name) = os.path.split(self.modName)
-        mod = str(name).split('.')[0]
-        if path:
-            if path not in sys.path:
-                sys.path.append(path)
-        #if from pickle, do this via exec
-        if self.sim.fromPickle==True:
-            self.module = imp.new_module(self.sim.moduleName)
-            exec self.sim.moduleStr in self.module.__dict__
-        else:
-            self.module = __import__(mod, globals(), locals(), [], -1)
-
-    def reset(self, modName=None):
-        print(modName)
-        if (modName and modName!=self.modName) or not self.module:
-            if modName:
-                self.modName = modName
-            self.importModule()
-        else:
-            reload(self.module)
-
-        self.nSpecies = self.module.numSpecies()
-        self.nSignals = self.module.numSignals()
 
     def setSignalling(self, signal):
         self.signal = signal
