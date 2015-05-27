@@ -46,6 +46,9 @@ class PyGLCMViewer(PyGLWidget):
         if self.sim:
             del self.sim
         self.sim = sim
+        self.frameNo = sim.stepNum
+        if self.run:
+            self.frameNo += 1
 
     def getOpenCLPlatDev(self):
         return self.getOpenCLPlatform() and self.getOpenCLDevice()
