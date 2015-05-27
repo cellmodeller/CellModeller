@@ -5,18 +5,15 @@ from CellModeller.GUI import Renderers
 import numpy
 import math
 
-max_cells = 2**15
+cell_cols = {   0:[0.7,0.2,0], \
+                1:[0,0.2,0.7], \
+                2:[0.2,0.7,0], \
+                3:[0.7,0.2,0.7], \
+                4:[0.2,0.7,0.7]}
 
 def setup(sim):
     # Set biophysics, signalling, and regulation models
-    biophys = CLBacterium(sim, \
-                            max_substeps=8, \
-                            max_cells=max_cells, \
-                            max_contacts=32, \
-                            max_sqs=192**2, \
-                            jitter_z=False, \
-                            reg_param=2, \
-                            gamma=10)
+    biophys = CLBacterium(sim, jitter_z=False)
 
     # use this file for reg too
     regul = ModuleRegulator(sim, sim.moduleName)	
@@ -25,7 +22,12 @@ def setup(sim):
  
 
     # Specify the initial cell and its location in the simulation
-    sim.addCell(cellType=0, pos=(0,0,0)) 
+    for i in range(5):
+        px = random.uniform(-10.0,10.0)
+        py = random.uniform(-10.0,10.0)
+        dx = random.uniform(0,1.0)
+        dy = math.sqrt(1-dx*dx)
+        sim.addCell(cellType=i, pos=(px,py,0), dir=(dx,dy,0)) 
 
     # Add some objects to draw the models
     therenderer = Renderers.GLBacteriumRenderer(sim)
@@ -34,19 +36,19 @@ def setup(sim):
 
 def init(cell):
     # Specify mean and distribution of initial cell size
-    cell.targetVol = 2.5 + random.uniform(0.0,0.5)
+    cell.targetVol = 3.5 + random.uniform(0.0,0.5)
     # Specify growth rate of cells
-    cell.growthRate = 2.0
+    cell.growthRate = 1.0
 
 def update(cells):
     #Iterate through each cell and flag cells that reach target size for division
     for (id, cell) in cells.iteritems():
-        cell.color = [cell.cellType*0.6+0.1, 1.0-cell.cellType*0.6, 0.3]
+        cell.color = cell_cols[cell.cellType]
         if cell.volume > cell.targetVol:
             cell.divideFlag = True
 
 def divide(parent, d1, d2):
     # Specify target cell size that triggers cell division
-    d1.targetVol = 2.5 + random.uniform(0.0,0.5)
-    d2.targetVol = 2.5 + random.uniform(0.0,0.5)
+    d1.targetVol = 3.5 + random.uniform(0.0,0.5)
+    d2.targetVol = 3.5 + random.uniform(0.0,0.5)
 
