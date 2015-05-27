@@ -18,7 +18,7 @@ class PyGLCMViewer(PyGLWidget):
 
     selectedCell = pyqtSignal(str) #emit selected cell info
     selectedName = -1
-    dt = 0.1 
+    dt = 0.025 
 
     def __init__(self, parent = None):
         PyGLWidget.__init__(self,parent)
