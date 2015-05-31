@@ -60,6 +60,10 @@ class PyGLCMViewer(PyGLWidget):
         platlist = QStringList([str(p.name) for p in platforms])
         platdict = dict(zip(platlist, range(len(platlist))))
 
+        if len(platlist)==1:
+            self.clPlatformNum = 0
+            return True
+
         qsPlatformName, ok = QtGui.QInputDialog.getItem(self, \
                                             'Choose OpenCL platform', \
                                             'Available platforms:', \
@@ -79,7 +83,11 @@ class PyGLCMViewer(PyGLWidget):
 
         devlist = QStringList([str(d.name) for d in devices])
         devdict = dict(zip(devlist, range(len(devlist))))
-
+        
+        if len(devlist)==1:
+            self.clDeviceNum = 0
+            return True
+        
         qsDeviceName, ok = QtGui.QInputDialog.getItem(self, \
                                             'Choose OpenCL device', \
                                             'Available devices:', \
