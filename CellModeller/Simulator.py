@@ -35,9 +35,9 @@ visualised.
                     moduleName, \
                     dt, \
                     outputSteps=50, \
-                    outputFileDir=None, \
+                    outputDirName=None, \
                     moduleStr=None, \
-                    saveOutput=True, \
+                    saveOutput=False, \
                     clPlatformNum=0, \
                     clDeviceNum=0):
         # No models specified yet
@@ -89,31 +89,42 @@ visualised.
         #else:
 
         # Set up the data output directory
+        self.dataOutputInitialised=False
+        self.outputDirName = outputDirName
+        self.outputSteps = outputSteps
+        self.setSaveOutput(saveOutput)
+        '''
         self.saveOutput = saveOutput
         if self.saveOutput:
             self.outputSteps = outputSteps
             self.init_data_output(outputFileDir)
+        '''
         
         # Call the user-defined setup function on ourself
         self.module.setup(self)
 
-    def init_data_output(self, outputDir):
+    def setSaveOutput(self, save):
+        self.saveOutput = save
+        if save and (not self.dataOutputInitialised):
+            self.init_data_output()
+
+    def init_data_output(self):
         import time
         startTime = time.localtime()
-        outputFileRoot = outputDir if outputDir else self.moduleName + '-' + time.strftime('%y-%m-%d-%H-%M', startTime)
-        self.outputDir = os.path.join('data', outputFileRoot)
+        outputFileRoot = self.outputDirName if self.outputDirName else self.moduleName + '-' + time.strftime('%y-%m-%d-%H-%M', startTime)
+        self.outputDirPath = os.path.join('data', outputFileRoot)
         if 'CMPATH' in os.environ:
-            self.outputDir = os.path.join(os.environ["CMPATH"], self.outputDir)
+            self.outputDirPath = os.path.join(os.environ["CMPATH"], self.outputDirPath)
 
         # Add a number to end of dir name if it already exists 
         label = 2
-        while os.path.exists(self.outputDir):
+        while os.path.exists(self.outputDirPath):
             if label>2:
-                self.outputDir = self.outputDir[:-2]+"_"+str(label)
+                self.outputDirPath = self.outputDirPath[:-2]+"_"+str(label)
             else:
-                self.outputDir = self.outputDir+"_"+str(label)
+                self.outputDirPath = self.outputDirPath+"_"+str(label)
             label+=1
-        os.mkdir(self.outputDir)
+        os.mkdir(self.outputDirPath)
 
         # write a copy of the model into the dir (for reference), 
         # this goes in the pickle too (and gets loaded when a pickle is loaded)
@@ -121,8 +132,9 @@ visualised.
             self.moduleOutput = self.moduleStr
         else:
             self.moduleOutput = inspect.getsource(self.module)
+        open(os.path.join(self.outputDirPath, self.moduleName), 'w').write(self.moduleOutput)
 
-        open(os.path.join(self.outputDir, self.moduleName), 'w').write(self.moduleOutput)
+        self.dataOutputInitialised=True
 
 
     ## Get an id for the next cell to be created
@@ -346,7 +358,7 @@ visualised.
 
     ## Write current simulation state to an output file
     def writePickle(self, csv=False):
-        filename = os.path.join(self.outputDir, 'step-%05i.pickle' % self.stepNum)
+        filename = os.path.join(self.outputDirPath, 'step-%05i.pickle' % self.stepNum)
         outfile = open(filename, 'wb')
         data = {}
         data['cellStates'] = self.cellStates

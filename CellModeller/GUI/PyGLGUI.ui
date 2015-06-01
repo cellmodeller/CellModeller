@@ -77,6 +77,8 @@
    <addaction name="actionLoadPickle"/>
    <addaction name="actionReset"/>
    <addaction name="actionRun"/>
+   <addaction name="separator"/>
+   <addaction name="actionSave_Pickles"/>
   </widget>
   <action name="actionRun">
    <property name="checkable">
@@ -125,6 +127,20 @@
     <string>Ctrl+L</string>
    </property>
   </action>
+  <action name="actionSave_Pickles">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Save Pickles</string>
+   </property>
+   <property name="toolTip">
+    <string>Save simulations data</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+S</string>
+   </property>
+  </action>
  </widget>
  <customwidgets>
   <customwidget>
@@ -132,11 +148,13 @@
    <extends>QWidget</extends>
    <header>CellModeller.GUI.PyGLCMViewer</header>
    <slots>
+    <signal>setSavePicklesToggle(bool)</signal>
     <slot>load()</slot>
     <slot>reset()</slot>
     <slot>updateMod()</slot>
     <slot>toggleRun(bool)</slot>
     <slot>loadPickle()</slot>
+    <slot>toggleSavePickles(bool)</slot>
    </slots>
   </customwidget>
  </customwidgets>
@@ -219,6 +237,38 @@
     <hint type="destinationlabel">
      <x>589</x>
      <y>357</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>actionSave_Pickles</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>PyGLCMViewer</receiver>
+   <slot>toggleSavePickles(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>589</x>
+     <y>356</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>PyGLCMViewer</sender>
+   <signal>setSavePicklesToggle(bool)</signal>
+   <receiver>actionSave_Pickles</receiver>
+   <slot>setChecked(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>589</x>
+     <y>356</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>-1</x>
+     <y>-1</y>
     </hint>
    </hints>
   </connection>

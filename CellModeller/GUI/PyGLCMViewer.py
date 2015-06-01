@@ -16,6 +16,7 @@ import pyopencl as cl
 
 class PyGLCMViewer(PyGLWidget):
 
+    setSavePicklesToggle = pyqtSignal(bool)
     selectedCell = pyqtSignal(str) #emit selected cell info
     selectedName = -1
     dt = 0.025 
@@ -49,6 +50,8 @@ class PyGLCMViewer(PyGLWidget):
         self.frameNo = sim.stepNum
         if self.run:
             self.frameNo += 1
+        # Make GUI button match simulator state for saving pickles
+        self.setSavePicklesToggle.emit(sim.saveOutput)
 
     def getOpenCLPlatDev(self):
         return self.getOpenCLPlatform() and self.getOpenCLDevice()
@@ -98,6 +101,11 @@ class PyGLCMViewer(PyGLWidget):
         self.run = run
         if run:
             self.frameNo += 1
+
+    @pyqtSlot(bool)
+    def toggleSavePickles(self, save):
+        self.writePickles = save
+        self.sim.setSaveOutput(save)
 
     @pyqtSlot()
     def reset(self):
