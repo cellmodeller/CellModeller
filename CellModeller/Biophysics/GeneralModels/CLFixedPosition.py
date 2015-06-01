@@ -5,13 +5,16 @@ import pyopencl as cl
 import pyopencl.array as cl_array
 from pyopencl.array import vec
 
-class FixedPositionCL:
-    def __init__(sim, max_cells=100):
+class CLFixedPosition:
+    def __init__(self, sim, max_cells=100):
         self.simulator = sim
         self.max_cells = max_cells
         self.init_cl()
         self.init_data()
         self.n_cells = 0
+
+    def setRegulator(self, reg):
+        self.reg = reg
                     
     def init_cl(self):
         if self.simulator:
@@ -80,4 +83,6 @@ class FixedPositionCL:
             self.get_cells()
             for state in self.simulator.cellStates.values():
                 self.updateCellState(state)
+
+        return True
 
