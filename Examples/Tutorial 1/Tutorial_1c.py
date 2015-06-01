@@ -5,11 +5,16 @@ from CellModeller.GUI import Renderers
 import numpy
 import math
 
-cell_cols = {0:[0,1.0,0], 1:[1.0,0,0]}
-
 def setup(sim):
     # Set biophysics, signalling, and regulation models
-    biophys = CLBacterium(sim, jitter_z=False)
+    biophys = CLBacterium(sim, jitter_z=True, max_planes=5)
+
+    biophys.addPlane((0,0,0),(0,0,1),1.0) #Base plane
+
+    biophys.addPlane((10,0,0),(-1,0,0),1.0)
+    biophys.addPlane((-10,0,0),(1,0,0),1.0)
+    biophys.addPlane((0,10,0),(0,-1,0),1.0)
+    biophys.addPlane((0,-10,0),(0,1,0),1.0)
 
     # use this file for reg too
     regul = ModuleRegulator(sim, sim.moduleName)	
@@ -17,19 +22,19 @@ def setup(sim):
     sim.init(biophys, regul, None, None)
  
     # Specify the initial cell and its location in the simulation
-    sim.addCell(cellType=0, pos=(0,0,0), dir=(0,0,0))
+    sim.addCell(cellType=0, pos=(0,0,0.5), dir=(1,0,0))
 
     # Add some objects to draw the models
     therenderer = Renderers.GLBacteriumRenderer(sim)
     sim.addRenderer(therenderer)
-    sim.pickleSteps = 10
+    sim.pickleSteps = 20
 
 def init(cell):
     # Specify mean and distribution of initial cell size
     cell.targetVol = 3.5 + random.uniform(0.0,0.5)
     # Specify growth rate of cells
     cell.growthRate = 1.0
-    cell.color = cell_cols[cell.cellType]
+    cell.color = (0.0,1.0,0.0)
 
 def update(cells):
     #Iterate through each cell and flag cells that reach target size for division
