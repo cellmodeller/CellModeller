@@ -154,6 +154,11 @@ class PyGLCMViewer(PyGLWidget):
                 self.setSimulator(sim) 
                 self.loadingFromPickle = True
                 self.sim.loadFromPickle(data)
+                # Note: the pickle loaded contains the stepNum, hence we now
+                # need to set the GUI frameNo to match
+                self.frameNo = self.sim.stepNum
+                if self.run:
+                    self.frameNo += 1
                 self.updateGL()
             else:
                 print "Pickle is in an unsupported format, sorry"
@@ -186,6 +191,8 @@ class PyGLCMViewer(PyGLWidget):
                     self.updateSelectedCell()
                     if self.run:
                         self.frameNo += 1
+            else:
+                print "GUI frame no. = %d, sim step num = %d"%(self.frameNo,self.sim.stepNum)
     
     def updateSelectedCell(self):
         if self.sim:
