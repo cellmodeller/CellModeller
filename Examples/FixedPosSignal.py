@@ -50,8 +50,8 @@ def setup(sim):
     # Add some objects to draw the models
 #    therenderer = Renderers.GLBacteriumRenderer(sim)
 #    sim.addRenderer(therenderer)
-#    sigrend = Renderers.GLGridRenderer(sig, integ) # Add
-#    sim.addRenderer(sigrend) #Add
+    sigrend = Renderers.GLGridRenderer(sig, integ) # Add
+    sim.addRenderer(sigrend) #Add
 
     sim.pickleSteps = 10
 

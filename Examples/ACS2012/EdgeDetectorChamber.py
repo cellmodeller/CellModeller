@@ -18,7 +18,7 @@ grid_orig = (-128, -14, -8)
 def setup(sim):
     sig = GridDiffusion(sim, 1, grid_dim, grid_size, grid_orig, [10.0])
     integ = CLCrankNicIntegrator(sim, 1, 5, max_cells, sig, boundcond='reflect')
-    biophys = CLBacterium(sim, max_cells=max_cells, max_contacts=32, max_sqs=64*16, jitter_z=False, reg_param=0.001, gamma=5.0)
+    biophys = CLBacterium(sim, max_cells=max_cells, jitter_z=False)
     biophys.addPlane((0,-16,0), (0,1,0), 1)
     biophys.addPlane((0,16,0), (0,-1,0), 1)
     reg = ModuleRegulator(sim)
