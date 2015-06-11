@@ -43,9 +43,10 @@ class GLGridRenderer:
             mx = numpy.max(self.imageData)
             mn = numpy.min(self.imageData)
         if mx>mn:
-            scale = 255/(mx-mn)
+            scale = 255.0/(mx-mn)
         else:
-            scale = 1
+            scale = 1.0
+        #print "mx = %f, mn = %f, scale = %f"%(mx,mn,scale)
         self.imageData = (self.imageData - mn)*scale
         #print "Signal grid range = %f to %f"%(mn,mx) 
         for s in range(self.sig.nSignals):
@@ -54,7 +55,7 @@ class GLGridRenderer:
         glDisable(GL_CULL_FACE)
         glEnable(GL_TEXTURE_2D)
         glDisable(GL_LIGHTING)
-	glDisable(GL_DEPTH_TEST)
+        glDisable(GL_DEPTH_TEST)
         glBindTexture(GL_TEXTURE_2D, self.texture)
         #Load the Data into the Texture
         glTexImage2D( GL_TEXTURE_2D, 0, GL_RGB, self.texDim, self.texDim, 0, GL_RGB, GL_UNSIGNED_BYTE, self.byteImageData )
@@ -77,7 +78,7 @@ class GLGridRenderer:
         glVertex3f(self.orig[0] , self.orig[1]+self.dim[1]*self.size[1],  0.0) 
         glEnd()
         glEnable(GL_LIGHTING)
-	glEnable(GL_DEPTH_TEST)
+        glEnable(GL_DEPTH_TEST)
         glDisable(GL_BLEND)
         glDisable(GL_TEXTURE_2D)
 

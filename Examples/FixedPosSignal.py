@@ -13,9 +13,9 @@ from CellModeller.Integration.CLCrankNicIntegrator import CLCrankNicIntegrator #
 max_cells = 100
 
 #Specify parameter for solving diffusion dynamics 
-grid_dim = (64, 8, 12) # dimension of diffusion space, unit = number of grid
+grid_dim = (64, 64, 12) # dimension of diffusion space, unit = number of grid
 grid_size = (4, 4, 4) # grid size
-grid_orig = (-128, -14, -8) # where to place the diffusion space onto simulation space
+grid_orig = (-128, -128, -8) # where to place the diffusion space onto simulation space
 
 
 def setup(sim):
@@ -37,7 +37,7 @@ def setup(sim):
     biophys = FixedPositionCL(sim, max_cells=max_cells)
 
     sig = GridDiffusion(sim, 1, grid_dim, grid_size, grid_orig, [10.0])
-    integ = CLCrankNicIntegrator(sim, 1, 1, max_cells, sig, boundcond='reflect')
+    integ = CLCrankNicIntegrator(sim, 1, 1, max_cells, sig, boundcond='mirror')
 
     # use this file for reg too
     regul = ModuleRegulator(sim, sim.moduleName)	
@@ -50,8 +50,8 @@ def setup(sim):
     # Add some objects to draw the models
 #    therenderer = Renderers.GLBacteriumRenderer(sim)
 #    sim.addRenderer(therenderer)
-    sigrend = Renderers.GLGridRenderer(sig, integ) # Add
-    sim.addRenderer(sigrend) #Add
+#    sigrend = Renderers.GLGridRenderer(sig, integ) # Add
+#    sim.addRenderer(sigrend) #Add
 
     sim.pickleSteps = 10
 
@@ -82,7 +82,7 @@ def sigRateCL(): #Add
     const float D1=0.1f;
     float x0 = species[0];
     float x0_sig = signals[0];
-    rates[0] = -D1*(x0_sig-x0);
+    rates[0] = 0.1;
     '''
     # D1 = diffusion rate of x0 
 
