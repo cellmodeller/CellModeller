@@ -191,8 +191,6 @@ class PyGLCMViewer(PyGLWidget):
                     self.updateSelectedCell()
                     if self.run:
                         self.frameNo += 1
-            else:
-                print "GUI frame no. = %d, sim step num = %d"%(self.frameNo,self.sim.stepNum)
     
     def updateSelectedCell(self):
         if self.sim:
