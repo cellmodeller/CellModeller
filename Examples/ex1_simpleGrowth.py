@@ -17,7 +17,7 @@ def setup(sim):
     sim.init(biophys, regul, None, None)
  
     # Specify the initial cell and its location in the simulation
-    sim.addCell(cellType=0, pos=(0,0,0), dir=(0,0,0))
+    sim.addCell(cellType=0, pos=(0,0,0), dir=(1,0,0))
 
     # Add some objects to draw the models
     therenderer = Renderers.GLBacteriumRenderer(sim)
