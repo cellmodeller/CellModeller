@@ -52,6 +52,7 @@ def update(cells):
         if dist < growthZone:
             cell.growthRate = cell_growr[cell.cellType]
         else:
+            cell.color = numpy.divide(cell_cols[cell.cellType],2)
             cell.growthRate = 0.0
         if cell.volume > cell.targetVol:
             cell.divideFlag = True
