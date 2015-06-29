@@ -6,10 +6,10 @@ import numpy
 import math
 
 def setup(sim):
-    # Set biophysics, signalling, and regulation models
+    # Set biophysics module
     biophys = CLBacterium(sim, jitter_z=False)
 
-    # use this file for reg too
+    # Set up regulation module
     regul = ModuleRegulator(sim, sim.moduleName)	
     # Only biophys and regulation
     sim.init(biophys, regul, None, None)
@@ -20,6 +20,8 @@ def setup(sim):
     # Add some objects to draw the models
     therenderer = Renderers.GLBacteriumRenderer(sim)
     sim.addRenderer(therenderer)
+    
+    # Specify how often data is saved
     sim.pickleSteps = 20
 
 def init(cell):
