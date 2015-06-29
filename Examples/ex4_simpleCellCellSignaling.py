@@ -19,14 +19,7 @@ grid_orig = (-128, -14, -8) # where to place the diffusion space onto simulation
 
 def setup(sim):
     # Set biophysics, signalling, and regulation models
-    biophys = CLBacterium(sim, \
-                            max_substeps=8, \
-                            max_cells=max_cells, \
-                            max_contacts=32, \
-                            max_sqs=192**2, \
-                            jitter_z=False, \
-                            reg_param=2, \
-                            gamma=10)
+    biophys = CLBacterium(sim, jitter_z=False)
  
     # add the planes to set physical  boundaries of cell growth
     biophys.addPlane((0,-16,0), (0,1,0), 1)

@@ -52,6 +52,8 @@ class PyGLCMViewer(PyGLWidget):
             self.frameNo += 1
         # Make GUI button match simulator state for saving pickles
         self.setSavePicklesToggle.emit(sim.saveOutput)
+        # Get rid of any selected cell id
+        self.selectedName = -1
 
     def getOpenCLPlatDev(self):
         return self.getOpenCLPlatform() and self.getOpenCLDevice()
@@ -155,6 +157,11 @@ class PyGLCMViewer(PyGLWidget):
                 self.setSimulator(sim) 
                 self.loadingFromPickle = True
                 self.sim.loadFromPickle(data)
+                # Note: the pickle loaded contains the stepNum, hence we now
+                # need to set the GUI frameNo to match
+                self.frameNo = self.sim.stepNum
+                if self.run:
+                    self.frameNo += 1
                 self.updateGL()
             else:
                 print "Pickle is in an unsupported format, sorry"

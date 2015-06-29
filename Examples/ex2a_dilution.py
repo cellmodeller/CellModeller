@@ -13,14 +13,7 @@ max_cells = 2**15
 
 def setup(sim):
     # Set biophysics, signalling, and regulation models
-    biophys = CLBacterium(sim, \
-                            max_substeps=8, \
-                            max_cells=max_cells, \
-                            max_contacts=32, \
-                            max_sqs=192**2, \
-                            jitter_z=False, \
-                            reg_param=2, \
-                            gamma=10)
+    biophys = CLBacterium(sim, jitter_z=False)
  
     integ = CLEulerIntegrator(sim, 1, max_cells)
 
@@ -28,11 +21,8 @@ def setup(sim):
     # Only biophys and regulation
     sim.init(biophys, regul, None, integ)
 
-
     # Specify the initial cell and its location in the simulation
     sim.addCell(cellType=0, pos=(0,0,0)) 
-
-
 
     # Add some objects to draw the models
     therenderer = Renderers.GLBacteriumRenderer(sim)
@@ -62,7 +52,7 @@ def specRateCL(): # Add
 def update(cells):
     #Iterate through each cell and flag cells that reach target size for division
     for (id, cell) in cells.iteritems():
-        cell.color = [0.1+cell.species[0]/20.0, 0.1, 0.1] # Add/change
+        cell.color = [0.1+cell.species[0]*10.0, 0.1, 0.1] # Add/change
         if cell.volume > cell.targetVol:
             cell.divideFlag = True
 

@@ -9,14 +9,7 @@ max_cells = 2**15
 
 def setup(sim):
     # Set biophysics, signalling, and regulation models
-    biophys = CLBacterium(sim, \
-                            max_substeps=8, \
-                            max_cells=max_cells, \
-                            max_contacts=32, \
-                            max_sqs=192**2, \
-                            jitter_z=False, \
-                            reg_param=2, \
-                            gamma=10)
+    biophys = CLBacterium(sim, jitter_z=False)
 
     # use this file for reg too
     regul = ModuleRegulator(sim, sim.moduleName)	
@@ -35,7 +28,7 @@ def setup(sim):
 
 def init(cell):
     # Specify mean and distribution of initial cell size
-    cell.targetVol = 2.5 + random.uniform(0.0,0.5)
+    cell.targetVol = 1 + random.uniform(0.0,0.5)
     # Specify growth rate of cells
     cell.growthRate = 2.0
 
