@@ -36,7 +36,7 @@ def init(cell):
     # Specify mean and distribution of initial cell size
     cell.targetVol = 3.0 + random.uniform(0.0,0.5)
     # Specify growth rate of cells
-    cell.growthRate = 1.0
+    cell.growthRate = 0.6
     # Specify initial concentration of chemical species
     cell.species[:] = [0,0]
 
