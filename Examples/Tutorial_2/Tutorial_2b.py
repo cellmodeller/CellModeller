@@ -14,7 +14,7 @@ max_cells = 100000
 def setup(sim):
     # Set biophysics, signalling, and regulation models
     biophys = CLBacterium(sim, max_cells=max_cells, jitter_z=False)
-    integ = CLEulerIntegrator(sim, 1, max_cells)
+    integ = CLEulerIntegrator(sim, 2, max_cells)
 
     # use this file for reg too
     regul = ModuleRegulator(sim)
@@ -28,7 +28,7 @@ def setup(sim):
     therenderer = Renderers.GLBacteriumRenderer(sim)
     sim.addRenderer(therenderer)
 
-    sim.pickleSteps = 10
+    sim.pickleSteps = 20
 
 
 
@@ -38,22 +38,27 @@ def init(cell):
     # Specify growth rate of cells
     cell.growthRate = 1.0
     # Specify initial concentration of chemical species
-    cell.species[:] = [0]
+    cell.species[:] = [0,0]
 
 
 def specRateCL():
     return '''
     const float k1 = 2.f;
-    float x0 = species[0];
-    rates[0] = k1;
+    const float k2 = 2.f;
+    const float delta = 1.f;
+    const float rho = 1.f;
+    const float sigma = 1.f;
+    
+    float x = species[0];
+    float y = species[1];
+    rates[0] = delta*(k1*(1+rho*x*x)/(1+x*x+sigma*y*y)-x);
+    rates[1] = delta*k2*(1+rho*x*x)/(1+x*x)-y;
     '''
-    # k1 = production rate of x0
-
 
 def update(cells):
     #Iterate through each cell and flag cells that reach target size for division
     for (id, cell) in cells.iteritems():
-        cell.color = [numpy.clip(cell.species[0]/6.0,0.0,1.0), 1.0, 0.1]
+        cell.color = [numpy.clip((cell.species[0]-0.5)/0.1,0.0,1.0), 0.1, 0.1]
         if cell.volume > cell.targetVol:
             a = 1
             cell.asymm = [a,1]
