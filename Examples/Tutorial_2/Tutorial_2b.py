@@ -58,7 +58,7 @@ def specRateCL():
 def update(cells):
     #Iterate through each cell and flag cells that reach target size for division
     for (id, cell) in cells.iteritems():
-        cell.color = [numpy.clip((cell.species[0]-0.5)/0.1,0.0,1.0), 0.1, 0.1]
+        cell.color = [numpy.clip((cell.species[0]-0.53)/0.05,0.0,1.0), 0.1, 0.1]
         if cell.volume > cell.targetVol:
             a = 1
             cell.asymm = [a,1]
