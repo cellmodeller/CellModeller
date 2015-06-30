@@ -5,13 +5,12 @@ from CellModeller.GUI import Renderers
 import numpy
 import math
 
-max_cells = 2**15
 
 def setup(sim):
     # Set biophysics, signalling, and regulation models
     biophys = CLBacterium(sim, jitter_z=False)
 
-    regul = ModuleRegulator(sim)	# use this file for reg too
+    regul = ModuleRegulator(sim, sim.moduleName)	# use this file for reg too
     # Only biophys and regulation
     sim.init(biophys, regul, None, None)
 
@@ -23,8 +22,8 @@ def setup(sim):
     sim.pickleSteps = 10
 
 def init(cell):
-    cell.targetVol = 2.5 + random.uniform(0.0,0.5)
-    cell.growthRate = 2.0
+    cell.targetVol = 3.5 + random.uniform(0.0,0.5)
+    cell.growthRate = 1.0
     cell.n_a = 3
     cell.n_b = 3
 
@@ -35,8 +34,8 @@ def update(cells):
             cell.divideFlag = True
 
 def divide(parent, d1, d2):
-    d1.targetVol = 2.5 + random.uniform(0.0,0.5)
-    d2.targetVol = 2.5 + random.uniform(0.0,0.5)
+    d1.targetVol = 3.5 + random.uniform(0.0,0.5)
+    d2.targetVol = 3.5 + random.uniform(0.0,0.5)
     plasmids = [0]*parent.n_a*2 + [1]*parent.n_b*2
     random.shuffle(plasmids)
     d1.n_a = 0
@@ -56,4 +55,3 @@ def divide(parent, d1, d2):
     assert parent.n_b*2 == d1.n_b+d2.n_b
     assert parent.n_a > 0 or (d1.n_a == 0 and d2.n_a == 0)
     assert parent.n_b > 0 or (d1.n_b == 0 and d2.n_b == 0)
-

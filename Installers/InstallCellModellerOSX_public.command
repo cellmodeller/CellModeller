@@ -21,7 +21,7 @@ echo
 echo 1. Downloading Miniconda...
 echo ---------------------------
 echo
-curl https://repo.continuum.io/miniconda/Miniconda-latest-MacOSX-x86_64.sh > Miniconda.sh
+curl https://repo.continuum.io/miniconda/Miniconda-3.8.3-MacOSX-x86_64.sh > Miniconda.sh
 
 # Change permission and run miniconda installer
 echo

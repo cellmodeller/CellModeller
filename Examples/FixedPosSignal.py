@@ -1,7 +1,7 @@
 import random
 from CellModeller.Regulation.ModuleRegulator import ModuleRegulator
 #from CellModeller.Biophysics.BacterialModels.CLBacterium import CLBacterium
-from CellModeller.Biophysics.GeneralModels.FixedPosition import FixedPositionCL
+from CellModeller.Biophysics.GeneralModels.FixedPosition import CLFixedPosition
 from CellModeller.GUI import Renderers
 import numpy
 import math
@@ -34,7 +34,7 @@ def setup(sim):
     biophys.addPlane((0,-16,0), (0,1,0), 1)
     biophys.addPlane((0,16,0), (0,-1,0), 1)
     '''
-    biophys = FixedPositionCL(sim, max_cells=max_cells)
+    biophys = CLFixedPosition(sim, max_cells=max_cells)
 
     sig = GridDiffusion(sim, 1, grid_dim, grid_size, grid_orig, [10.0])
     integ = CLCrankNicIntegrator(sim, 1, 1, max_cells, sig, boundcond='mirror')
