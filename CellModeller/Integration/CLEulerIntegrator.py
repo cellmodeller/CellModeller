@@ -83,8 +83,12 @@ class CLEulerIntegrator:
         self.specLevel_dev = cl_array.zeros(self.queue, (self.maxCells,self.nSpecies), dtype=numpy.float32)
         self.specRate_dev = cl_array.zeros(self.queue, (self.maxCells,self.nSpecies), dtype=numpy.float32)
 
-        self.celltype = numpy.zeros((self.maxCells,),dtype=numpy.int32)
+        self.celltype = numpy.zeros((self.maxCells,), dtype=numpy.int32)
         self.celltype_dev = cl_array.zeros(self.queue, (self.maxCells,),dtype=numpy.int32)
+    
+        self.effgrow = numpy.zeros((self.maxCells,), dtype=numpy.float32)
+        self.effgrow_dev = cl_array.zeros(self.queue, (self.maxCells,), dtype=numpy.float32)
+    
         #self.pos_dev = cl_array.zeros(self.queue, (self.maxCells,), dtype=vec.float4)
 
     def initKernels(self):
@@ -108,6 +112,7 @@ class CLEulerIntegrator:
                                   self.sim.phys.cell_areas_dev.data,
                                   self.sim.phys.cell_vols_dev.data,
                                   self.celltype_dev.data,
+                                  self.effgrow_dev.data,
                                   self.specLevel_dev.data,
                                   self.specRate_dev.data).wait()
         self.specRate[:] = self.specRate_dev.get()
@@ -128,6 +133,12 @@ class CLEulerIntegrator:
                     + "::maxCells (" + self.maxCells + ")"
 
         self.dataLen = self.nCells*self.nSpecies
+
+        self.cellStates = self.sim.cellStates
+        cs = self.cellStates
+        for id,c in cs.items():
+            self.effgrow[c.idx] = numpy.float32(c.effGrowth)
+        self.effgrow_dev.set(self.effgrow)
 
         # growth dilution of species
         self.diluteSpecies()

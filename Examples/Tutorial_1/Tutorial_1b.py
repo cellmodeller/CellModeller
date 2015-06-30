@@ -5,13 +5,13 @@ from CellModeller.GUI import Renderers
 import numpy
 import math
 
-cell_cols = {0:[0,1.0,0], 1:[1.0,0,0], 2:[0,0,1.0]}
-cell_lens = {0:1.0, 1:2.0, 2:3.5}
-cell_growr = {0:2.0, 1:1.1, 2:0.8}
+cell_cols = {0:[0,1.0,0], 1:[1.0,0,0], 2:[0,0,1.0]} #RGB cell colours
+cell_lens = {0:1.0, 1:2.0, 2:3.5} #target cell lengths
+cell_growr = {0:2.0, 1:1.1, 2:0.8} #growth rates
 
 def setup(sim):
     # Set biophysics, signalling, and regulation models
-    biophys = CLBacterium(sim, jitter_z=False, gamma=5.0)
+    biophys = CLBacterium(sim, jitter_z=False)
 
     # use this file for reg too
     regul = ModuleRegulator(sim, sim.moduleName)
@@ -52,6 +52,7 @@ def update(cells):
         if dist < growthZone:
             cell.growthRate = cell_growr[cell.cellType]
         else:
+            cell.color = numpy.divide(cell_cols[cell.cellType],2)
             cell.growthRate = 0.0
         if cell.volume > cell.targetVol:
             cell.divideFlag = True

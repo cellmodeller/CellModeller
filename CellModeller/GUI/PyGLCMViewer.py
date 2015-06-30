@@ -148,6 +148,7 @@ class PyGLCMViewer(PyGLWidget):
             if isinstance(data, dict):
                 self.modName = data['moduleName']
                 self.moduleStr = data['moduleStr']
+                self.frameNo = data['stepNum']
                 sim = Simulator(self.modName, \
                                     self.dt, \
                                     moduleStr=self.moduleStr, \
