@@ -22,7 +22,7 @@ def setup(sim):
     sim.addRenderer(therenderer)
     
     # Specify how often data is saved
-    sim.pickleSteps = 20
+    sim.pickleSteps = 100
 
 def init(cell):
     # Specify mean and distribution of initial cell size

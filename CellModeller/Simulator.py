@@ -34,7 +34,7 @@ visualised.
     def __init__(self, \
                     moduleName, \
                     dt, \
-                    outputSteps=50, \
+                    pickleSteps=50, \
                     outputDirName=None, \
                     moduleStr=None, \
                     saveOutput=False, \
@@ -45,6 +45,7 @@ visualised.
         self.phys = None
         self.sig = None
         self.integ = None
+        self.pickleSteps = pickleSteps
 
         # No cells yet, initialise indices and empty lists/dicts, zero counters
         self._next_id = 1
@@ -91,7 +92,6 @@ visualised.
         # Set up the data output directory
         self.dataOutputInitialised=False
         self.outputDirName = outputDirName
-        self.outputSteps = outputSteps
         self.setSaveOutput(saveOutput)
         '''
         self.saveOutput = saveOutput
@@ -337,7 +337,7 @@ visualised.
             if state.divideFlag:
                 self.divide(state)
 
-        if self.saveOutput and self.stepNum%self.outputSteps==0:
+        if self.saveOutput and self.stepNum%self.pickleSteps==0:
             self.writePickle()
 
         self.stepNum += 1
