@@ -17,30 +17,20 @@ echo "**************************************************************************
 echo 
 echo 
 
-# Download miniconda
-echo
-echo
-echo 1. Downloading Miniconda...
-echo ------------------------------------------------------------
-echo
-echo
-curl https://repo.continuum.io/miniconda/Miniconda-3.8.3-Linux-x86_64.sh > Miniconda.sh
-
 # Change permission and run miniconda installer
 echo
 echo
-echo 2. Installing Miniconda ...
+echo 1. Installing Miniconda ...
 echo ------------------------------------------------------------
 echo
 echo
-chmod +x Miniconda.sh
-bash Miniconda.sh -b
-rm Miniconda.sh
+chmod +x Miniconda-3.8.3-Linux-x86_64.sh
+bash Miniconda-3.8.3-Linux-x86_64.sh -b
 
 # Install dependencies
 echo
 echo
-echo 3. Installing cellmodeller dependencies via miniconda
+echo 2. Installing cellmodeller dependencies via miniconda
 echo ------------------------------------------------------------
 echo
 echo
@@ -56,7 +46,7 @@ THIS_DIR="`dirname $0`"
 
 echo
 echo
-echo 4. Setting up user environment
+echo 3. Setting up user environment
 echo ------------------------------------------------------------
 echo
 echo

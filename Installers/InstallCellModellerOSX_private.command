@@ -16,25 +16,17 @@ echo "*                                                                         
 echo "********************************************************************************"
 echo
 
-# Download miniconda
-echo
-echo 1. Downloading Miniconda...
-echo ---------------------------
-echo
-curl https://repo.continuum.io/miniconda/Miniconda-3.8.3-MacOSX-x86_64.sh > Miniconda.sh
-
 # Change permission and run miniconda installer
 echo
-echo 2. Installing Miniconda ...
+echo 1. Installing Miniconda ...
 echo ---------------------------
 echo
-chmod +x Miniconda.sh
-bash Miniconda.sh -b
-rm Miniconda.sh
+chmod +x Miniconda-3.8.3-MacOSX-x86_64.sh
+bash Miniconda-3.8.3-MacOSX-x86_64.sh -b
 
 # Install dependencies
 echo
-echo 3. Installing CellModeller and dependencies via miniconda...
+echo 2. Installing CellModeller and dependencies via miniconda...
 echo ------------------------------------------------------------
 echo
 source ~/.bash_profile
@@ -44,7 +36,7 @@ $HOME/miniconda/bin/conda install -yc https://conda.binstar.org/timrudge cellmod
 THIS_DIR="`dirname $0`"
 
 echo
-echo 4. Setting up user environment in $HOME/cellmodeller...
+echo 3. Setting up user environment in $HOME/cellmodeller...
 echo -------------------------------------------------------
 echo
 # Setup the users cellmodeller directory with scripts etc.

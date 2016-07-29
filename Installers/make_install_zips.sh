@@ -9,6 +9,7 @@ VERSION=`git describe`
 INSTALLERDIR=InstallCellModeller-$VERSION-OSX
 mkdir -p $INSTALLERDIR
 mkdir -p $INSTALLERDIR/PackageFiles
+cp $THIS_DIR/Miniconda-3.8.3-MacOSX-x86_64.sh $INSTALLERDIR/PackageFiles/
 cp -Rf $THIS_DIR/../Examples $INSTALLERDIR/PackageFiles/
 cp -Rf $THIS_DIR/../Scripts $INSTALLERDIR/PackageFiles/
 cp -Rf $THIS_DIR/../Examples $INSTALLERDIR/PackageFiles/
@@ -25,6 +26,7 @@ rm -rf $INSTALLERDIR
 INSTALLERDIR=InstallCellModeller-$VERSION-OSX-dev
 mkdir -p $INSTALLERDIR
 mkdir -p $INSTALLERDIR/PackageFiles
+cp $THIS_DIR/Miniconda-3.8.3-MacOSX-x86_64.sh $INSTALLERDIR/PackageFiles/
 cp -Rf $THIS_DIR/../Examples $INSTALLERDIR/PackageFiles/
 cp -Rf $THIS_DIR/../Scripts $INSTALLERDIR/PackageFiles/
 cp -Rf $THIS_DIR/../Examples $INSTALLERDIR/PackageFiles/
@@ -41,6 +43,7 @@ rm -rf $INSTALLERDIR
 INSTALLERDIR=InstallCellModeller-$VERSION-Linux64
 mkdir -p $INSTALLERDIR
 mkdir -p $INSTALLERDIR/PackageFiles
+cp $THIS_DIR/Miniconda-3.8.3-Linux-x86_64.sh $INSTALLERDIR/PackageFiles/
 cp -Rf $THIS_DIR/../Examples $INSTALLERDIR/PackageFiles/
 cp -Rf $THIS_DIR/../Scripts $INSTALLERDIR/PackageFiles/
 cp -Rf $THIS_DIR/../Examples $INSTALLERDIR/PackageFiles/
@@ -57,6 +60,7 @@ rm -rf $INSTALLERDIR
 INSTALLERDIR=InstallCellModeller-$VERSION-Linux64-dev
 mkdir -p $INSTALLERDIR
 mkdir -p $INSTALLERDIR/PackageFiles
+cp $THIS_DIR/Miniconda-3.8.3-Linux-x86_64.sh $INSTALLERDIR/PackageFiles/
 cp -Rf $THIS_DIR/../Examples $INSTALLERDIR/PackageFiles/
 cp -Rf $THIS_DIR/../Scripts $INSTALLERDIR/PackageFiles/
 cp -Rf $THIS_DIR/../Examples $INSTALLERDIR/PackageFiles/

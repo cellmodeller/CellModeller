@@ -30,7 +30,7 @@ requirements:
   build:
     - python
     - setuptools
-    - numpy
+    - numpy=1.9.2
     - scipy
     - pyqt
     - pyopengl
@@ -39,7 +39,7 @@ requirements:
   run:
     - python
     - setuptools
-    - numpy
+    - numpy=1.9.2
     - scipy
     - pyqt
     - pyopengl
