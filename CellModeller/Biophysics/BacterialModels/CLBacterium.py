@@ -132,7 +132,6 @@ class CLBacterium:
         self.initCellState(daughter1State)
         self.initCellState(daughter2State)
 
-
     def init_cl(self):
         if self.simulator:
             (self.context, self.queue) = self.simulator.getOpenCL()
@@ -587,25 +586,26 @@ class CLBacterium:
         pa = numpy.array(state.pos)
         da = numpy.array(state.dir)
         state.ends = (pa-da*state.length*0.5, pa+da*state.length*0.5)
-        state.strainRate = state.growthRate/state.length
-        self.cell_dlens[i] = state.growthRate
+        state.strainRate = 0.0
+        #self.cell_dlens[i] = state.growthRate
         state.startVol = state.volume
 
 
     def updateCellState(self, state):
         cid = state.id
         i = state.idx
-        state.strainRate = self.cell_dlens[i]/state.length
+        state.oldLen = state.length
         state.pos = [self.cell_centers[i][j] for j in range(3)]
         state.dir = [self.cell_dirs[i][j] for j in range(3)]
         state.radius = self.cell_rads[i]
         state.length = self.cell_lens[i]
+        state.strainRate = (state.length - state.oldLen)/state.oldLen
+
         #currently the effective growth rate is calculated over the entire history of the cell
-        state.effGrowth = ((state.effGrowth * state.cellAge) + state.length - state.oldLen)
+        state.effGrowth = state.effGrowth * state.cellAge + state.strainRate
         state.cellAge += 1
         state.effGrowth = state.effGrowth / state.cellAge
-        state.oldLen = state.length
-        
+
         state.volume = state.length # TO DO: do something better here
         pa = numpy.array(state.pos)
         da = numpy.array(state.dir)

@@ -21,7 +21,7 @@ Stores a map from cell_id to CellState, which stores the current simulation
 state of each cell.
 
 Constructed on a user-defined python file. This file implements a
-function setup(Simulator, Gui) that constructs the required modules
+function setup(Simulator, Gui) that constructs the requiredx modules
 (Regulator, Signalling, Integrator), and calls Simulator.init(). It
 can also create Renderers and add them by calling
 Simulator.addRenderer(renderer) so that the simulation can be
@@ -158,7 +158,7 @@ visualised.
     # and have the user-defined func initialise the 3 modules
 
     ## Specify models to be used by simulator object. The four inputs are
-    # 'phy' = physical model of cell iteractions
+    # 'phys' = physical model of cell iteractions
     # 'reg' = regulatory model of biochemical circuit in the cell
     # 'sig' = signaling model of intercellular chemical reaction diffusion.
     # 'integ' = integrator
@@ -272,6 +272,9 @@ visualised.
         #reset cell ages
         d1State.cellAge = 0
         d2State.cellAge = 0
+        #inherit effGrowth
+        d1State.effGrowth = pState.effGrowth
+        d2State.effGrowth = pState.effGrowth
         
         self.lineage[d1id] = pid
         self.lineage[d2id] = pid
@@ -300,7 +303,6 @@ visualised.
         cid = self.next_id()
         cs = CellState(cid)
         cs.length = length
-        cs.oldLen = length
         cs.cellType = cellType
         cs.cellAdh = cellAdh
         cs.idx = self.next_idx()
@@ -354,7 +356,7 @@ visualised.
             clen = float(row[6]) #radius should be removed from this in the analysis
             ndir = cdir/numpy.linalg.norm(cdir) #normalize cell dir just in case
             #this should probably also check for overlaps
-            self.addCell(pos=tuple(cpos), dir=tuple(ndir), len=clen)
+            self.addCell(pos=tuple(cpos), dir=tuple(ndir), length=clen)
 
     ## Write current simulation state to an output file
     def writePickle(self, csv=False):
