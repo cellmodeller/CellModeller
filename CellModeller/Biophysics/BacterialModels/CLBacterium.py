@@ -237,6 +237,8 @@ class CLBacterium:
         self.ct_norms_dev = cl_array.zeros(self.queue, ct_geom, vec.float4)
         self.ct_stiff_dev = cl_array.zeros(self.queue, ct_geom, numpy.float32)
         self.ct_overlap_dev = cl_array.zeros(self.queue, ct_geom, numpy.float32)
+        self.neighbours = numpy.zeros(ct_geom, numpy.int32)
+        self.cell_cts = numpy.zeros(self.max_cells, numpy.int32)
 
         # where the contacts pointing to this cell are collected
         self.cell_tos = numpy.zeros(ct_geom, numpy.int32)
@@ -497,6 +499,8 @@ class CLBacterium:
         # pull cells from the device and update simulator
         if self.simulator:
             self.get_cells()
+            idxToId = {idx: id for id, idx in self.simulator.idToIdx.iteritems()}
+            self.updateCellNeighbours(idxToId)
             for state in self.simulator.cellStates.values():
                 self.updateCellState(state)
 
@@ -590,6 +594,17 @@ class CLBacterium:
         #self.cell_dlens[i] = state.growthRate
         state.startVol = state.volume
 
+    def updateCellNeighbours(self, idx2Id):
+        ct_tos = self.ct_tos_dev.get()
+        cell_to_cts = self.cell_n_cts_dev.get()
+        cell_cts = numpy.zeros(self.n_cells, numpy.int32)
+        for i in range(self.n_cells):
+            for j in range(cell_to_cts[i]):
+                self.neighbours[i, cell_cts[i]] = idx2Id[ct_tos[i,j]]
+                cell_cts[i] += 1
+                self.neighbours[ct_tos[i,j], cell_cts[ct_tos[i,j]]] = idx2Id[i]
+                cell_cts[ct_tos[i,j]] += 1
+        self.cell_cts = cell_cts
 
     def updateCellState(self, state):
         cid = state.id
@@ -605,6 +620,12 @@ class CLBacterium:
         state.effGrowth = state.effGrowth * state.cellAge + state.strainRate
         state.cellAge += 1
         state.effGrowth = state.effGrowth / state.cellAge
+
+        state.neighbours = [] #clear contacts
+        for n in range(self.cell_cts[i]):
+            if self.neighbours[i,n] not in state.neighbours:
+                state.neighbours.append(self.neighbours[i,n]) #this is a list of indices, not ids
+        state.cts = len(state.neighbours)
 
         state.volume = state.length # TO DO: do something better here
         pa = numpy.array(state.pos)

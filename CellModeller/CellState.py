@@ -9,4 +9,5 @@ class CellState:
         self.color = [0.5,0.5,0.5]
         self.divideFlag = False
         self.cellAge = 0
+        self.neighbours = []
         self.effGrowth = 0.0
