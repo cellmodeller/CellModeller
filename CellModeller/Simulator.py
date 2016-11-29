@@ -326,7 +326,7 @@ visualised.
     ## Proceed to the next simulation step
     # This method is where objects phys, reg, sig and integ are called
     def step(self):
-        if not self.phys.step(self.dt):
+        if not self.phys.step(self.dt): #neighbours are current here
             return False
         self.reg.step(self.dt)
         if self.sig:
@@ -337,7 +337,7 @@ visualised.
         states = dict(self.cellStates)
         for (cid,state) in states.items():
             if state.divideFlag:
-                self.divide(state)
+                self.divide(state) #neighbours no longer current
 
         if self.saveOutput and self.stepNum%self.pickleSteps==0:
             self.writePickle()

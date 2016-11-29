@@ -19,7 +19,7 @@ class CLBacterium:
     def __init__(self, simulator,
                  max_substeps=8,
                  max_cells=10000,
-                 max_contacts=32,
+                 max_contacts=24,
                  max_planes=4,
                  max_sqs=192**2,
                  grid_spacing=5.0,
@@ -624,7 +624,7 @@ class CLBacterium:
         state.neighbours = [] #clear contacts
         for n in range(self.cell_cts[i]):
             if self.neighbours[i,n] not in state.neighbours:
-                state.neighbours.append(self.neighbours[i,n]) #this is a list of indices, not ids
+                state.neighbours.append(self.neighbours[i,n]) #ids of all cells in physical contact
         state.cts = len(state.neighbours)
 
         state.volume = state.length # TO DO: do something better here
