@@ -600,10 +600,11 @@ class CLBacterium:
         cell_cts = numpy.zeros(self.n_cells, numpy.int32)
         for i in range(self.n_cells):
             for j in range(cell_to_cts[i]):
-                self.neighbours[i, cell_cts[i]] = idx2Id[ct_tos[i,j]]
-                cell_cts[i] += 1
-                self.neighbours[ct_tos[i,j], cell_cts[ct_tos[i,j]]] = idx2Id[i]
-                cell_cts[ct_tos[i,j]] += 1
+                if ct_tos[i,j]>0:#not a plane contact
+                    self.neighbours[i, cell_cts[i]] = idx2Id[ct_tos[i,j]]
+                    cell_cts[i] += 1
+                    self.neighbours[ct_tos[i,j], cell_cts[ct_tos[i,j]]] = idx2Id[i]
+                    cell_cts[ct_tos[i,j]] += 1
         self.cell_cts = cell_cts
 
     def updateCellState(self, state):

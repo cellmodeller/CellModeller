@@ -1,7 +1,7 @@
 
 class CellState:
     # Don't show these attributes in gui
-    excludeAttr = ['id', 'divideFlag', 'ends']
+    excludeAttr = ['id', 'divideFlag', 'ends','cellAdh']
 
     def __init__(self, cid):
         self.id = cid

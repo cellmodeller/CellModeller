@@ -23,7 +23,7 @@ n_species = 2
 def setup(sim):
     # Set biophysics, signalling, and regulation models
     biophys = CLBacterium(sim, jitter_z=False)
-    sig = GridDiffusion(sim, n_signals, grid_dim, grid_size, grid_orig, [10.0, 10.0])
+    sig = GridDiffusion(sim, n_signals, grid_dim, grid_size, grid_orig, [1.0, 1.0])
     integ = CLCrankNicIntegrator(sim, n_signals, n_species, max_cells, sig)
     
     # use this file for reg too
@@ -38,8 +38,8 @@ def setup(sim):
     # Add some objects to draw the models
     therenderer = Renderers.GLBacteriumRenderer(sim)
     sim.addRenderer(therenderer)
-    #sigrend = Renderers.GLGridRenderer(sig, integ) # Add
-    #sim.addRenderer(sigrend) #Add
+    sigrend = Renderers.GLGridRenderer(sig, integ) # Add
+    sim.addRenderer(sigrend) #Add
     
     sim.pickleSteps = 20
 

@@ -299,7 +299,7 @@ visualised.
         self.reg.divide(pState, d1State, d2State)
 
     ## Add a new cell to the simulator
-    def addCell(self, cellType=0, cellAdh=0.0, length=3.5, **kwargs):
+    def addCell(self, cellType=0, cellAdh=0, length=3.5, **kwargs):
         cid = self.next_id()
         cs = CellState(cid)
         cs.length = length
