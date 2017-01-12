@@ -5,7 +5,7 @@ import numpy as np
 sys.path.append('.')
 import cPickle
 import CellModeller
-import matplotlib.pyplot as plt
+#import matplotlib.pyplot as plt
 
 file = sys.argv[1] #select pickle file in command line
 output_file = open('LengthData.csv','w')
@@ -31,10 +31,10 @@ def lengthHist(pickle, bins, file=False):
         if file:
             file.write(str(radialPosition)+', '+ str(cellLength)+'\n')
     #plt.hist(lens,bins)
-    heatmap, xedges, yedges = np.histogram2d(r, lens, bins=100)
-    extent = [xedges[0], xedges[-1], yedges[0], yedges[-1]]
-    plt.imshow(heatmap,extent=extent,aspect='auto')
-    plt.show()
+    #heatmap, xedges, yedges = np.histogram2d(r, lens, bins=100)
+    #extent = [xedges[0], xedges[-1], yedges[0], yedges[-1]]
+    #plt.imshow(heatmap,extent=extent,aspect='auto')
+    #plt.show()
     #print r, lens
     return r, lens
 
@@ -48,7 +48,6 @@ def dirLengthHist(dir,bins,file=False):
             n, lens = lengthHist(dir + f,bins,file)
             if file:
                 fout.close()
-
 
 bin = np.arange(0.0,6.0,0.1)
 lengthHist(file,bin,output_file)
