@@ -4,8 +4,8 @@
 from setuptools import setup
 
 setup(name='CellModeller',
-      install_requires=['numpy', 'scipy', 'pyopengl', 'mako', 'pyopencl'],
-      setup_requires=['numpy', 'scipy', 'pyopengl', 'mako', 'pyopencl'],
+      install_requires=['numpy', 'pyopengl', 'mako', 'pyopencl'],
+      setup_requires=['numpy', 'pyopengl', 'mako', 'pyopencl'],
       packages=['CellModeller',
                 'CellModeller.Biophysics',
                 'CellModeller.Biophysics.BacterialModels',
@@ -13,7 +13,5 @@ setup(name='CellModeller',
                 'CellModeller.Regulation',
                 'CellModeller.Signalling',
                 'CellModeller.GUI'],
-      package_data={'CellModeller.Integration':['CLCrankNicIntegrator.cl'],
-                    'CellModeller.Integration':['CLEulerIntegrator.cl'],
-                    'CellModeller.Biophysics.BacterialModels':['CLBacterium.cl']},
+      package_data={'':['*.cl']},
 )
