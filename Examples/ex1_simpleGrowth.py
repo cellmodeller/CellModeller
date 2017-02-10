@@ -6,6 +6,7 @@ import numpy
 import math
 
 cell_cols = {0:[0,1.0,0], 1:[1.0,0,0]}
+outfile = 'all.csv'
 
 def setup(sim):
     # Set biophysics, signalling, and regulation models
@@ -23,6 +24,7 @@ def setup(sim):
     therenderer = Renderers.GLBacteriumRenderer(sim)
     sim.addRenderer(therenderer)
     sim.pickleSteps = 10
+    sim.saveOutput = True
 
 def init(cell):
     # Specify mean and distribution of initial cell size
