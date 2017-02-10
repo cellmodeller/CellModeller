@@ -19,7 +19,7 @@ class CLBacterium:
     def __init__(self, simulator,
                  max_substeps=8,
                  max_cells=10000,
-                 max_contacts=32,
+                 max_contacts=24,
                  max_planes=4,
                  max_sqs=192**2,
                  grid_spacing=5.0,
@@ -132,7 +132,6 @@ class CLBacterium:
         self.initCellState(daughter1State)
         self.initCellState(daughter2State)
 
-
     def init_cl(self):
         if self.simulator:
             (self.context, self.queue) = self.simulator.getOpenCL()
@@ -238,6 +237,8 @@ class CLBacterium:
         self.ct_norms_dev = cl_array.zeros(self.queue, ct_geom, vec.float4)
         self.ct_stiff_dev = cl_array.zeros(self.queue, ct_geom, numpy.float32)
         self.ct_overlap_dev = cl_array.zeros(self.queue, ct_geom, numpy.float32)
+        self.neighbours = numpy.zeros(ct_geom, numpy.int32)
+        self.cell_cts = numpy.zeros(self.max_cells, numpy.int32)
 
         # where the contacts pointing to this cell are collected
         self.cell_tos = numpy.zeros(ct_geom, numpy.int32)
@@ -498,6 +499,8 @@ class CLBacterium:
         # pull cells from the device and update simulator
         if self.simulator:
             self.get_cells()
+            idxToId = {idx: id for id, idx in self.simulator.idToIdx.iteritems()}
+            self.updateCellNeighbours(idxToId)
             for state in self.simulator.cellStates.values():
                 self.updateCellState(state)
 
@@ -587,25 +590,44 @@ class CLBacterium:
         pa = numpy.array(state.pos)
         da = numpy.array(state.dir)
         state.ends = (pa-da*state.length*0.5, pa+da*state.length*0.5)
-        state.strainRate = state.growthRate/state.length
-        self.cell_dlens[i] = state.growthRate
+        state.strainRate = 0.0
+        #self.cell_dlens[i] = state.growthRate
         state.startVol = state.volume
 
+    def updateCellNeighbours(self, idx2Id):
+        ct_tos = self.ct_tos_dev.get()
+        cell_to_cts = self.cell_n_cts_dev.get()
+        cell_cts = numpy.zeros(self.n_cells, numpy.int32)
+        for i in range(self.n_cells):
+            for j in range(cell_to_cts[i]):
+                if ct_tos[i,j]>0:#not a plane contact
+                    self.neighbours[i, cell_cts[i]] = idx2Id[ct_tos[i,j]]
+                    cell_cts[i] += 1
+                    self.neighbours[ct_tos[i,j], cell_cts[ct_tos[i,j]]] = idx2Id[i]
+                    cell_cts[ct_tos[i,j]] += 1
+        self.cell_cts = cell_cts
 
     def updateCellState(self, state):
         cid = state.id
         i = state.idx
-        state.strainRate = self.cell_dlens[i]/state.length
+        state.oldLen = state.length
         state.pos = [self.cell_centers[i][j] for j in range(3)]
         state.dir = [self.cell_dirs[i][j] for j in range(3)]
         state.radius = self.cell_rads[i]
         state.length = self.cell_lens[i]
+        state.strainRate = (state.length - state.oldLen)/state.oldLen
+
         #currently the effective growth rate is calculated over the entire history of the cell
-        state.effGrowth = ((state.effGrowth * state.cellAge) + state.length - state.oldLen)
+        state.effGrowth = state.effGrowth * state.cellAge + state.strainRate
         state.cellAge += 1
         state.effGrowth = state.effGrowth / state.cellAge
-        state.oldLen = state.length
-        
+
+        state.neighbours = [] #clear contacts
+        for n in range(self.cell_cts[i]):
+            if self.neighbours[i,n] not in state.neighbours:
+                state.neighbours.append(self.neighbours[i,n]) #ids of all cells in physical contact
+        state.cts = len(state.neighbours)
+
         state.volume = state.length # TO DO: do something better here
         pa = numpy.array(state.pos)
         da = numpy.array(state.dir)
@@ -1144,312 +1166,3 @@ class CLBacterium:
         open("cgs_prof","a").write( "%i, %i, %i, %f\n"%(self.n_cells,self.n_cts,iters,(t2-t1)*0.001) )
 
 
-
-circ_pts = [(math.cos(math.radians(th)), math.sin(math.radians(th))) for th in range(-80,90,20)]
-
-
-def display_grid(spacing, x_lo, x_hi, y_lo, y_hi):
-    glBegin(GL_LINES)
-    for i in range(x_lo, x_hi+1):
-        glVertex3f(i*spacing, y_lo*spacing, 0)
-        glVertex3f(i*spacing, y_hi*spacing, 0)
-    for i in range(y_lo, y_hi+1):
-        glVertex3f(x_lo*spacing, i*spacing, 0)
-        glVertex3f(x_hi*spacing, i*spacing, 0)
-    glEnd()
-
-
-def display_cell(p, d, l, r):
-    global quad
-    pa = numpy.array([p[i] for i in range(3)])
-    da = numpy.array([d[i] for i in range(3)])
-    e1 = pa - da*l*0.5
-    e2 = pa + da*l*0.5
-    glEnable(GL_DEPTH_TEST)
-    glMatrixMode(GL_MODELVIEW)
-    glPushMatrix()
-    glTranslatef(e1[0],e1[1],e1[2])
-    zaxis = numpy.array([0,0,1])
-    rotaxis = numpy.cross(da, zaxis)
-    ang = numpy.arccos(numpy.dot(da, zaxis))
-    glRotatef(-ang*180.0/math.pi, rotaxis[0], rotaxis[1], rotaxis[2])
-    #glRotatef(90.0, 1, 0, 0)
-    gluCylinder(quad, r, r , l, 8, 1)
-    gluSphere(quad, r, 8, 8)
-    glPopMatrix() 
-    glPushMatrix()
-    glTranslatef(e2[0],e2[1],e2[2])
-    gluSphere(quad, r, 8, 8)
-    glPopMatrix() 
-    glDisable(GL_DEPTH_TEST)
-
-'''
-def display_cell(p, d, l, r):
-    glEnable(GL_DEPTH_TEST)
-    glMatrixMode(GL_MODELVIEW)
-    glPushMatrix()
-    ang = math.atan2(d[1], d[0]) * 360.0 / (2.0*3.141593)
-    glTranslatef(p[0], p[1], 0.0)
-    glRotatef(ang, 0.0, 0.0, 1.0)
-    glBegin(GL_POLYGON)
-    glVertex3f(-l/2.0, -r, 0)
-    glVertex3f(l/2.0, -r, 0)
-    for x,y in circ_pts:
-        glVertex3f(l/2.0 + x*r, y*r, 0.0)
-    glVertex3f(l/2.0, r, 0)
-    glVertex3f(-l/2.0, r, 0)
-    for x,y in circ_pts:
-        glVertex3f(-l/2.0 -x*r, -y*r, 0.0)
-    glEnd()
-    glPopMatrix()
-    glDisable(GL_DEPTH_TEST)
-'''
-
-def display_cell_name(p, name):
-    glMatrixMode(GL_MODELVIEW)
-    glPushMatrix()
-    glTranslatef(p[0], p[1], p[2])
-    glScalef(0.006, 0.006, 0.006)
-    display_string(name)
-    glPopMatrix()
-
-def display_ct(pt, norm, fr_Lz):
-    glMatrixMode(GL_MODELVIEW)
-    glPushMatrix()
-    glTranslatef(pt[0], pt[1], pt[2])
-    glBegin(GL_POINTS)
-    glVertex3f(0.0, 0.0, 0.0)
-    glEnd()
-    glPushMatrix()
-    glTranslatef(0.1, 0.1, 0.0)
-    glScalef(0.004, 0.004, 0.004)
-    display_string(fr_Lz)
-    glPopMatrix()
-    xaxis = numpy.array([1,0,0])
-    norma = numpy.array([norm[i] for i in range(3)])
-    rotaxis = numpy.cross(norma, xaxis)
-    ang = numpy.arccos(numpy.dot(norma, xaxis))
-    glRotatef(-ang*180.0/math.pi, rotaxis[0], rotaxis[1], rotaxis[2])
-#    ang = math.atan2(norm[1], norm[0]) * 360.0 / (2.0*3.141593)
-#    glRotatef(ang, 0.0, 0.0, 1.0)
-    glBegin(GL_LINES)
-    glVertex3f(0.0, 0.0, 0.0)
-    glVertex3f(1.0, 0.0, 0.0)
-    glEnd()
-    glBegin(GL_TRIANGLES)
-    glVertex3f(1.0, 0.0, 0.0)
-    glVertex3f(0.8, 0.2, 0.0)
-    glVertex3f(0.8, -0.2, 0.0)
-    glEnd()
-    glPopMatrix()
-
-
-def display_string(s):
-    for ch in s:
-        glutStrokeCharacter(GLUT_STROKE_ROMAN, ord(ch))
-
-def cell_color(i):
-    global founders
-    while i not in founders:
-        i = model.parents[i]
-    return founders[i]
-
-
-
-def display():
-    global view_x, view_y, view_z, view_ang
-    glEnable(GL_LINE_SMOOTH)
-    glEnable(GL_POLYGON_SMOOTH)
-    glEnable(GL_BLEND)
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
-
-    glClearColor(0.7, 0.7, 0.7, 0.7)
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
-
-    glMatrixMode(GL_PROJECTION)
-    glLoadIdentity()
-    gluPerspective(60.0, 1.0, 0.1, 1000.0)
-
-    glMatrixMode(GL_MODELVIEW)
-    glLoadIdentity()
-    glTranslatef(view_x, view_y, -view_z)
-    glRotatef(view_ang, 1,0,0)
-
-    glColor3f(0, 0, 0)
-    glLineWidth(0.5)
-    display_grid(model.grid_spacing, model.grid_x_min, model.grid_x_max, model.grid_y_min, model.grid_y_max)
-
-    model.get_cells()
-    for i in range(model.n_cells):
-        #glColor3f(0.5, 0.5, 0.5)
-        rr,gg,bb = cell_color(i)
-        glColor3f(rr, gg, bb)
-        #glPolygonMode(GL_FRONT_AND_BACK, GL_FILL)
-        glPolygonMode(GL_FRONT, GL_FILL)
-        display_cell(model.cell_centers[i], model.cell_dirs[i], model.cell_lens[i], model.cell_rads[i])
-
-        glColor3f(0.0, 0.0, 0.0)
-        #glPolygonMode(GL_FRONT_AND_BACK, GL_LINE)
-        glPolygonMode(GL_FRONT, GL_LINE)
-        glLineWidth(2.0)
-        display_cell(model.cell_centers[i], model.cell_dirs[i], model.cell_lens[i], model.cell_rads[i])
-
-        # glColor3f(0.0, 0.0, 0.0)
-        # glLineWidth(1.0)
-        # display_cell_name(model.cell_centers[i], str(i))
-
-    glColor3f(0.1, 0.2, 0.4)
-    glPolygonMode(GL_FRONT_AND_BACK, GL_FILL)
-    glPointSize(1.0)
-    glLineWidth(1.0)
-    global ct_map
-    new_ct_map = {}
-    model.get_cts()
-    for i in range(model.n_cells):
-        for j in range(model.cell_n_cts[i]):
-            other = model.ct_tos[i][j]
-            new_ct_map[i,other] = (model.ct_pts[i][j], model.ct_norms[i][j], '% .4f'%model.ct_dists[i][j])
-            if other<0:
-                glColor3f(0.5,0.5,0.1)
-            elif (i,other) in ct_map:
-                glColor3f(0.1, 0.4, 0.2)
-            else:
-                glColor3f(0.6, 0.1, 0.1)
-            if other<0:
-                display_ct(model.ct_pts[i][j], model.ct_norms[i][j], '% .4f'% model.ct_dists[i][j])
-    dead_cts_keys = set(ct_map.keys()) - set(new_ct_map.keys())
-    for key in dead_cts_keys:
-        pt, norm, dist = ct_map[key]
-        glColor3f(0.1, 0.1, 0.6)
-        display_ct(pt, norm, dist)
-    ct_map = new_ct_map
-
-
-    glFlush()
-    glutSwapBuffers()
-
-def reshape(w, h):
-    l = min(w, h)
-    glViewport(0, 0, l, l)
-    glMatrixMode(GL_PROJECTION)
-    glLoadIdentity()
-    glMatrixMode(GL_MODELVIEW)
-    glLoadIdentity()
-    glutPostRedisplay()
-
-
-
-from OpenGL.GL import *
-from OpenGL.GLU import *
-from OpenGL.GLUT import *
-
-display_flag = False
-quad = gluNewQuadric()
-
-def idle():
-    global frame_no
-    global display_flag
-    model.tick(0.01)
-    model.get_cells()
-
-    if model.frame_no % 100 == 0:
-        #self.dump_cell_data(frame_no/100)
-        print '% 8i    % 8i cells    % 8i contacts' % (model.frame_no, model.n_cells, model.n_cts)
-
-    if model.frame_no %100 == 0:
-        for i in range(model.n_cells):
-            if model.cell_lens[i] > 3.0+random.uniform(0.0,1.0):
-                model.divide_cell(i)
-    model.set_cells()
-
-    if model.frame_no % 500 == 0 or display_flag:
-        display()
-        display_flag = False
-
-    if model.frame_no % 1001 == 0:
-        model.profileCGS()
-        model.profileFindCts()
-        model.profileGrid()
-
-    model.frame_no += 1
-
-
-
-view_x = 0
-view_y = 0
-view_z = 50
-view_ang = 45.0
-
-def key_pressed(*args):
-    global view_x, view_y, view_z, view_ang, display_flag
-    if args[0] == 'j':
-        view_x += 2
-    elif args[0] == 'l':
-        view_x -= 2
-    elif args[0] == 'i':
-        view_y -= 2
-    elif args[0] == 'k':
-        view_y += 2
-    elif args[0] == 'e':
-        view_z -= 2
-    elif args[0] == 'd':
-        view_z += 2
-    elif args[0] == 'z':
-        view_ang += 2
-    elif args[0] == 'x':
-        view_ang -= 2
-    elif args[0] == '\x1b':
-        exit()
-    elif args[0] == 'f':
-        display_flag = True
-
-
-
-
-import time
-
-class state:
-    pass
-
-if __name__ == '__main__':
-
-    numpy.set_printoptions(precision=8,
-                           threshold=10000,
-                           linewidth=180)
-
-    ct_map = {}
-
-    glutInit(sys.argv)
-    glutInitWindowSize(1400, 1400)
-    glutInitWindowPosition(0, 0)
-    glutCreateWindow('CLBacterium')
-    glutDisplayFunc(display)
-    glutReshapeFunc(reshape)
-    glutKeyboardFunc(key_pressed)
-    glutIdleFunc(idle)
-    
-    from CellModeller.Simulator import Simulator
-    sim = Simulator(None, 0.01)
-    model = CLBacterium(sim, max_cells=2**15, max_contacts=32, max_sqs=64*16, jitter_z=False, reg_param=2, gamma=5.0)
-    model.addPlane((0,-16,0), (0,1,0), 1)
-    model.addPlane((0,16,0), (0,-1,0), 1)
-    #model = CLBacterium(None)
-    
-    #model.load_test_data()
-    #model.load_3_cells_2_planes()
-    #model.load_1024_cells()
-    #model.load_3_cells()
-    
-    cs = state()
-    cs.id=0
-    cs.idx=0
-    cs.growthRate = 0.5
-    model.addCell(cs)
-    founders = {0:(0.5, 0.3, 0.3),
-                1:(0.3, 0.5, 0.3),
-                2:(0.3, 0.3, 0.5)}
-    #model.load_3_cells_2_planes()
-    #model.load_1024_cells()
-    model.load_3_cells()
-
-    glutMainLoop()

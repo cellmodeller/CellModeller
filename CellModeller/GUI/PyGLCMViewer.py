@@ -19,7 +19,7 @@ class PyGLCMViewer(PyGLWidget):
     setSavePicklesToggle = pyqtSignal(bool)
     selectedCell = pyqtSignal(str) #emit selected cell info
     selectedName = -1
-    dt = 0.025 
+    dt = 0.05
 
     def __init__(self, parent = None):
         PyGLWidget.__init__(self,parent)
