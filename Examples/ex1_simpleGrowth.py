@@ -24,6 +24,8 @@ def setup(sim):
     if sim.is_gui:
         therenderer = Renderers.GLBacteriumRenderer(sim)
         sim.addRenderer(therenderer)
+    else:
+        print "Running in batch mode: no display will be output"
 
     sim.pickleSteps = 10
     sim.saveOutput = True
