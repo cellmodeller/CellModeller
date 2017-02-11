@@ -21,8 +21,10 @@ def setup(sim):
     sim.addCell(cellType=0, pos=(0,0,0), dir=(1,0,0))
 
     # Add some objects to draw the models
-    therenderer = Renderers.GLBacteriumRenderer(sim)
-    sim.addRenderer(therenderer)
+    if sim.is_gui:
+        therenderer = Renderers.GLBacteriumRenderer(sim)
+        sim.addRenderer(therenderer)
+
     sim.pickleSteps = 10
     sim.saveOutput = True
 

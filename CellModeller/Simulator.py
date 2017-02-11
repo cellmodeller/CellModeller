@@ -39,7 +39,11 @@ visualised.
                     moduleStr=None, \
                     saveOutput=False, \
                     clPlatformNum=0, \
-                    clDeviceNum=0):
+                    clDeviceNum=0,
+                    is_gui=False):
+        # Is this simulator running in a gui?
+        self.is_gui = is_gui
+
         # No models specified yet
         self.reg = None
         self.phys = None
