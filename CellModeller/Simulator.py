@@ -39,7 +39,7 @@ visualised.
                     moduleStr=None, \
                     saveOutput=False, \
                     clPlatformNum=0, \
-                    clDeviceNum=0,
+                    clDeviceNum=0, \
                     is_gui=False):
         # Is this simulator running in a gui?
         self.is_gui = is_gui
@@ -55,6 +55,7 @@ visualised.
         self._next_id = 1
         self._next_idx = 0
         self.idToIdx = {}
+        self.idxToId = {}
         self.cellStates = {}
         self.renderers = []
         self.stepNum = 0
@@ -291,8 +292,10 @@ visualised.
         # Update indexing, reuse parent index for d1
         d1State.idx = pState.idx
         self.idToIdx[d1id] = pState.idx
+        self.idxToId[pState.idx] = d1id
         d2State.idx = self.next_idx()
         self.idToIdx[d2id] = d2State.idx
+        self.idxToId[d2State.idx] = d2id
         del self.idToIdx[pid]
 
         # Divide the cell in each model
@@ -311,6 +314,7 @@ visualised.
         cs.cellAdh = cellAdh
         cs.idx = self.next_idx()
         self.idToIdx[cid] = cs.idx
+        self.idxToId[cs.idx] = cid
         self.cellStates[cid] = cs
         if self.integ:
             self.integ.addCell(cs)
@@ -385,12 +389,15 @@ visualised.
         self.lineage = data['lineage']
         self.stepNum = data['stepNum']
         idx_map = {}
+        id_map = {}
         idmax = 0
         for id,state in data['cellStates'].iteritems():
             idx_map[state.id] = state.idx
+            id_map[state.idx] = state.id
             if id>idmax:
                 idmax=id
         self.idToIdx = idx_map
+        self.idxToId = id_map
         self._next_id = idmax+1
         self._next_idx = len(data['cellStates'])
         if data.has_key('sigData'):

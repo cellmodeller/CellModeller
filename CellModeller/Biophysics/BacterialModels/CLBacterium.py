@@ -30,7 +30,11 @@ class CLBacterium:
                  reg_param=0.1,
                  jitter_z=True,
                  alternate_divisions=False,
-                 printing=True):
+                 printing=True,
+                 compNeighbours=False):
+
+        # Should we compute neighbours? (bit slow)
+        self.computeNeighbours = compNeighbours
 
         self.frame_no = 0
         self.simulator = simulator
@@ -499,8 +503,11 @@ class CLBacterium:
         # pull cells from the device and update simulator
         if self.simulator:
             self.get_cells()
-            idxToId = {idx: id for id, idx in self.simulator.idToIdx.iteritems()}
-            self.updateCellNeighbours(idxToId)
+            # TJR: added incremental construction of this dict to same places as idToIdx - not fully tested
+            #idxToId = {idx: id for id, idx in self.simulator.idToIdx.iteritems()}
+            # TJR: add flag for this cos a bit time consuming
+            if self.computeNeighbours:
+                self.updateCellNeighbours(self.simulator.idxToId)
             for state in self.simulator.cellStates.values():
                 self.updateCellState(state)
 
@@ -522,17 +529,17 @@ class CLBacterium:
         # set target dlens (taken from growth rates set by updateCellStates)
         #self.cell_target_dlens_dev.set(dt*self.cell_growth_rates)
         #self.cell_dlens_dev.set(dt*self.cell_dlens)
-        self.cell_dlens_dev.set(dt*self.cell_growth_rates)
+        self.cell_dlens_dev[0:self.n_cells].set(dt*self.cell_growth_rates[0:self.n_cells])
 
         # redefine gridding based on the range of cell positions
-        self.cell_centers = self.cell_centers_dev.get()
+        self.cell_centers[0:self.n_cells] = self.cell_centers_dev[0:self.n_cells].get()
         self.update_grid() # we assume local cell_centers is current
 
         # get each cell into the correct sq and retrieve from the device
         self.bin_cells()
 
         # sort cells and find sq index starts in the list
-        self.cell_sqs = self.cell_sqs_dev.get() # get updated cell sqs
+        self.cell_sqs = self.cell_sqs_dev[0:self.n_cells].get() # get updated cell sqs
         self.sort_cells()
         self.sorted_ids_dev.set(self.sorted_ids) # push changes to the device
         self.sq_inds_dev.set(self.sq_inds)
@@ -595,8 +602,8 @@ class CLBacterium:
         state.startVol = state.volume
 
     def updateCellNeighbours(self, idx2Id):
-        ct_tos = self.ct_tos_dev.get()
-        cell_to_cts = self.cell_n_cts_dev.get()
+        ct_tos = self.ct_tos_dev[0:self.n_cells,:].get()
+        cell_to_cts = self.cell_n_cts_dev[0:self.n_cells].get()
         cell_cts = numpy.zeros(self.n_cells, numpy.int32)
         for i in range(self.n_cells):
             for j in range(cell_to_cts[i]):
@@ -769,7 +776,7 @@ class CLBacterium:
 
         # set dtype to int32 so we don't overflow the int32 when summing
         #self.n_cts = self.cell_n_cts_dev.get().sum(dtype=numpy.int32)
-        self.n_cts = cl_array.sum(self.cell_n_cts_dev).get()
+        self.n_cts = cl_array.sum(self.cell_n_cts_dev[0:self.n_cells]).get()
 
 
     def collect_tos(self):
@@ -879,8 +886,8 @@ class CLBacterium:
 
         # There must be a way to do this using built in pyopencl - what
         # is it?!
-        self.vclearf(self.deltap_dev)
-        self.vclearf(self.rhs_dev)
+        self.vclearf(self.deltap_dev[0:self.n_cells])
+        self.vclearf(self.rhs_dev[0:self.n_cells])
 
         # put M^T n^Tv_rel in rhs (b)
         self.program.calculate_MTMx(self.queue,
@@ -897,13 +904,13 @@ class CLBacterium:
 
         # res = b-Ax
         self.calculate_Ax(self.MTMx_dev, self.deltap_dev, dt)
-        self.vsub(self.res_dev, self.rhs_dev, self.MTMx_dev)
+        self.vsub(self.res_dev[0:self.n_cells], self.rhs_dev[0:self.n_cells], self.MTMx_dev[0:self.n_cells])
 
         # p = res
-        cl.enqueue_copy(self.queue, self.p_dev.data, self.res_dev.data)
+        cl.enqueue_copy(self.queue, self.p_dev[0:self.n_cells].data, self.res_dev[0:self.n_cells].data)
 
         # rsold = l2norm(res)
-        rsold = self.vdot(self.res_dev, self.res_dev).get()
+        rsold = self.vdot(self.res_dev[0:self.n_cells], self.res_dev[0:self.n_cells]).get()
         rsfirst = rsold
         if math.sqrt(rsold/self.n_cells) < self.cgs_tol:
             if self.printing and self.frame_no%10==0:
@@ -918,22 +925,22 @@ class CLBacterium:
             
         for iter in range(max_iters):
             # Ap
-            self.calculate_Ax(self.Ap_dev, self.p_dev, dt)
+            self.calculate_Ax(self.Ap_dev[0:self.n_cells], self.p_dev[0:self.n_cells], dt)
 
             # p^TAp
-            pAp = self.vdot(self.p_dev, self.Ap_dev).get()
+            pAp = self.vdot(self.p_dev[0:self.n_cells], self.Ap_dev[0:self.n_cells]).get()
 
             # alpha = rsold/p^TAp
             alpha = numpy.float32(rsold/pAp)
 
             # x = x + alpha*p, x=self.disp
-            self.vaddkx(self.deltap_dev, alpha, self.deltap_dev, self.p_dev)
+            self.vaddkx(self.deltap_dev[0:self.n_cells], alpha, self.deltap_dev[0:self.n_cells], self.p_dev[0:self.n_cells])
 
             # res = res - alpha*Ap
-            self.vsubkx(self.res_dev, alpha, self.res_dev, self.Ap_dev)
+            self.vsubkx(self.res_dev[0:self.n_cells], alpha, self.res_dev[0:self.n_cells], self.Ap_dev[0:self.n_cells])
 
             # rsnew = l2norm(res)
-            rsnew = self.vdot(self.res_dev, self.res_dev).get()
+            rsnew = self.vdot(self.res_dev[0:self.n_cells], self.res_dev[0:self.n_cells]).get()
 
             # Test for convergence
             if math.sqrt(rsnew/self.n_cells) < self.cgs_tol:
@@ -945,7 +952,7 @@ class CLBacterium:
             #    break
 
             # p = res + rsnew/rsold *p
-            self.vaddkx(self.p_dev, numpy.float32(rsnew/rsold), self.res_dev, self.p_dev)
+            self.vaddkx(self.p_dev[0:self.n_cells], numpy.float32(rsnew/rsold), self.res_dev[0:self.n_cells], self.p_dev[0:self.n_cells])
 
             rsold = rsnew
             #print '        ',iter,rsold
