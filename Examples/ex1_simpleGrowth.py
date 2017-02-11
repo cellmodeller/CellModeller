@@ -10,7 +10,7 @@ outfile = 'all.csv'
 
 def setup(sim):
     # Set biophysics, signalling, and regulation models
-    biophys = CLBacterium(sim, jitter_z=False)
+    biophys = CLBacterium(sim, jitter_z=False, max_cells=2**20)
 
     # use this file for reg too
     regul = ModuleRegulator(sim, sim.moduleName)	
@@ -21,8 +21,9 @@ def setup(sim):
     sim.addCell(cellType=0, pos=(0,0,0), dir=(1,0,0))
 
     # Add some objects to draw the models
-    therenderer = Renderers.GLBacteriumRenderer(sim)
-    sim.addRenderer(therenderer)
+    # Only use these in gui mode
+    #therenderer = Renderers.GLBacteriumRenderer(sim)
+    #sim.addRenderer(therenderer)
     sim.pickleSteps = 10
     sim.saveOutput = True
 
