@@ -21,9 +21,12 @@ def setup(sim):
     sim.addCell(cellType=0, pos=(0,0,0), dir=(1,0,0))
 
     # Add some objects to draw the models
-    # Only use these in gui mode
-    #therenderer = Renderers.GLBacteriumRenderer(sim)
-    #sim.addRenderer(therenderer)
+    if sim.is_gui:
+        therenderer = Renderers.GLBacteriumRenderer(sim)
+        sim.addRenderer(therenderer)
+    else:
+        print "Running in batch mode: no display will be output"
+
     sim.pickleSteps = 10
     sim.saveOutput = True
 

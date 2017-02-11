@@ -128,13 +128,15 @@ class PyGLCMViewer(PyGLWidget):
                             self.dt, \
                             moduleStr=self.moduleStr, \
                             clPlatformNum=self.clPlatformNum, \
-                            clDeviceNum=self.clDeviceNum) 
+                            clDeviceNum=self.clDeviceNum, \
+                            is_gui=True) 
             self.setSimulator(sim) 
         else:
             sim = Simulator(self.modName, \
                                 self.dt, \
                                 clPlatformNum=self.clPlatformNum, \
-                                clDeviceNum=self.clDeviceNum) 
+                                clDeviceNum=self.clDeviceNum, \
+                                is_gui=True) 
             self.setSimulator(sim) 
         self.frameNo = 0
         self.updateGL()
@@ -153,7 +155,9 @@ class PyGLCMViewer(PyGLWidget):
                                     self.dt, \
                                     moduleStr=self.moduleStr, \
                                     clPlatformNum=self.clPlatformNum, \
-                                    clDeviceNum=self.clDeviceNum) 
+                                    clDeviceNum=self.clDeviceNum, \
+                                    is_gui=True) 
+ 
                 self.setSimulator(sim) 
                 self.loadingFromPickle = True
                 self.sim.loadFromPickle(data)
@@ -182,7 +186,9 @@ class PyGLCMViewer(PyGLWidget):
             sim = Simulator(self.modName, \
                                     self.dt, \
                                     clPlatformNum=self.clPlatformNum, \
-                                    clDeviceNum=self.clDeviceNum) 
+                                    clDeviceNum=self.clDeviceNum, \
+                                    is_gui=True) 
+ 
             self.setSimulator(sim)
             self.updateGL()
 
