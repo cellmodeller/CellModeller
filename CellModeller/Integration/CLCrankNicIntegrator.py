@@ -102,8 +102,8 @@ class CLCrankNicIntegrator:
 
         # set the species for existing states to views of the levels array
         cs = self.cellStates
-        for c in cs.items():
-            c.species = self.specLevels[c.idx,:]
+        for id,c in cs.items():
+            c.species = self.specLevel[c.idx,:]
 
 
     def makeViews(self):
@@ -201,9 +201,13 @@ class CLCrankNicIntegrator:
         # Get user defined kernel source
         specRateKernel = self.regul.specRateCL()
         sigRateKernel = self.regul.sigRateCL()
-        kernel_src = open('CellModeller/Integration/CLCrankNicIntegrator.cl', 'r').read()
+        #kernel_src = open('CellModeller/Integration/CLCrankNicIntegrator.cl', 'r').read()
+        from pkg_resources import resource_string
+        kernel_src = resource_string(__name__, 'CLCrankNicIntegrator.cl')
         # substitute user defined kernel code, and number of signals
-        kernel_src = kernel_src%(sigRateKernel, specRateKernel, self.nSignals)
+        kernel_src = kernel_src % {'sigKernel': sigRateKernel,
+                                   'specKernel': specRateKernel,
+                                   'nSignals': self.nSignals}
         self.program = cl.Program(self.context, kernel_src).build(cache_dir=False)
 
 
@@ -348,4 +352,20 @@ class CLCrankNicIntegrator:
                                  self.sim.phys.cell_vols_dev.data,
                                  self.specLevel_dev.data).wait()
         self.specLevel[:] = self.specLevel_dev.get()
+
+    def setLevels(self, SSLevel, cellSigData):
+        self.cellStates = self.sim.cellStates
+        self.levels = SSLevel
+        self.makeViews()
+        self.cellSigLevels = cellSigData
+        self.signalLevel_dev.set(self.signalLevel)
+        self.specLevel_dev.set(self.specLevel)
+        self.cellSigLevels_dev.set(self.cellSigLevels)
+        cs = self.cellStates
+        for id,c in cs.items(): #make sure everything is correct here
+            c.species = self.specLevel[c.idx,:]
+            c.signals = self.cellSigLevels[c.idx,:]
+            self.celltype[c.idx] = numpy.int32(c.cellType)
+        self.celltype_dev.set(self.celltype)
+
 

@@ -1,8 +1,9 @@
 #define EPSILON 0.1f
 #define MARGIN 0.01f
-#define RHS_FRAC 0.5f
+#define RHS_FRAC 1.f 
 #define ANG_LIMIT ((float)(5.f*3.14159f/180.f))
 #define ISQRT2 ((float)(1.f/sqrt(2.f)))
+#define POINT 0.01f
 
 // multiply a matrix and a vector
 //  m -- 4x4 matrix
@@ -403,7 +404,8 @@ __kernel void find_contacts(const int max_cells,
                             __global float4* pts,
                             __global float4* norms,
                             __global float* reldists,
-                            __global float* stiff)
+                            __global float* stiff,
+                            __global float* overlap)
 {
   // our id
   int i = get_global_id(0);
@@ -464,12 +466,14 @@ __kernel void find_contacts(const int max_cells,
         float dist = length(v_ij) - (rads[i]+rads[j]);
         float4 norm = normalize(v_ij); // normal on our cell at the contact
         float4 pt = pi + rads[i]*norm; // point on the capsule surface
-
+          
         int ct_i;
         ct_i = i*max_contacts+k; // index of this contact
 
         float stiffness = two_pts*ISQRT2 + (!two_pts)*1.0;
-
+        
+        float overlap_length = two_pts*fabs(dot(pi-pi2,dirs[i]))/(2*POINT) + (!two_pts)*1.0;
+          
         if (dist < MARGIN)
         {
             if (n_existing_cts==0)
@@ -483,8 +487,9 @@ __kernel void find_contacts(const int max_cells,
               norms[ct_i] = norm;
               reldists[ct_i] = stiffness*RHS_FRAC*dist;
               stiff[ct_i] = stiffness;
+              overlap[ct_i] = overlap_length;
             }
-        }
+	}
         if(n_existing_cts>0){
           // recompute dist etc. for existing contact
           int idx = existing_cts_idx[0];
@@ -493,32 +498,34 @@ __kernel void find_contacts(const int max_cells,
           norms[idx] = norm;
           reldists[idx] = stiffness*RHS_FRAC*dist;
           stiff[idx] = stiffness;
+          overlap[idx]=overlap_length;
         }
 
 
         if (!two_pts){
-            if(n_existing_cts>1){
-                // Not parallel, but were before - how to deal with this?
-                // Set stiffness and rhs (reldists) to zero so that this row has no effect
-                int idx = existing_cts_idx[1];
-                /*dists[idx] = 0.0;
-                pts[idx] = pt;
-                norms[idx] = norm;*/
-                reldists[idx] = 0.0;
-                stiff[idx] = 0.0;
-            }
-            continue;
-        }
+	  if(n_existing_cts>1){
+	    // Not parallel, but were before - how to deal with this?
+	    // Set stiffness and rhs (reldists) to zero so that this row has no effect
+	    int idx = existing_cts_idx[1];
+	    /*dists[idx] = 0.0;
+	    pts[idx] = pt;
+	    norms[idx] = norm;*/
+	    reldists[idx] = 0.0;
+            stiff[idx] = 0.0;
+          overlap[idx]=overlap_length;
+	  }
+	  continue;
+	}
 
         // if we had two contacts, add the second point
         v_ij = pj2-pi2;
         dist = length(v_ij) - (rads[i]+rads[j]);
         norm = normalize(v_ij);
         pt = pi2 + rads[i]*norm;
-
-        // Are cells moving together or penetrating?
-        if (dist < MARGIN)
-        {
+          
+	// Are cells moving together or penetrating?
+	if (dist < MARGIN)
+	{
             if (n_existing_cts<2)
             {
               ct_i = i*max_contacts+k;
@@ -530,8 +537,9 @@ __kernel void find_contacts(const int max_cells,
               norms[ct_i] = norm;
               reldists[ct_i] = stiffness*RHS_FRAC*dist;
               stiff[ct_i] = stiffness;
+              overlap[ct_i]=overlap_length;
             }
-        }
+	}
         if(n_existing_cts>1){
           // recompute dist etc. for existing contact
           int idx = existing_cts_idx[1];
@@ -540,6 +548,7 @@ __kernel void find_contacts(const int max_cells,
           norms[idx] = norm;
           reldists[idx] = stiffness*RHS_FRAC*dist;
           stiff[idx] = stiffness;
+          overlap[idx]=overlap_length;
         }
 
       }
@@ -634,7 +643,6 @@ __kernel void build_matrix(const int max_contacts,
                            __global const int* n_cts,
                            __global const int* frs,
                            __global const int* tos,
-                           __global const float* dists,
                            __global const float4* pts,
                            __global const float4* norms,
                            __global float8* fr_ents,
@@ -703,7 +711,7 @@ __kernel void calculate_Mx(const int max_contacts,
   int b = tos[i];
   if (a == 0 && b == 0) return; // not a contact
   float8 to_ents_i = b < 0 ? 0.f : to_ents[i];
-  // my machine can't dot float8s...
+  //my machine can't dot float8s...
   float res0123 = dot(fr_ents[i].s0123, deltap[a].s0123) - dot(to_ents_i.s0123, deltap[b].s0123);
   float res4567 = dot(fr_ents[i].s4567, deltap[a].s4567) - dot(to_ents_i.s4567, deltap[b].s4567);
   Mx[i] = res0123 + res4567;
@@ -734,14 +742,13 @@ __kernel void calculate_MTMx(const int max_contacts,
   MTMx[i] = res;
 }
 
-
 __kernel void calculate_Minv_x(const float muA,
-                   const float gamma,
-                   __global const float4* dirs,
-                   __global const float* lens,
-                   __global const float* rads,
-                   __global const float8* x,
-                   __global float8* Minvx)
+			       const float gamma,
+			       __global const float4* dirs,
+			       __global const float* lens,
+			       __global const float* rads,
+			       __global const float8* x,
+			       __global float8* Minvx)
 {
   int i = get_global_id(0);
 

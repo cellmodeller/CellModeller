@@ -1,0 +1,78 @@
+package:
+  name: cellmodeller
+  version: !!str "4.2.1"
+
+source:
+  git_url: http://github.com/HaseloffLab/CellModeller.git
+  git_tag: 4.2.1
+#  patches:
+   # List any patch files here
+   # - fix.patch
+
+#build:
+  # preserve_egg_dir: True
+#  entry_points:
+    # Put any entry points (scripts to be generated automatically) here. The
+    # syntax is module:function.  For example
+    #
+    # - pyopencl = pyopencl:main
+    #
+    # Would create an entry point called pyopencl that calls pyopencl.main()
+#    - cellmodeller = CellModeller.GUI.CellModellerGUI:main
+#    - cmbatch = CellModeller.batch:main
+
+
+  # If this is a new build for the same version, increment the build
+  # number. If you do not include this key, it defaults to 0.
+  # number: 1
+
+requirements:
+  build:
+    - python
+    - setuptools
+    - numpy=1.9.2
+    - scipy
+    - pyqt
+    - pyopengl
+    - pyopencl
+
+  run:
+    - python
+    - setuptools
+    - numpy=1.9.2
+    - scipy
+    - pyqt
+    - pyopengl
+    - pyopencl
+    - reportlab
+
+test:
+  # Python imports
+  imports:
+    - CellModeller
+    - CellModeller.Biophysics
+    - CellModeller.Regulation
+    - CellModeller.Signalling
+    - CellModeller.Integration
+
+#  commands:
+    # You can put test commands to be run here.  Use this to test that the
+    # entry points work.
+#    - cellmodeller
+#    - cmbatch
+
+  # You can also put a file called run_test.py in the recipe that will be run
+  # at test time.
+
+  # requires:
+    # Put any additional test requirements here.  For example
+    # - nose
+
+about:
+  home: http://www.cellmodeller.org
+  license: BSD License
+  summary: 'Multicellular modelling framework'
+
+# See
+# http://docs.continuum.io/conda/build.html for
+# more information about meta.yaml
