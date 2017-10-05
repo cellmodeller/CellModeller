@@ -4,7 +4,7 @@ package:
 
 source:
   git_url: http://github.com/HaseloffLab/CellModeller.git
-  git_tag: 4.2.1
+#  git_tag: 4.2.1
 #  patches:
    # List any patch files here
    # - fix.patch
@@ -18,8 +18,8 @@ source:
     # - pyopencl = pyopencl:main
     #
     # Would create an entry point called pyopencl that calls pyopencl.main()
-#    - cellmodeller = CellModeller.GUI.CellModellerGUI:main
-#    - cmbatch = CellModeller.batch:main
+#    - cellmodeller = CellModeller:GUI:CellModellerGUI:main
+#    - cmbatch = CellModeller:batch:main
 
 
   # If this is a new build for the same version, increment the build
@@ -30,20 +30,20 @@ requirements:
   build:
     - python
     - setuptools
-    - numpy=1.9.2
+    - numpy
     - scipy
-    - pyqt
+    - pyqt 
     - pyopengl
-    - pyopencl
+    - pyopencl 
 
   run:
     - python
     - setuptools
-    - numpy=1.9.2
+    - numpy
     - scipy
-    - pyqt
+    - pyqt 
     - pyopengl
-    - pyopencl
+    - pyopencl 
     - reportlab
 
 test:
