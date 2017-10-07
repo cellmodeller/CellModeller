@@ -44,7 +44,6 @@ requirements:
     - pyqt 4
     - pyopengl
     - pyopencl 2014.1
-    - reportlab
 
 test:
   # Python imports

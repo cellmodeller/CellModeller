@@ -22,8 +22,8 @@ version_py = os.path.join(os.path.dirname(__file__), 'CellModeller/version.py')
 
 
 setup(name='CellModeller',
-      install_requires=['numpy==1.9.2', 'scipy', 'pyopengl', 'mako', 'pyopencl==2014.1', 'pyqt>=4'],
-      setup_requires=['numpy==1.9.2', 'scipy', 'pyopengl', 'mako', 'pyopencl==2014.1', 'pyqt>=4'],
+      install_requires=['numpy==1.9.2', 'scipy', 'pyqt>=4', 'pyopengl', 'pyopencl==2014.1'],
+      setup_requires=['numpy==1.9.2', 'scipy', 'pyqt>=4', 'pyopengl', 'pyopencl==2014.1'],
       #setup_requires=['numpy', 'pyopengl', 'mako', 'pyopencl'],
       packages=['CellModeller',
                 'CellModeller.Biophysics',
