@@ -28,7 +28,7 @@ source:
 
 requirements:
   build:
-    - python 2.7
+    - python 2
     - setuptools
     - numpy 1.9.2
     - scipy
@@ -37,7 +37,7 @@ requirements:
     - pyopencl 2014.1
 
   run:
-    - python 2.7
+    - python 2
     - setuptools
     - numpy 1.9.2
     - scipy

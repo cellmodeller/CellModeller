@@ -34,5 +34,5 @@ setup(name='CellModeller',
                 'CellModeller.Signalling',
                 'CellModeller.GUI'],
       package_data={'':['*.cl','*.ui']},
-      version=version_py
+      #version=version_py
 )
