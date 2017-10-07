@@ -28,22 +28,22 @@ source:
 
 requirements:
   build:
-    - python
+    - python 2.7
     - setuptools
-    - numpy
+    - numpy 1.9.2
     - scipy
-    - pyqt 
+    - pyqt 4
     - pyopengl
-    - pyopencl 
+    - pyopencl 2014.1
 
   run:
-    - python
+    - python 2.7
     - setuptools
-    - numpy
+    - numpy 1.9.2
     - scipy
-    - pyqt 
+    - pyqt 4
     - pyopengl
-    - pyopencl 
+    - pyopencl 2014.1
     - reportlab
 
 test:

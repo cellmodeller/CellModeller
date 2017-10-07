@@ -29,20 +29,20 @@ source:
 
 requirements:
   build:
-    - python
+    - python 2
     - setuptools
-    - pytools >=2014.2
-    - pytest >=2
-    - decorator >=3.2.0
+    - pytools 2014.3.5
+    - pytest
+    - decorator
     - mako
     - numpy
 
   run:
-    - python
+    - python 2
     - setuptools
-    - pytools >=2014.2
-    - pytest >=2
-    - decorator >=3.2.0
+    - pytools 2014.3.5
+    - pytest 
+    - decorator
     - mako
     - numpy
 
