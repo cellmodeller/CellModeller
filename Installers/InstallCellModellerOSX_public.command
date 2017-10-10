@@ -61,6 +61,7 @@ cp -Ri $THIS_DIR/PackageFiles/Scripts $CMDIR
 cp -Ri $THIS_DIR/PackageFiles/Doc $CMDIR
 cp -Ri $THIS_DIR/PackageFiles/Examples $CMDIR
 cp $THIS_DIR/PackageFiles/cmgui $BINDIR/
+cp $THIS_DIR/PackageFiles/cmpython $BINDIR/
 
 echo
 echo 3. Adding paths to bash_profile
