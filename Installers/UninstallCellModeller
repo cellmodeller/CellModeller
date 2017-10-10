@@ -7,12 +7,12 @@ then
 fi
 
 rm -rf $CMPATH
-rm -rf $HOME/miniconda
-rm -rf $HOME/.conda
-rm -rf $HOME/.continuum
+
+conda-env remove -y cellmodeller
+
 echo 
 echo ---------------------------------------------------------------------------------------------------------
-echo "CellModeller and its dependencies (including the miniconda installation) have been removed."
+echo "CellModeller and its dependencies (including the conda environment) have been removed."
 echo
 echo "If you had data in your $CMPATH/data folder, it has been copied to "
 echo
