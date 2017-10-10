@@ -8,7 +8,7 @@ fi
 
 rm -rf $CMPATH
 
-conda-env remove -y cellmodeller
+conda-env remove -yn cellmodeller
 
 echo 
 echo ---------------------------------------------------------------------------------------------------------
