@@ -4,7 +4,7 @@ package:
 
 source:
   git_url: http://github.com/HaseloffLab/CellModeller.git
-#  git_tag: 4.2.1
+  git_tag: 4.2.1
 #  patches:
    # List any patch files here
    # - fix.patch
