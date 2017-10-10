@@ -35,7 +35,7 @@ requirements:
     - pytest
     - decorator
     - mako
-    - numpy
+    - numpy 1.9.2
 
   run:
     - python 2
@@ -44,7 +44,7 @@ requirements:
     - pytest 
     - decorator
     - mako
-    - numpy
+    - numpy 1.9.2
 
 #test:
   # Python imports
