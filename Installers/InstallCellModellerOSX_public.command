@@ -8,36 +8,31 @@ echo "*                       ----------------------------                      
 echo "*                                                                              *"
 echo "*  This installer script will:                                                 *"
 echo "*                                                                              *"
-echo "*     1. Install miniconda into ~/miniconda                                    *"
-echo "*     2. Install CellModeller and dependencies into this miniconda python      *"
-echo "*     3. Create your own ~/cellmodeller local CellModeller environment         *"
-echo "*     4. Add some environment variables to your bash_profile/bashrc            *"
+echo "*     1. Install CellModeller and dependencies into Anaconda python            *"
+echo "*     2. Create your own ~/cellmodeller local CellModeller environment         *"
+echo "*     3. Add some environment variables to your bash_profile/bashrc            *"
 echo "*                                                                              *"
 echo "********************************************************************************"
 echo
 
 
-# Change permission and run miniconda installer
-echo
-echo 1. Installing Miniconda ...
-echo ---------------------------
-echo
-chmod +x Miniconda-3.8.3-MacOSX-x86_64.sh
-bash Miniconda-3.8.3-MacOSX-x86_64.sh -b
-
 # Install dependencies
 echo
-echo 2. Installing CellModeller and dependencies via miniconda...
+echo 1. Installing CellModeller and dependencies via Anaconda...
 echo ------------------------------------------------------------
 echo
 source ~/.bash_profile
 
-$HOME/miniconda/bin/conda install -yc https://conda.binstar.org/timrudge cellmodeller
+command -v conda >/dev/null 2>&1 || { echo "You must install Anaconda before running this installer..." >&2; exit 1; }
+
+conda create -yn cellmodeller 
+source activate cellmodeller
+conda install -yc trudge cellmodeller
 
 THIS_DIR="`dirname $0`"
 
 echo
-echo 3. Setting up user environment in $HOME/cellmodeller...
+echo 2. Setting up user environment in $HOME/cellmodeller...
 echo -------------------------------------------------------
 echo
 # Setup the users cellmodeller directory with scripts etc.
@@ -65,22 +60,15 @@ mkdir -p $MODELDIR
 cp -Ri $THIS_DIR/PackageFiles/Scripts $CMDIR
 cp -Ri $THIS_DIR/PackageFiles/Doc $CMDIR
 cp -Ri $THIS_DIR/PackageFiles/Examples $CMDIR
-cp $THIS_DIR/PackageFiles/cmpython $BINDIR/
 cp $THIS_DIR/PackageFiles/cmgui $BINDIR/
 
+echo
+echo 3. Adding paths to bash_profile
+echo -------------------------------------------------------
+echo
 # Put an environment variable in bash_profile to tell CellModeller where things are
 # Also append our bin dir to PATH
 echo export CMPATH=$CMDIR >> $HOME/.bash_profile
-echo export PATH=$BINDIR:$PATH >> $HOME/.bash_profile
+echo export "PATH=$BINDIR:$PATH" >> $HOME/.bash_profile
 source ~/.bash_profile
 
-clear
-echo 
-echo 
-echo "********************************************************************************"
-echo "*                                                                              *"
-echo "*                           SUCCESS! All done.                                 *"
-echo "*                                                                              *"
-echo "********************************************************************************"
-echo 
-echo 
