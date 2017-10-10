@@ -1,3 +1,4 @@
 #!/bin/bash
 source $HOME/.bash_profile
-$HOME/miniconda/bin/python $CMPATH/Scripts/CellModellerGUI.py $1 
+source activate cellmodeller
+python $CMPATH/Scripts/CellModellerGUI.py $1 

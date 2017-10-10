@@ -1,2 +1,3 @@
 #!/bin/bash
-$HOME/miniconda/bin/python "$@"
+source activate cellmodeller
+python "$@"
