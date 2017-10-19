@@ -1,7 +1,6 @@
 import random
 from CellModeller.Regulation.ModuleRegulator import ModuleRegulator
 from CellModeller.Biophysics.BacterialModels.CLBacterium import CLBacterium
-from CellModeller.GUI import Renderers
 import numpy
 
 max_cells = 2**15
@@ -44,9 +43,11 @@ def setup(sim):
         data = cPickle.load(open(dataFileName,'r'))
         sim.loadFromPickle(data)
 
-    # Add some objects to draw the models
-    therenderer = Renderers.GLBacteriumRenderer(sim)
-    sim.addRenderer(therenderer)
+    if sim.is_gui:
+        # Add some objects to draw the models
+        from CellModeller.GUI import Renderers
+        therenderer = Renderers.GLBacteriumRenderer(sim)
+        sim.addRenderer(therenderer)
 
 def init(cell):
     cell.targetVol = 2.5 + random.uniform(0.0,0.5)
