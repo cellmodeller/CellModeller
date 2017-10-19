@@ -630,9 +630,10 @@ class CLBacterium:
         state.effGrowth = state.effGrowth / state.cellAge
 
         state.neighbours = [] #clear contacts
-        for n in range(self.cell_cts[i]):
-            if self.neighbours[i,n] not in state.neighbours:
-                state.neighbours.append(self.neighbours[i,n]) #ids of all cells in physical contact
+        if self.computeNeighbours:
+            for n in range(self.cell_cts[i]):
+                if self.neighbours[i,n] not in state.neighbours:
+                    state.neighbours.append(self.neighbours[i,n]) #ids of all cells in physical contact
         state.cts = len(state.neighbours)
 
         state.volume = state.length # TO DO: do something better here
