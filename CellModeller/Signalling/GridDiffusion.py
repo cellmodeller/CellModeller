@@ -134,8 +134,7 @@ something else - e.g. a bulk flow term.
 #                        signalRatesView[(s,)+idx] += w[i,j,k]*cellRates[s]
 
     def signals(self, cellState, signalLevels):
-        # Gets signal level at nearest neighbour grid point to cell position
-        # TO DO: interpolation
+        # Gets weighted average signal level at nearest neighbour grid points to cell position
         signalLevelsView = signalLevels.reshape(self.gridDim)
         pidx = self.idxFromPos(cellState.pos)
         print "flatidx = %i"%(self.flattenIdx(pidx))
