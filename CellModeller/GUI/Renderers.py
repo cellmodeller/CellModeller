@@ -7,10 +7,12 @@ import numpy.linalg as la
 import random
 
 class GLGridRenderer:
-    def __init__(self, sig, integ, rng=None):
+    def __init__(self, sig, integ, rng=None, alpha=1.0):
         self.sig = sig
         self.integ = integ
         self.rng = rng
+        self.alpha = alpha
+
         self.size = self.sig.gridSize
         self.dim = self.sig.gridDim[1:]
         self.len = self.dim[0]*self.dim[1]
@@ -47,7 +49,7 @@ class GLGridRenderer:
         else:
             scale = 1.0
         #print "mx = %f, mn = %f, scale = %f"%(mx,mn,scale)
-        self.imageData = (self.imageData - mn)*scale
+        self.imageData = numpy.clip((self.imageData - mn)*scale, 0.0, 255.0)
         #print "Signal grid range = %f to %f"%(mn,mx) 
         for s in range(self.sig.nSignals):
             self.byteImageData[0:self.dim[0],0:self.dim[1],s] = self.imageData[s,:,:].astype(numpy.uint8)
@@ -66,7 +68,7 @@ class GLGridRenderer:
         
         glEnable(GL_BLEND)
         glBlendFunc(GL_SRC_ALPHA ,GL_ONE_MINUS_SRC_ALPHA)
-        glColor4f(1.0,1.0,1.0,0.2)
+        glColor4f(1.0,1.0,1.0,self.alpha)
         glBegin(GL_QUADS)
         glTexCoord2f(0.0, 0.0)
         glVertex3f(self.orig[0], self.orig[1],  0.0)    # Bottom Left Of The Texture and Quad
