@@ -380,6 +380,7 @@ visualised.
             data['specData'] = self.integ.levels
         if self.sig:
             data['sigData'] = self.integ.cellSigLevels
+            data['sigGrid'] = self.integ.signalLevel
         cPickle.dump(data, outfile, protocol=-1)
         #output csv file with cell pos,dir,len - sig?
 
@@ -400,9 +401,10 @@ visualised.
         self.idxToId = id_map
         self._next_id = idmax+1
         self._next_idx = len(data['cellStates'])
-        if data.has_key('sigData'):
-            self.integ.setLevels(data['specData'],data['sigData'])
-        elif data.has_key('specData'):
-            self.integ.setLevels(data['specData'])
+        if self.integ:
+            if data.has_key('sigData'):
+                self.integ.setLevels(data['specData'],data['sigData'])
+            elif data.has_key('specData'):
+                self.integ.setLevels(data['specData'])
 
 
