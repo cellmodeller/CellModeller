@@ -617,7 +617,6 @@ class CLBacterium:
     def updateCellState(self, state):
         cid = state.id
         i = state.idx
-        state.oldLen = state.length
         state.pos = [self.cell_centers[i][j] for j in range(3)]
         state.dir = [self.cell_dirs[i][j] for j in range(3)]
         state.radius = self.cell_rads[i]
@@ -625,12 +624,13 @@ class CLBacterium:
         state.strainRate = (state.length - state.oldLen)/state.oldLen
 
         #currently the effective growth rate is calculated over the entire history of the cell
-        state.effGrowth = state.effGrowth * state.cellAge + state.strainRate
+        state.effGrowth = state.effGrowth * state.cellAge + state.strainRate * state.oldLen
         state.cellAge += 1
         state.effGrowth = state.effGrowth / state.cellAge
+        state.oldLen = state.length
 
         state.neighbours = [] #clear contacts
-        if self.computeNeighbours:
+        if self.computeNeighbours: #populate cellstate.neighbours
             for n in range(self.cell_cts[i]):
                 if self.neighbours[i,n] not in state.neighbours:
                     state.neighbours.append(self.neighbours[i,n]) #ids of all cells in physical contact
