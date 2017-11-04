@@ -61,13 +61,13 @@ __kernel void gridCells(const float gridOrigx,
     //  Tedious bounds checking on neighbourhood to avoid wrapping and overflow...
     //    Set weight to zero if off grid (index will also be zero)
     
-   weights[base+0] /*[0,0,0]*/ = (float)(ix>=0 && ix<gridDimx && iy>=0 && iy<gridDimy && iz>=0 && iz<gridDimz) *  (1-dx)*(1-dy)*(1-dz);
-   weights[base+1] /*[0,0,1]*/ = (float)(ix>=0 && ix<gridDimx && iy>=0 && iy<gridDimy && iz>=-1 && iz<gridDimz-1) * (1-dx)*(1-dy)*dz;
-   weights[base+2] /*[0,1,0]*/ = (float)(ix>=0 && ix<gridDimx && iy>=-1 && iy<gridDimy-1 && iz>=0 && iz<gridDimz) * (1-dx)*dy*(1-dz);
-   weights[base+3] /*[0,1,1]*/ = (float)(ix>=0 && ix<gridDimx && iy>=-1 && iy<gridDimy-1 && iz>=-1 && iz<gridDimz-1) * (1-dx)*dy*dz;
-   weights[base+4] /*[1,0,0]*/ = (float)(ix>=-1 && ix<gridDimx-1 && iy>=0 && iy<gridDimy && iz>=0 && iz<gridDimz) * dx*(1-dy)*(1-dz);
-   weights[base+5] /*[1,0,1]*/ = (float)(ix>=-1 && ix<gridDimx-1 && iy>=0 && iy<gridDimy && iz>=-1 && iz<gridDimz-1) * dx*(1-dy)*dz;
-   weights[base+6] /*[1,1,0]*/ = (float)(ix>=-1 && ix<gridDimx-1 && iy>=-1 && iy<gridDimy-1 && iz>=0 && iz<gridDimz) * dx*dy*(1-dz);
+   weights[base+0] /*[0,0,0]*/ = (float)(ix>=0 && ix<gridDimx && iy>=0 && iy<gridDimy && iz>=0 && iz<gridDimz) *  (1.f-dx)*(1.f-dy)*(1.f-dz);
+   weights[base+1] /*[0,0,1]*/ = (float)(ix>=0 && ix<gridDimx && iy>=0 && iy<gridDimy && iz>=-1 && iz<gridDimz-1) * (1.f-dx)*(1.f-dy)*dz;
+   weights[base+2] /*[0,1,0]*/ = (float)(ix>=0 && ix<gridDimx && iy>=-1 && iy<gridDimy-1 && iz>=0 && iz<gridDimz) * (1.f-dx)*dy*(1.f-dz);
+   weights[base+3] /*[0,1,1]*/ = (float)(ix>=0 && ix<gridDimx && iy>=-1 && iy<gridDimy-1 && iz>=-1 && iz<gridDimz-1) * (1.f-dx)*dy*dz;
+   weights[base+4] /*[1,0,0]*/ = (float)(ix>=-1 && ix<gridDimx-1 && iy>=0 && iy<gridDimy && iz>=0 && iz<gridDimz) * dx*(1.f-dy)*(1.f-dz);
+   weights[base+5] /*[1,0,1]*/ = (float)(ix>=-1 && ix<gridDimx-1 && iy>=0 && iy<gridDimy && iz>=-1 && iz<gridDimz-1) * dx*(1.f-dy)*dz;
+   weights[base+6] /*[1,1,0]*/ = (float)(ix>=-1 && ix<gridDimx-1 && iy>=-1 && iy<gridDimy-1 && iz>=0 && iz<gridDimz) * dx*dy*(1.f-dz);
    weights[base+7] /*[1,1,1]*/ = (float)(ix>=-1 && ix<gridDimx-1 && iy>=-1 && iy<gridDimy-1 && iz>=-1 && iz<gridDimz-1) * dx*dy*dz;
     
 }
