@@ -7,7 +7,7 @@ import numpy.linalg as la
 import random
 
 class GLGridRenderer:
-    def __init__(self, sig, integ, rng=None, alpha=1.0):
+    def __init__(self, sig, integ, rng=None, alpha=0.5):
         self.sig = sig
         self.integ = integ
         self.rng = rng
