@@ -108,7 +108,8 @@ something else - e.g. a bulk flow term.
                 # Use edge case from boundary conditions for diffusion
                 signalRatesView[s] += laplace(signalLevelsView[s], None, mode=boundcond, cval=boundval) * self.diffRates[s]
             else:
-                signalRatesView[s] = laplace(signalLevelsView[s], None, mode=boundcond, cval=boundval) * self.diffRates[s]
+                signalRatesView[s] = laplace(signalLevelsView[s], None, mode=boundcond, cval=boundval) \
+                                                                                   * self.diffRates[s] / 6.0
 
  
     def interpAddToGrid(self, pos, delta, grid):
