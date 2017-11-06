@@ -342,6 +342,10 @@ class CLCrankNicIntegrator:
 #            if self.signalling:
 #                c.signals = self.signalling.signals(c, self.signalLevel)
 
+        # Update cellType array
+        for (id,c) in self.cellStates.items():
+            self.celltype[c.idx] = numpy.int32(c.cellType)
+        self.celltype_dev.set(self.celltype)
 
 
     def diluteSpecies(self):
