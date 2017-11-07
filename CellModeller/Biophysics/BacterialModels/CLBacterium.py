@@ -434,6 +434,9 @@ class CLBacterium:
         self.cell_dlens[0:self.n_cells] = self.cell_dlens_dev[0:self.n_cells].get()
         self.cell_dcenters[0:self.n_cells] = self.cell_dcenters_dev[0:self.n_cells].get()
         self.cell_dangs[0:self.n_cells] = self.cell_dangs_dev[0:self.n_cells].get()
+        if (self.adh_strength > 0):
+            self.cell_adh = self.cell_adh_dev.get()
+
 
     def set_cells(self):
         """Copy cell centers, dirs, lens, and rads to the device from local."""
@@ -444,7 +447,9 @@ class CLBacterium:
         self.cell_dlens_dev[0:self.n_cells].set(self.cell_dlens[0:self.n_cells])
         self.cell_dcenters_dev[0:self.n_cells].set(self.cell_dcenters[0:self.n_cells])
         self.cell_dangs_dev[0:self.n_cells].set(self.cell_dangs[0:self.n_cells])
-
+        if (self.adh_strength > 0):
+            self.cell_adh_dev.set(self.cell_adh)
+    
     def set_planes(self):
         """Copy plane pts, norms, and coeffs to the device from local."""
         self.plane_pts_dev[0:self.n_planes].set(self.plane_pts[0:self.n_planes])
@@ -938,18 +943,18 @@ class CLBacterium:
                                       x.data,
                                       self.adhE_M_dev.data).wait()
                                       
-        self.program.calculate_adhE(self.queue,
-                                  (self.n_cells,),
-                                  None,
-                                  numpy.int32(self.max_contacts),
-                                  self.cell_n_cts_dev.data,
-                                  self.n_cell_tos_dev.data,
-                                  self.cell_tos_dev.data,
-                                  self.ct_tangs_fr_dev.data,
-                                  self.ct_tangs_to_dev.data,
-                                  self.adhE_M_dev.data,
-                                  self.ct_adh_str_dev.data,
-                                  self.adhE_dev.data).wait()
+            self.program.calculate_adhE(self.queue,
+                                      (self.n_cells,),
+                                      None,
+                                      numpy.int32(self.max_contacts),
+                                      self.cell_n_cts_dev.data,
+                                      self.n_cell_tos_dev.data,
+                                      self.cell_tos_dev.data,
+                                      self.ct_tangs_fr_dev.data,
+                                      self.ct_tangs_to_dev.data,
+                                      self.adhE_M_dev.data,
+                                      self.ct_adh_str_dev.data,
+                                      self.adhE_dev.data).wait()
 
 
         # Energy mimizing regularization
