@@ -33,6 +33,9 @@ class ModuleRegulator:
     def specRateCL(self):
         return self.module.specRateCL()
     
+    def adhLogicCL(self):
+        return self.module.adhLogicCL()
+
     def signalRates(self, cstate, speciesLevels, signalLevels):
         return self.module.signalRates(cstate, speciesLevels, signalLevels)
 

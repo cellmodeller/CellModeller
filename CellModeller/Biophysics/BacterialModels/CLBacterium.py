@@ -150,12 +150,12 @@ class CLBacterium:
         from pkg_resources import resource_string
         kernel_src = resource_string(__name__, 'CLBacterium.cl')
 
-    #user defined adhesion Logic kernel - this also contains the necessary functions
-    if (self.adh_strength>0):
-        adhLogicKernel = self.regulator.adhLogicCL()
-        kernel_AL_src = resource_string(__name__, 'AdhKernel.cl')
-        kernel_AL_src = kernel_AL_src%(adhLogicKernel)
-        kernel_src = kernel_src+kernel_AL_src
+        #user defined adhesion Logic kernel - this also contains the necessary functions
+        if (self.adh_strength>0):
+            adhLogicKernel = self.regulator.adhLogicCL()
+            kernel_AL_src = resource_string(__name__, 'AdhKernel.cl')
+            kernel_AL_src = kernel_AL_src%(adhLogicKernel)
+            kernel_src = kernel_src+kernel_AL_src
 
         self.program = cl.Program(self.context, kernel_src).build(cache_dir=False)
         # Some kernels that seem like they should be built into pyopencl...
@@ -876,8 +876,8 @@ class CLBacterium:
                                   self.to_ents_dev.data,
                                   self.ct_stiff_dev.data).wait()
           #calculating all the tangential vectors to contacts for adhesion if adhesion is enabled
-          if (self.adh_strength > 0):
-              self.program.build_Tmatrix(self.queue,
+        if (self.adh_strength > 0):
+            self.program.build_Tmatrix(self.queue,
                                          (self.n_cells, self.max_contacts),
                                          None,
                                          numpy.int32(self.max_contacts),
