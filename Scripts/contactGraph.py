@@ -123,7 +123,9 @@ get_current_contacts(G, data)
 print "num_contacts = " + str(networkx.number_of_edges(G))
 degrees = G.degree().values()
 print "mean degree = " + str(np.mean(degrees))
-edges,ecolor = zip(*networkx.get_edge_attributes(G,'color').items())
+
+if networkx.get_edge_attributes(G,'color').items():
+    edges,ecolor = zip(*networkx.get_edge_attributes(G,'color').items())
 ncolor = networkx.get_node_attributes(G,'color').values()
 
 pdf = CellModellerPDFGenerator(oname, G, bg_color)
