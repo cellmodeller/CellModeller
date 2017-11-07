@@ -25,6 +25,7 @@ class CLBacterium:
                  grid_spacing=5.0,
                  muA=1.0,
                  gamma=10.0,
+                 adh_strength=0.0,
                  dt=None,
                  cgs_tol=5e-3,
                  reg_param=0.1,
@@ -50,6 +51,7 @@ class CLBacterium:
         self.dt = dt
         self.cgs_tol = cgs_tol
         self.reg_param = numpy.float32(reg_param)
+        self.adh_strength = numpy.float32(adh_strength)
 
         self.max_substeps = max_substeps
 
@@ -99,6 +101,9 @@ class CLBacterium:
         self.initCellState(cellState)
         self.set_cells()
         self.calc_cell_geom() # cell needs a volume
+        if (self.adh_strength > 0):
+            self.cell_adh[i] = cellState.cellAdh
+
 
     #---
     # Some functions to modify existing cells (e.g. from GUI)
@@ -144,6 +149,13 @@ class CLBacterium:
         """Set up the OpenCL kernels."""
         from pkg_resources import resource_string
         kernel_src = resource_string(__name__, 'CLBacterium.cl')
+
+    #user defined adhesion Logic kernel - this also contains the necessary functions
+    if (self.adh_strength>0):
+        adhLogicKernel = self.regulator.adhLogicCL()
+        kernel_AL_src = resource_string(__name__, 'AdhKernel.cl')
+        kernel_AL_src = kernel_AL_src%(adhLogicKernel)
+        kernel_src = kernel_src+kernel_AL_src
 
         self.program = cl.Program(self.context, kernel_src).build(cache_dir=False)
         # Some kernels that seem like they should be built into pyopencl...
@@ -206,6 +218,10 @@ class CLBacterium:
         self.cell_dlens_dev = cl_array.zeros(self.queue, cell_geom, numpy.float32)
         self.cell_target_dlens_dev = cl_array.zeros(self.queue, cell_geom, numpy.float32)
         self.cell_growth_rates = numpy.zeros(cell_geom, numpy.float32)
+
+        self.cell_external_forces = numpy.zeros(cell_geom, vec.float4)
+        self.external_forces_dev = cl_array.zeros(self.queue, cell_geom, vec.float8)
+
 
         # cell geometry calculated from l and r
         self.cell_areas_dev = cl_array.zeros(self.queue, cell_geom, numpy.float32)
@@ -279,6 +295,21 @@ class CLBacterium:
         self.res_dev = cl_array.zeros(self.queue, cell_geom, vec.float8)
         self.rhs_dev = cl_array.zeros(self.queue, cell_geom, vec.float8)
     
+        #arrays for adhesion
+        if (self.adh_strength > 0):
+            #cell and contact adhesion strentghs
+            self.cell_adh = numpy.zeros(cell_geom, numpy.float32)
+            self.cell_adh_dev = cl_array.zeros(self.queue, cell_geom, numpy.float32)
+            self.ct_adh_str_dev = cl_array.zeros(self.queue, ct_geom, numpy.float32)
+            #tangential vectors to a contact
+            self.ct_tangs_fr = numpy.zeros(mat_geom, vec.float8)
+            self.ct_tangs_fr_dev = cl_array.zeros(self.queue, mat_geom, vec.float8)
+            self.ct_tangs_to = numpy.zeros(mat_geom, vec.float8)
+            self.ct_tangs_to_dev = cl_array.zeros(self.queue, mat_geom, vec.float8)
+            #adhesion energy calculations
+            self.adhE_M_dev = cl_array.zeros(self.queue, mat_geom, numpy.float32)
+            self.adhE_dev = cl_array.zeros(self.queue, cell_geom, vec.float8)
+
 
     def load_from_cellstates(self, cell_states):
         for (cid,cs) in cell_states.items():
@@ -548,6 +579,11 @@ class CLBacterium:
         self.vcleari(self.cell_n_cts_dev) # clear the accumulated contact count
         self.sub_tick_i=0
         self.sub_tick_initialised=True
+    
+        #SET VELOCITY HERE LIKE:
+        #self.external_forces_dev.set(self.cell_external_forces)
+        #self.cell_dcenters_dev.set(self.cell_external_forces)
+
 
     def tick(self, dt):
         if not self.sub_tick_initialised:
@@ -572,6 +608,9 @@ class CLBacterium:
             self.build_matrix() # Calculate entries of the matrix
             #print "max cell contacts = %i"%cl_array.max(self.cell_n_cts_dev).get()
             self.CGSSolve(dt) # invert MTMx to find deltap
+            
+            #ADD EXTERNAL FORCES HERE:
+            #self.vadd(self.deltap_dev,self.external_forces_dev, self.deltap_dev)
             self.add_impulse()
             return False
         else:
@@ -642,7 +681,7 @@ class CLBacterium:
         state.ends = (pa-da*state.length*0.5, pa+da*state.length*0.5)
         # Length vel is linearisation of exponential growth
         self.cell_growth_rates[i] = state.growthRate*state.length
-
+        #self.cell_external_forces[i] = state.externalForce
 
     def update_grid(self):
         """Update our grid_(x,y)_min, grid_(x,y)_max, and n_sqs.
@@ -836,7 +875,29 @@ class CLBacterium:
                                   self.fr_ents_dev.data,
                                   self.to_ents_dev.data,
                                   self.ct_stiff_dev.data).wait()
-    
+          #calculating all the tangential vectors to contacts for adhesion if adhesion is enabled
+          if (self.adh_strength > 0):
+              self.program.build_Tmatrix(self.queue,
+                                         (self.n_cells, self.max_contacts),
+                                         None,
+                                         numpy.int32(self.max_contacts),
+                                         numpy.float32(self.muA),
+                                         numpy.float32(self.gamma),
+                                         self.pred_cell_centers_dev.data,
+                                         self.pred_cell_dirs_dev.data,
+                                         self.pred_cell_lens_dev.data,
+                                         self.cell_rads_dev.data,
+                                         self.cell_adh_dev.data,
+                                         self.cell_n_cts_dev.data,
+                                         self.ct_frs_dev.data,
+                                         self.ct_tos_dev.data,
+                                         self.ct_pts_dev.data,
+                                         self.ct_norms_dev.data,
+                                         self.ct_tangs_fr_dev.data,
+                                         self.ct_tangs_to_dev.data,
+                                         self.ct_overlap_dev.data,
+                                         self.ct_adh_str_dev.data).wait()
+
 
     def calculate_Ax(self, Ax, x, dt):
 
@@ -864,6 +925,33 @@ class CLBacterium:
         # Tikhonov test
         #self.vaddkx(Ax, numpy.float32(0.01), Ax, x)
 
+        #Adhesion - calculating the tangential dispacement to each contact and calculate adhesion energy
+        if (self.adh_strength > 0):
+            self.program.calculate_Mx(self.queue,
+                                      (self.n_cells, self.max_contacts),
+                                      None,
+                                      numpy.int32(self.max_contacts),
+                                      self.ct_frs_dev.data,
+                                      self.ct_tos_dev.data,
+                                      self.ct_tangs_fr_dev.data,
+                                      self.ct_tangs_to_dev.data,
+                                      x.data,
+                                      self.adhE_M_dev.data).wait()
+                                      
+        self.program.calculate_adhE(self.queue,
+                                  (self.n_cells,),
+                                  None,
+                                  numpy.int32(self.max_contacts),
+                                  self.cell_n_cts_dev.data,
+                                  self.n_cell_tos_dev.data,
+                                  self.cell_tos_dev.data,
+                                  self.ct_tangs_fr_dev.data,
+                                  self.ct_tangs_to_dev.data,
+                                  self.adhE_M_dev.data,
+                                  self.ct_adh_str_dev.data,
+                                  self.adhE_dev.data).wait()
+
+
         # Energy mimizing regularization
         self.program.calculate_Minv_x(self.queue,
                                       (self.n_cells,),
@@ -875,11 +963,14 @@ class CLBacterium:
                                       self.cell_rads_dev.data,
                                       x.data,
                                       self.Minvx_dev.data).wait()
-
+                                      
         #this was altered from dt*reg_param
-        self.vaddkx(Ax, self.reg_param, Ax, self.Minvx_dev).wait()
+        self.vaddkx(Ax, self.reg_param/numpy.sqrt(self.n_cells), Ax, self.Minvx_dev).wait()
+        #adhesion is a further constraint in the regularization
+        if (self.adh_strength > 0):
+            self.vaddkx(Ax, self.adh_strength*self.reg_param, Ax, self.adhE_dev).wait()
         # 1/math.sqrt(self.n_cells) removed from the reg_param NB
-    
+            
         #print(self.Minvx_dev)
 
     def CGSSolve(self, dt, substep=False):
@@ -1090,7 +1181,11 @@ class CLBacterium:
         parent_dang = self.cell_dangs[i]
         self.cell_dangs[a] = parent_dang
         self.cell_dangs[b] = parent_dang
-
+        
+        # inherit adhesions strengths - this may be unnessesary - is this done in the simulator?
+        if (self.adh_strength >0):
+            self.cell_adh[a] = self.cell_adh[i]
+            self.cell_adh[b] = self.cell_adh[i]
 
         #return indices of daughter cells
         return (a,b)
