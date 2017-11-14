@@ -4,8 +4,9 @@ from CellModeller.Biophysics.BacterialModels.CLBacterium import CLBacterium
 import numpy
 import math
 
-from CellModeller.Integration.CLCrankNicIntegrator import CLCrankNicIntegrator #add
-from CellModeller.Signalling.GridDiffusion import GridDiffusion #add
+from CellModeller.Integration.CLCrankNicIntegrator import CLCrankNicIntegrator 
+from CellModeller.Integration.CLEulerSigIntegrator import CLEulerSigIntegrator
+from CellModeller.Signalling.GridDiffusion import GridDiffusion 
 
 
 
@@ -26,7 +27,12 @@ def setup(sim):
     biophys.addPlane((0,16,0), (0,-1,0), 1)
 
     sig = GridDiffusion(sim, 1, grid_dim, grid_size, grid_orig, [10.0])
-    integ = CLCrankNicIntegrator(sim, 1, 2, max_cells, sig, boundcond='reflect')
+
+    # Here we set up the numerical integration:
+    # Crank-Nicholson method:
+    #integ = CLCrankNicIntegrator(sim, 1, 2, max_cells, sig, boundcond='reflect')
+    # Alternative is to use the simple forward Euler method:
+    integ = CLEulerSigIntegrator(sim, 1, 2, max_cells, sig, boundcond='reflect')
 
     # use this file for reg too
     regul = ModuleRegulator(sim, sim.moduleName)	
