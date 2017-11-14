@@ -106,8 +106,8 @@ something else - e.g. a bulk flow term.
                 convolve(signalLevelsView[s], advKernel*self.advRates[s], output=signalRatesView[s], mode='nearest')
                 # Diffusion term = \del^2u
                 # Use edge case from boundary conditions for diffusion
-                signalRatesView[s] += laplace(signalLevelsView[s], None, mode=boundcond, cval=boundval) *
-                self.diffRates[s] / 6.0
+                signalRatesView[s] += laplace(signalLevelsView[s], None, mode=boundcond, cval=boundval) * \
+                                                                                    self.diffRates[s] / 6.0
             else:
                 signalRatesView[s] = laplace(signalLevelsView[s], None, mode=boundcond, cval=boundval) \
                                                                                    * self.diffRates[s] / 6.0
