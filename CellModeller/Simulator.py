@@ -80,6 +80,15 @@ visualised.
             self.module = imp.new_module(moduleName)
             exec moduleStr in self.module.__dict__
         else:
+            # In case the moduleName is a path to a python file:
+            # Get path and file name
+            (path,name) = os.path.split(self.moduleName)
+            # Append path to PYTHONPATH, if no path do nothing
+            if path:
+                if path not in sys.path:
+                    sys.path.append(path)
+            # Remove .py extension if present
+            self.moduleName = str(name).split('.')[0]
             print "Importing model %s"%(self.moduleName)
             if self.moduleName in sys.modules:
                 self.module = sys.modules[self.moduleName]
