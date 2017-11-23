@@ -15,6 +15,7 @@ def setup(sim):
 
     sim.addCell(cellType=0, pos=(0,0,0))
     biophys.addPlane((0,0,0),(0,0,-1),1.0)
+    biophys.addPlane((0,0,0),(0,0,1),5e-2)
 
     if sim.is_gui:
         # Add some objects to draw the models
