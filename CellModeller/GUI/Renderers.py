@@ -62,8 +62,8 @@ class GLGridRenderer:
         #Load the Data into the Texture
         glTexImage2D( GL_TEXTURE_2D, 0, GL_RGB, self.texDim, self.texDim, 0, GL_RGB, GL_UNSIGNED_BYTE, self.byteImageData )
 #        glTexSubImage2Dub( GL_TEXTURE_2D, 0, 0,0, GL_RED, GL_UNSIGNED_BYTE, self.imageData )
-        glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST)#GL_LINEAR)
-        glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST)#GL_LINEAR)
+        glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR)
+        glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR)
         #Define some Parameters for this Texture
         
         glEnable(GL_BLEND)
