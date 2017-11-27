@@ -617,6 +617,8 @@ class CLBacterium:
     def updateCellState(self, state):
         cid = state.id
         i = state.idx
+
+        state.vel = [self.cell_centers[i][j]-state.pos[j] for j in range(3)]
         state.pos = [self.cell_centers[i][j] for j in range(3)]
         state.dir = [self.cell_dirs[i][j] for j in range(3)]
         state.radius = self.cell_rads[i]

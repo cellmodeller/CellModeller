@@ -15,10 +15,10 @@ for f in $( ls *.pdf ); do
     NAME=`basename $f .pdf`
     convert \
            -verbose       \
-           -density 300   \
+           -density 150   \
             $NAME.pdf      \
-            $NAME.jpg
+            $NAME.png
 done
 
 # Run ffmpeg to generate video file
-ffmpeg -framerate 24 -i step-%04d0.jpg -vf scale=1920:1080 -r 24 $1
+ffmpeg -framerate 7 -i step-%04d0.png -vf scale=1920:1080 -r 24 $1

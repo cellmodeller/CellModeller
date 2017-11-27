@@ -33,7 +33,7 @@ def init(cell):
     cell.targetVol = 3.0 + random.uniform(0.0,0.5)
     # Specify growth rate of cells
     cell.growthRate = 1.0
-    cell.color = (0.0,1.0,0.0)
+    cell.color = (1.0,1.0,1.0)
 
 def update(cells):
     #Iterate through each cell and flag cells that reach target size for division
