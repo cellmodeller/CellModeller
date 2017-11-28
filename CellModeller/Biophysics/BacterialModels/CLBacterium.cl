@@ -65,6 +65,8 @@ void matmulmat(float4 a[], float4 b[], float4 r[]) {
 //  q -- a quaternion
 float4 quat_inv(float4 q) {
   float l2 = dot(q, q);
+  if (l2==0.f)
+    return(q);
   float4 inv = {-q.x/l2, -q.y/l2, -q.z/l2, q.w/l2};
   return inv;
 }
@@ -789,9 +791,14 @@ __kernel void predict(__global const float4* centers,
 
   pred_centers[i] = center_i + dcenter_i;
 
-  float4 rot_axis = normalize(dang_i);
-  float rot_angle = length(dang_i);
-  pred_dirs[i] = normalize(rot(rot_axis, rot_angle, dir_i));
+  if (length(dang_i)>1e-12)
+  {
+    float4 rot_axis = normalize(dang_i);
+    float rot_angle = length(dang_i);
+    pred_dirs[i] = normalize(rot(rot_axis, rot_angle, dir_i));
+  } else {
+    pred_dirs[i] = dir_i;
+  }
 
   pred_lens[i] = len_i + dlen_i;
 
@@ -814,9 +821,12 @@ __kernel void integrate(__global float4* centers,
 
   centers[i] = center_i + dcenter_i;
 
-  float4 rot_axis = normalize(dang_i);
-  float rot_angle = length(dang_i);
-  dirs[i] = normalize(rot(rot_axis, rot_angle, dir_i));
+  if (length(dang_i)>1e-12)
+  {
+    float4 rot_axis = normalize(dang_i);
+    float rot_angle = length(dang_i);
+    dirs[i] = normalize(rot(rot_axis, rot_angle, dir_i));
+  }
 
   lens[i] = len_i + dlen_i;
 
@@ -860,7 +870,7 @@ __kernel void add_impulse(const float muA,
     dpang *= ANG_LIMIT/dpangmag;
   }
   dangs[i] += dpang;
-
+  
   float dplen = deltap_i.s6;
   //dlens[i] += max(0.f, target_dlens[i] + dplen/gamma);
   dlens[i] = max(0.f, dlens[i]+dplen/gamma);
