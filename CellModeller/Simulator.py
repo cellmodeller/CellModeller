@@ -240,6 +240,18 @@ visualised.
         #this sets them on the card too
         self.cellStates = {}
         self.cellStates = cellStates
+        idx_map = {}
+        id_map = {}
+        idmax = 0
+        for id,state in cellStates.iteritems():
+            idx_map[state.id] = state.idx
+            id_map[state.idx] = state.id
+            if id>idmax:
+                idmax=id
+        self.idToIdx = idx_map
+        self.idxToId = id_map
+        self._next_id = idmax+1
+        self._next_idx = len(cellStates)
         self.reg.cellStates = cellStates
         self.phys.load_from_cellstates(cellStates)
     
@@ -343,14 +355,15 @@ visualised.
     ## Proceed to the next simulation step
     # This method is where objects phys, reg, sig and integ are called
     def step(self):
+        self.reg.step(self.dt)
         states = dict(self.cellStates)
         for (cid,state) in states.items():
             if state.divideFlag:
                 self.divide(state) #neighbours no longer current
 
-        if not self.phys.step(self.dt): #neighbours are current here
-            return False
-        self.reg.step(self.dt)
+        self.phys.set_cells()
+        while not self.phys.step(self.dt): #neighbours are current here
+            pass
         if self.sig:
             self.sig.step(self.dt)
         if self.integ:
