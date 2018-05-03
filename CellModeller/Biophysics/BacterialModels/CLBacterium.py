@@ -7,6 +7,7 @@ from pyopencl.array import vec
 from pyopencl.elementwise import ElementwiseKernel
 from pyopencl.reduction import ReductionKernel
 import random
+import time
 
 
 ct_map = {}
