@@ -7,6 +7,7 @@ from pyopencl.array import vec
 from pyopencl.elementwise import ElementwiseKernel
 from pyopencl.reduction import ReductionKernel
 import random
+import time
 
 
 ct_map = {}
@@ -39,6 +40,11 @@ class CLBacterium:
         self.frame_no = 0
         self.simulator = simulator
         self.regulator = None
+        
+        self.time_begin = time.time()
+        self.seconds_elapsed = 0
+        self.minutes_elapsed = 0
+        self.hours_elapsed = 0
 
         self.max_cells = max_cells
         self.max_contacts = max_contacts
@@ -498,8 +504,11 @@ class CLBacterium:
     def progress_finalise(self):
         self.frame_no += 1
         self.progress_initialised = False
+        self.seconds_elapsed = numpy.float32(time.time() - self.time_begin)
+        self.minutes_elapsed = (numpy.float32(self.seconds_elapsed) / 60.0)  
+        self.hours_elapsed = (numpy.float32(self.minutes_elapsed) / 60.0)  
         if self.frame_no % 10 == 0:
-            print '% 8i    % 8i cells    % 8i contacts' % (self.frame_no, self.n_cells, self.n_cts)
+            print '% 8i    % 8i cells    % 8i contacts    %f hour(s) or %f minute(s) or %f second(s)' % (self.frame_no, self.n_cells, self.n_cts, self.hours_elapsed, self.minutes_elapsed, self.seconds_elapsed)
         # pull cells from the device and update simulator
         if self.simulator:
             self.get_cells()
