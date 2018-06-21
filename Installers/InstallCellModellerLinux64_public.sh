@@ -21,7 +21,6 @@ echo
 echo 1. Installing CellModeller and dependencies via Anaconda...
 echo ------------------------------------------------------------
 echo
-source ~/.bash_profile
 
 command -v conda >/dev/null 2>&1 || { echo "You must install Anaconda before running this installer..." >&2; exit 1; }
 
@@ -69,7 +68,10 @@ echo -------------------------------------------------------
 echo
 # Put an environment variable in bash_profile to tell CellModeller where things are
 # Also append our bin dir to PATH
+touch $HOME/.bashrc
+touch $HOME/.bash_profile
 echo export CMPATH=$CMDIR >> $HOME/.bash_profile
 echo export "PATH=$BINDIR:$PATH" >> $HOME/.bash_profile
-source ~/.bash_profile
+echo export CMPATH=$CMDIR >> $HOME/.bashrc
+echo export "PATH=$BINDIR:$PATH" >> $HOME/.bashrc
 
