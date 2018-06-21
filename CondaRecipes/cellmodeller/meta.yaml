@@ -35,6 +35,8 @@ requirements:
     - pyqt 4
     - pyopengl
     - pyopencl 2014.1
+    - reportlab
+    - matplotlib
 
   run:
     - python 2
@@ -44,6 +46,8 @@ requirements:
     - pyqt 4
     - pyopengl
     - pyopencl 2014.1
+    - reportlab
+    - matplotlib
 
 test:
   # Python imports
