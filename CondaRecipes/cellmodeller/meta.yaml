@@ -29,25 +29,28 @@ source:
 requirements:
   build:
     - python 2
-    - setuptools
     - numpy 1.9.2
+    - setuptools
     - scipy
     - pyqt 4
     - pyopengl
     - pyopencl 2014.1
     - reportlab
     - matplotlib
+    - mock
+    - nose
 
   run:
     - python 2
-    - setuptools
     - numpy 1.9.2
+    - setuptools
     - scipy
     - pyqt 4
     - pyopengl
     - pyopencl 2014.1
     - reportlab
     - matplotlib
+    - mock
 
 test:
   # Python imports
