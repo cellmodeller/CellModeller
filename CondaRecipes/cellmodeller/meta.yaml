@@ -39,7 +39,6 @@ requirements:
     - matplotlib
     - mock
     - nose
-    - libgfortran 1
 
   run:
     - python 2
@@ -52,7 +51,6 @@ requirements:
     - reportlab
     - matplotlib
     - mock
-    - libgfortran 1
 
 test:
   # Python imports
