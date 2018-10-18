@@ -27,6 +27,9 @@ command -v conda >/dev/null 2>&1 || { echo "You must install Anaconda before run
 conda create -yn cellmodeller 
 source activate cellmodeller
 conda install -yc trudge cellmodeller
+source deactivate
+source activate cellmodeller
+conda install libgfortran==1
 
 THIS_DIR="`dirname $0`"
 
