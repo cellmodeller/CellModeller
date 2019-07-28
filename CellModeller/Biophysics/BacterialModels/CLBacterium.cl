@@ -1,14 +1,14 @@
 #define EPSILON 0.1f
 #define MARGIN 0.01f
 #define RHS_FRAC 1.f 
-#define ANG_LIMIT ((float)(5.f*3.14159f/180.f))
-#define ISQRT2 ((float)(1.f/sqrt(2.f)))
+#define ANG_LIMIT ((double)(5.f*3.14159f/180.f))
+#define ISQRT2 ((double)(1.f/sqrt(2.f)))
 #define POINT 0.01f
 
 // multiply a matrix and a vector
 //  m -- 4x4 matrix
 //  v -- 4-vector
-float4 matmul(float4 m[], float4 v) {
+double4 matmul(double4 m[], double4 v) {
   return m[0]*v.s0 + m[1]*v.s1 + m[2]*v.s2 + m[3]*v.s3;
 }
 
@@ -16,7 +16,7 @@ float4 matmul(float4 m[], float4 v) {
 // transpose a matrix
 //  m -- matrix to transpose (vector of columns)
 //  t -- result
-void transpose(float4 m[], float4 t[]) {
+void transpose(double4 m[], double4 t[]) {
   t[0].s0 = m[0].s0;
   t[0].s1 = m[1].s0;
   t[0].s2 = m[2].s0;
@@ -41,7 +41,7 @@ void transpose(float4 m[], float4 t[]) {
 //  b -- right matrix
 //  r -- result
 // this is the naive way
-void matmulmat(float4 a[], float4 b[], float4 r[]) {
+void matmulmat(double4 a[], double4 b[], double4 r[]) {
   r[0].s0 = a[0].s0 * b[0].s0 + a[1].s0 * b[0].s1 + a[2].s0 * b[0].s2 + a[3].s0 * b[0].s3;
   r[1].s0 = a[0].s0 * b[1].s0 + a[1].s0 * b[1].s1 + a[2].s0 * b[1].s2 + a[3].s0 * b[1].s3;
   r[2].s0 = a[0].s0 * b[2].s0 + a[1].s0 * b[2].s1 + a[2].s0 * b[2].s2 + a[3].s0 * b[2].s3;
@@ -63,11 +63,11 @@ void matmulmat(float4 a[], float4 b[], float4 r[]) {
 
 // return the inverse of a quaternion
 //  q -- a quaternion
-float4 quat_inv(float4 q) {
-  float l2 = dot(q, q);
+double4 quat_inv(double4 q) {
+  double l2 = dot(q, q);
   if (l2==0.f)
     return(q);
-  float4 inv = {-q.x/l2, -q.y/l2, -q.z/l2, q.w/l2};
+  double4 inv = {-q.x/l2, -q.y/l2, -q.z/l2, q.w/l2};
   return inv;
 }
 
@@ -75,8 +75,8 @@ float4 quat_inv(float4 q) {
 // multiply two quaternions
 //  a -- a quaternion
 //  b -- a quaternion
-float4 quat_prod(float4 a, float4 b) {
-  float4 res;
+double4 quat_prod(double4 a, double4 b) {
+  double4 res;
   res.x =  a.x*b.w + a.y*b.z - a.z*b.y + a.w*b.x;
   res.y = -a.x*b.z + a.y*b.w + a.z*b.x + a.w*b.y;
   res.z =  a.x*b.y - a.y*b.x + a.z*b.w + a.w*b.z;
@@ -88,10 +88,10 @@ float4 quat_prod(float4 a, float4 b) {
 // rotate a vector using a quaternion
 //  q -- quaternion
 //  v -- vector, w ('real') component is ignored
-float4 quat_rot(float4 q, float4 v) {
+double4 quat_rot(double4 q, double4 v) {
   v.w = 0.f;
-  float4 qi = quat_inv(q);
-  float4 v_prime = quat_prod(q, quat_prod(v, qi));
+  double4 qi = quat_inv(q);
+  double4 v_prime = quat_prod(q, quat_prod(v, qi));
   v_prime.w = 0.f;
   return v_prime;
 }
@@ -101,14 +101,14 @@ float4 quat_rot(float4 q, float4 v) {
 //  axis -- axis about which to rotate
 //  angle -- amount to rotate (radians)
 //  v -- the vector to rotate
-float4 rot(float4 axis, float angle, float4 v) {
-  float4 q = axis*sin(angle/2.f);
+double4 rot(double4 axis, double angle, double4 v) {
+  double4 q = axis*sin(angle/2.f);
   q.w = cos(angle/2.f);
   return quat_rot(q, v);
 }
 
 
-void print_matrix(float4* m) {
+void print_matrix(double4* m) {
   /*
   printf("\
  % 3.3f  % 3.3f  % 3.3f (% 3.3f)\n\
@@ -122,37 +122,37 @@ void print_matrix(float4* m) {
   */
 }
 
-void cyl_inv_inertia_tensor(float muA, float l, float4 axis, float4 res[]) {
+void cyl_inv_inertia_tensor(double muA, double l, double4 axis, double4 res[]) {
   // first find the inv inertia tensor for a capsule along the x axis
-  float diag = 12.f/(muA*l*l*l);
+  double diag = 12.f/(muA*l*l*l);
 
   // now find the matrix that transforms from the x-axis to the axis
-  float4 x_axis = {1.f, 0.f, 0.f, 0.f};
-  float4 y_axis = {0.f, 1.f, 0.f, 0.f};
-  float4 z_axis = {0.f, 0.f, 1.f, 0.f};
-  float rot_ang = acos(dot(x_axis, axis));
+  double4 x_axis = {1.f, 0.f, 0.f, 0.f};
+  double4 y_axis = {0.f, 1.f, 0.f, 0.f};
+  double4 z_axis = {0.f, 0.f, 1.f, 0.f};
+  double rot_ang = acos(dot(x_axis, axis));
 
-  float4 y_prime = y_axis;
-  float4 z_prime = z_axis;
+  double4 y_prime = y_axis;
+  double4 z_prime = z_axis;
 
   if (rot_ang > EPSILON) {
     y_prime = rot(z_prime, rot_ang, y_axis);
     z_prime = normalize(cross(x_axis, axis));
   }
 
-  float4 M[4];
+  double4 M[4];
   M[0] = axis;
   M[1] = y_prime;
   M[2] = z_prime;
   M[3] = 0.f;
 
-  float4 MD[4];
+  double4 MD[4];
   MD[0] = 0.f;
   MD[1] = M[1]*diag;
   MD[2] = M[2]*diag;
   MD[3] = 0.f;
 
-  float4 MDT[4];
+  double4 MDT[4];
   transpose(MD, MDT);
 
   // I in the world is = M(I_D)M^T
@@ -166,8 +166,8 @@ __kernel void bin_cells(const int grid_x_min,
                         const int grid_x_max,
                         const int grid_y_min,
                         const int grid_y_max,
-                        const float grid_spacing,
-                        __global const float4* centers,
+                        const double grid_spacing,
+                        __global const double4* centers,
                         __global int* sqs)
 {
   int i = get_global_id(0);
@@ -178,51 +178,51 @@ __kernel void bin_cells(const int grid_x_min,
 
 
 // find the closest points on two line segments
-void closest_points_on_segments(const float4 r_a,  // center of first segment
-                                const float4 r_b,  // center of second segment
-                                const float4 a,    // direction of first segment (unit)
-                                const float4 b,    // direction of second segment (unit)
-                                const float len_a, // length of first segment
-                                const float len_b, // length of second segment
-                                float4* p_a,       // (return) point on first segment
-                                float4* p_b,       // (return) point on second segment
-                                float4* p_a2,      // (return) 2nd point on first segment
-                                float4* p_b2,      // (return) 2nd point on second segment
+void closest_points_on_segments(const double4 r_a,  // center of first segment
+                                const double4 r_b,  // center of second segment
+                                const double4 a,    // direction of first segment (unit)
+                                const double4 b,    // direction of second segment (unit)
+                                const double len_a, // length of first segment
+                                const double len_b, // length of second segment
+                                double4* p_a,       // (return) point on first segment
+                                double4* p_b,       // (return) point on second segment
+                                double4* p_a2,      // (return) 2nd point on first segment
+                                double4* p_b2,      // (return) 2nd point on second segment
                                 int* two_pts)      // (return) were two points picked?
 {
-  float hlen_a = len_a / 2.f;
-  float hlen_b = len_b / 2.f;
-  float4 r = r_b - r_a;
-  float a_dot_r = dot(a, r);
-  float b_dot_r = dot(b, r);
-  float a_dot_b = dot(a, b);
-  float denom = 1.f - a_dot_b * a_dot_b;
+  double hlen_a = len_a / 2.f;
+  double hlen_b = len_b / 2.f;
+  double4 r = r_b - r_a;
+  double a_dot_r = dot(a, r);
+  double b_dot_r = dot(b, r);
+  double a_dot_b = dot(a, b);
+  double denom = 1.f - a_dot_b * a_dot_b;
 
-  float t_a = 0.f;
-  float t_b = 0.f;
+  double t_a = 0.f;
+  double t_b = 0.f;
 
   *two_pts = 0;
-  float t_a2 = 0.f;
-  float t_b2 = 0.f;
+  double t_a2 = 0.f;
+  double t_b2 = 0.f;
 
   if (sqrt(denom) > EPSILON) {
     // non-parallel lines
 
     // closest points on the same lines if they were infinitely long
-    float t_a0 = (a_dot_r - b_dot_r * a_dot_b) / denom;
-    float t_b0 = (a_dot_r * a_dot_b - b_dot_r) / denom;
+    double t_a0 = (a_dot_r - b_dot_r * a_dot_b) / denom;
+    double t_b0 = (a_dot_r * a_dot_b - b_dot_r) / denom;
 
     // there are a few different cases we have to handle...
     bool on_a = fabs(t_a0) < hlen_a;
     bool on_b = fabs(t_b0) < hlen_b;
     if (!on_a && !on_b) {
       // the corner
-      float c_a = copysign(hlen_a, t_a0);
-      float c_b = copysign(hlen_b, t_b0);
+      double c_a = copysign(hlen_a, t_a0);
+      double c_b = copysign(hlen_b, t_b0);
 
       // signs of partials at the corner
-      float dd_dt_a = 2.f*(c_a - a_dot_b*c_b - a_dot_r);
-      float dd_dt_b = 2.f*(c_b - a_dot_b*c_a + b_dot_r);
+      double dd_dt_a = 2.f*(c_a - a_dot_b*c_b - a_dot_r);
+      double dd_dt_b = 2.f*(c_b - a_dot_b*c_a + b_dot_r);
 
       if (sign(dd_dt_a) == sign(c_a)) {
         // on the other edge
@@ -248,15 +248,15 @@ void closest_points_on_segments(const float4 r_a,  // center of first segment
     // project a onto b
 
     // use the same _dot_r for each for consistency
-    float x_dot_r = copysign(min(a_dot_r, b_dot_r), a_dot_r);
+    double x_dot_r = copysign(min(a_dot_r, b_dot_r), a_dot_r);
 
     // project the ends of a into b coordinates
-    float a_l = -x_dot_r - hlen_a;
-    float a_r = -x_dot_r + hlen_a;
+    double a_l = -x_dot_r - hlen_a;
+    double a_r = -x_dot_r + hlen_a;
 
     // find the intersection of the two on b
-    float i_l = max(a_l, -hlen_b);
-    float i_r = min(a_r, hlen_b);
+    double i_l = max((double)(a_l), (double)(-hlen_b));
+    double i_r = min((double)(a_r), (double)(hlen_b));
 
     if (i_l > i_r) {
       // they don't intersect
@@ -293,7 +293,7 @@ void closest_points_on_segments(const float4 r_a,  // center of first segment
 
 // intest distance from a point p to a plane passing through point v
 // with unit normal n
-float pt_to_plane_dist(float4 v, float4 n, float4 p)
+double pt_to_plane_dist(double4 v, double4 n, double4 p)
 {
   return dot((p-v), n);
 }
@@ -302,36 +302,36 @@ float pt_to_plane_dist(float4 v, float4 n, float4 p)
 __kernel void find_plane_contacts(const int max_cells,
                                   const int max_contacts,
                                   const int n_planes,
-                                  __global const float4* plane_pts,
-                                  __global const float4* plane_norms,
-                                  __global const float* plane_coeffs,
-                                  __global const float4* centers,
-                                  __global const float4* dirs,
-                                  __global const float* lens,
-                                  __global const float* rads,
+                                  __global const double4* plane_pts,
+                                  __global const double4* plane_norms,
+                                  __global const double* plane_coeffs,
+                                  __global const double4* centers,
+                                  __global const double4* dirs,
+                                  __global const double* lens,
+                                  __global const double* rads,
                                   __global int* n_cts,
                                   __global int* frs,
                                   __global int* tos,
-                                  __global float* dists,
-                                  __global float4* pts,
-                                  __global float4* norms,
-                                  __global float* reldists,
-                                  __global float* stiff)
+                                  __global double* dists,
+                                  __global double4* pts,
+                                  __global double4* norms,
+                                  __global double* reldists,
+                                  __global double* stiff)
 {
   int i = get_global_id(0);
 
   // collision count
   int k = n_cts[i]; //keep existing contacts
 
-  float4 end1 = centers[i] - 0.5f*lens[i]*dirs[i]; // 'left' end of the cell
-  float4 end2 = centers[i] + 0.5f*lens[i]*dirs[i]; // 'right' end of the cell
+  double4 end1 = centers[i] - 0.5f*lens[i]*dirs[i]; // 'left' end of the cell
+  double4 end2 = centers[i] + 0.5f*lens[i]*dirs[i]; // 'right' end of the cell
 
   for (int n = 0; n < n_planes; n++) { // loop through all planes
     int to1 = -2*n - 1; // 'to' if left end has contact with plane n
     int to2 = to1 - 1;  // 'to' if right end has contact with plane n
 
-    float dist1 = pt_to_plane_dist(plane_pts[n], plane_norms[n], end1)-rads[i];
-    float dist2 = pt_to_plane_dist(plane_pts[n], plane_norms[n], end2)-rads[i];
+    double dist1 = pt_to_plane_dist(plane_pts[n], plane_norms[n], end1)-rads[i];
+    double dist2 = pt_to_plane_dist(plane_pts[n], plane_norms[n], end2)-rads[i];
 
     // check for old contacts with this plane
     int cti1 = -1;
@@ -342,10 +342,10 @@ __kernel void find_plane_contacts(const int max_cells,
     }
 
     // common to both ends
-    float4 norm = -plane_norms[n];
+    double4 norm = -plane_norms[n];
 
     bool two_pts = ((cti1 >= 0) || (dist1<0.f) ) && ( (cti2 >= 0) || (dist2<0.f) );
-    float stiffness = two_pts*ISQRT2 + (!two_pts)*1.0;
+    double stiffness = two_pts*ISQRT2 + (!two_pts)*1.0;
 
     // if we're in contact, or we were in contact, recompute
     if ((cti1 >= 0) || (dist1<0.f) ){
@@ -392,22 +392,22 @@ __kernel void find_contacts(const int max_cells,
                             const int grid_y_max,
                             const int n_sqs,
                             const int max_contacts,
-                            __global const float4* centers,
-                            __global const float4* dirs,
-                            __global const float* lens,
-                            __global const float* rads,
+                            __global const double4* centers,
+                            __global const double4* dirs,
+                            __global const double* lens,
+                            __global const double* rads,
                             __global const int* sqs,
                             __global const int* sorted_ids,
                             __global const int* sq_inds,
                             __global int* n_cts,
                             __global int* frs,
                             __global int* tos,
-                            __global float* dists,
-                            __global float4* pts,
-                            __global float4* norms,
-                            __global float* reldists,
-                            __global float* stiff,
-                            __global float* overlap)
+                            __global double* dists,
+                            __global double4* pts,
+                            __global double4* norms,
+                            __global double* reldists,
+                            __global double* stiff,
+                            __global double* overlap)
 {
   // our id
   int i = get_global_id(0);
@@ -456,26 +456,26 @@ __kernel void find_contacts(const int max_cells,
         }
 
         // if so, find closest points
-        float4 pi, pj; // pi is point on our line seg, pj point on other
-        float4 pi2, pj2; // optional second points
+        double4 pi, pj; // pi is point on our line seg, pj point on other
+        double4 pi2, pj2; // optional second points
         int two_pts = 0; // are there two contacts?
         closest_points_on_segments(centers[i], centers[j],
                                    dirs[i], dirs[j],
                                    lens[i], lens[j],
                                    &pi, &pj, &pi2, &pj2, &two_pts);
 
-        float4 v_ij = pj-pi; // vector between closest points
-        float dist = length(v_ij) - (rads[i]+rads[j]);
-        float4 norm = normalize(v_ij); // normal on our cell at the contact
-        float4 pt = pi + rads[i]*norm; // point on the capsule surface
-          
+        double4 v_ij = pj-pi; // vector between closest points
+        double dist = length(v_ij) - (rads[i]+rads[j]);
+        double4 norm = normalize(v_ij); // normal on our cell at the contact
+        double4 pt = pi + rads[i]*norm; // point on the capsule surface
+
         int ct_i;
         ct_i = i*max_contacts+k; // index of this contact
 
-        float stiffness = two_pts*ISQRT2 + (!two_pts)*1.0;
-        
-        float overlap_length = two_pts*fabs(dot(pi-pi2,dirs[i]))/(2*POINT) + (!two_pts)*1.0;
-          
+        double stiffness = two_pts*ISQRT2 + (!two_pts)*1.0;
+
+        double overlap_length = two_pts*fabs(dot(pi-pi2,dirs[i]))/(2*POINT) + (!two_pts)*1.0;
+
         if (dist < MARGIN)
         {
             if (n_existing_cts==0)
@@ -524,7 +524,7 @@ __kernel void find_contacts(const int max_cells,
         dist = length(v_ij) - (rads[i]+rads[j]);
         norm = normalize(v_ij);
         pt = pi2 + rads[i]*norm;
-          
+
 	// Are cells moving together or penetrating?
 	if (dist < MARGIN)
 	{
@@ -636,20 +636,20 @@ __kernel void collect_tos(const int max_cells,
 
 
 __kernel void build_matrix(const int max_contacts,
-                           const float muA,
-                           const float gamma,
-                           __global const float4* centers,
-                           __global const float4* dirs,
-                           __global const float* lens,
-                           __global const float* rads,
+                           const double muA,
+                           const double gamma,
+                           __global const double4* centers,
+                           __global const double4* dirs,
+                           __global const double* lens,
+                           __global const double* rads,
                            __global const int* n_cts,
                            __global const int* frs,
                            __global const int* tos,
-                           __global const float4* pts,
-                           __global const float4* norms,
-                           __global float8* fr_ents,
-                           __global float8* to_ents,
-                           __global float* stiff)
+                           __global const double4* pts,
+                           __global const double4* norms,
+                           __global double8* fr_ents,
+                           __global double8* to_ents,
+                           __global double* stiff)
 {
   int id = get_global_id(0);
   int ct = get_global_id(1);
@@ -659,12 +659,12 @@ __kernel void build_matrix(const int max_contacts,
   int i = id*max_contacts + ct;
 
   int a = frs[i];
-  float4 r_a = pts[i]-centers[a];
-  float8 fr_ent = 0.f;
+  double4 r_a = pts[i]-centers[a];
+  double8 fr_ent = 0.f;
 
-  float4 Ia[4];
+  double4 Ia[4];
   cyl_inv_inertia_tensor(muA, lens[a]+2.f*rads[a], dirs[a], Ia);
-  float4 nxr_a = 0.f;
+  double4 nxr_a = 0.f;
   nxr_a = cross(norms[i], r_a);
 
   fr_ent.s012 = norms[i].s012/(muA*(lens[a]+2.f*rads[a]));
@@ -682,12 +682,12 @@ __kernel void build_matrix(const int max_contacts,
     return;
   }
 
-  float4 r_b = pts[i]-centers[b];
-  float8 to_ent = 0.f;
+  double4 r_b = pts[i]-centers[b];
+  double8 to_ent = 0.f;
 
-  float4 Ib[4];
+  double4 Ib[4];
   cyl_inv_inertia_tensor(muA, lens[b]+2.f*rads[b], dirs[b], Ib);
-  float4 nxr_b = 0.f;
+  double4 nxr_b = 0.f;
   nxr_b = cross(norms[i], r_b);
 
   to_ent.s012 = norms[i].s012/(muA*(lens[b]+2.f*rads[b]));
@@ -701,10 +701,10 @@ __kernel void build_matrix(const int max_contacts,
 __kernel void calculate_Mx(const int max_contacts,
                            __global const int* frs,
                            __global const int* tos,
-                           __global const float8* fr_ents,
-                           __global const float8* to_ents,
-                           __global const float8* deltap,
-                           __global float* Mx)
+                           __global const double8* fr_ents,
+                           __global const double8* to_ents,
+                           __global const double8* deltap,
+                           __global double* Mx)
 {
   int id = get_global_id(0);
   int ct = get_global_id(1);
@@ -712,10 +712,10 @@ __kernel void calculate_Mx(const int max_contacts,
   int a = frs[i];
   int b = tos[i];
   if (a == 0 && b == 0) return; // not a contact
-  float8 to_ents_i = b < 0 ? 0.f : to_ents[i];
-  //my machine can't dot float8s...
-  float res0123 = dot(fr_ents[i].s0123, deltap[a].s0123) - dot(to_ents_i.s0123, deltap[b].s0123);
-  float res4567 = dot(fr_ents[i].s4567, deltap[a].s4567) - dot(to_ents_i.s4567, deltap[b].s4567);
+  double8 to_ents_i = b < 0 ? 0.f : to_ents[i];
+  //my machine can't dot double8s...
+  double res0123 = dot(fr_ents[i].s0123, deltap[a].s0123) - dot(to_ents_i.s0123, deltap[b].s0123);
+  double res4567 = dot(fr_ents[i].s4567, deltap[a].s4567) - dot(to_ents_i.s4567, deltap[b].s4567);
   Mx[i] = res0123 + res4567;
 }
 
@@ -724,16 +724,16 @@ __kernel void calculate_MTMx(const int max_contacts,
                              __global const int* n_cts,
                              __global const int* n_cell_tos,
                              __global const int* cell_tos,
-                             __global const float8* fr_ents,
-                             __global const float8* to_ents,
-                             __global const float* Mx,
-                             __global float8* MTMx)
+                             __global const double8* fr_ents,
+                             __global const double8* to_ents,
+                             __global const double* Mx,
+                             __global double8* MTMx)
 {
   int i = get_global_id(0);
   int base = i*max_contacts;
-  float8 res = 0.f;
+  double8 res = 0.f;
   for (int k = base; k < base+n_cts[i]; k++) {
-    float8 oldres = res;
+    double8 oldres = res;
     res += fr_ents[k]*Mx[k];
   }
   for (int k = base; k < base+n_cell_tos[i]; k++) {
@@ -744,25 +744,25 @@ __kernel void calculate_MTMx(const int max_contacts,
   MTMx[i] = res;
 }
 
-__kernel void calculate_Minv_x(const float muA,
-			       const float gamma,
-			       __global const float4* dirs,
-			       __global const float* lens,
-			       __global const float* rads,
-			       __global const float8* x,
-			       __global float8* Minvx)
+__kernel void calculate_Minv_x(const double muA,
+			       const double gamma,
+			       __global const double4* dirs,
+			       __global const double* lens,
+			       __global const double* rads,
+			       __global const double8* x,
+			       __global double8* Minvx)
 {
   int i = get_global_id(0);
 
-  float8 xi = x[i];
-  float8 v = 0.f;
+  double8 xi = x[i];
+  double8 v = 0.f;
   v.s012 = xi.s012/(muA*(lens[i]+2.f*rads[i]));
 
-  float4 Iinv[4];
+  double4 Iinv[4];
   cyl_inv_inertia_tensor(muA, lens[i]+2.f*rads[i], dirs[i], Iinv);
-  float4 L = 0.f;
+  double4 L = 0.f;
   L.s012 = xi.s345;
-  float4 w = matmul(Iinv, L);
+  double4 w = matmul(Iinv, L);
   v.s345 = w.s012;
 
   v.s6 = xi.s6/gamma;
@@ -771,30 +771,30 @@ __kernel void calculate_Minv_x(const float muA,
 }
 
 
-__kernel void predict(__global const float4* centers,
-                        __global const float4* dirs,
-                        __global const float* lens,
-                        __global const float4* dcenters,
-                        __global const float4* dangs,
-                        __global const float* dlens,
-                        __global float4* pred_centers,
-                        __global float4* pred_dirs,
-                        __global float* pred_lens)
+__kernel void predict(__global const double4* centers,
+                        __global const double4* dirs,
+                        __global const double* lens,
+                        __global const double4* dcenters,
+                        __global const double4* dangs,
+                        __global const double* dlens,
+                        __global double4* pred_centers,
+                        __global double4* pred_dirs,
+                        __global double* pred_lens)
 {
   int i = get_global_id(0);
-  float4 center_i = centers[i];
-  float4 dir_i = dirs[i];
-  float len_i = lens[i];
-  float4 dcenter_i = dcenters[i];
-  float4 dang_i = dangs[i];
-  float dlen_i = dlens[i];
+  double4 center_i = centers[i];
+  double4 dir_i = dirs[i];
+  double len_i = lens[i];
+  double4 dcenter_i = dcenters[i];
+  double4 dang_i = dangs[i];
+  double dlen_i = dlens[i];
 
   pred_centers[i] = center_i + dcenter_i;
 
   if (length(dang_i)>1e-12)
   {
-    float4 rot_axis = normalize(dang_i);
-    float rot_angle = length(dang_i);
+    double4 rot_axis = normalize(dang_i);
+    double rot_angle = length(dang_i);
     pred_dirs[i] = normalize(rot(rot_axis, rot_angle, dir_i));
   } else {
     pred_dirs[i] = dir_i;
@@ -804,27 +804,27 @@ __kernel void predict(__global const float4* centers,
 
 }
 
-__kernel void integrate(__global float4* centers,
-                        __global float4* dirs,
-                        __global float* lens,
-                        __global float4* dcenters,
-                        __global float4* dangs,
-                        __global float* dlens)
+__kernel void integrate(__global double4* centers,
+                        __global double4* dirs,
+                        __global double* lens,
+                        __global double4* dcenters,
+                        __global double4* dangs,
+                        __global double* dlens)
 {
   int i = get_global_id(0);
-  float4 center_i = centers[i];
-  float4 dir_i = dirs[i];
-  float len_i = lens[i];
-  float4 dcenter_i = dcenters[i];
-  float4 dang_i = dangs[i];
-  float dlen_i = dlens[i];
+  double4 center_i = centers[i];
+  double4 dir_i = dirs[i];
+  double len_i = lens[i];
+  double4 dcenter_i = dcenters[i];
+  double4 dang_i = dangs[i];
+  double dlen_i = dlens[i];
 
   centers[i] = center_i + dcenter_i;
 
   if (length(dang_i)>1e-12)
   {
-    float4 rot_axis = normalize(dang_i);
-    float rot_angle = length(dang_i);
+    double4 rot_axis = normalize(dang_i);
+    double rot_angle = length(dang_i);
     dirs[i] = normalize(rot(rot_axis, rot_angle, dir_i));
   }
 
@@ -836,44 +836,42 @@ __kernel void integrate(__global float4* centers,
   dlens[i] = 0.f;
 }
 
-__kernel void add_impulse(const float muA,
-                          const float gamma,
-                          __global const float8* deltap,
-                          __global const float4* dirs,
-                          __global const float* lens,
-                          __global const float* rads,
-                          __global float4* dcenters,
-                          __global float4* dangs,
-                          __global const float* target_dlens,
-                          __global float* dlens)
+__kernel void add_impulse(const double muA,
+                          const double gamma,
+                          __global const double8* deltap,
+                          __global const double4* dirs,
+                          __global const double* lens,
+                          __global const double* rads,
+                          __global double4* dcenters,
+                          __global double4* dangs,
+                          __global const double* target_dlens,
+                          __global double* dlens)
 {
   int i = get_global_id(0);
 
-  float4 dir_i = dirs[i];
-  float len_i = lens[i];
-  float rad_i = rads[i];
-  float8 deltap_i = deltap[i];
+  double4 dir_i = dirs[i];
+  double len_i = lens[i];
+  double rad_i = rads[i];
+  double8 deltap_i = deltap[i];
 
-  float4 dplin = 0.f;
+  double4 dplin = 0.f;
   dplin.s012 = deltap_i.s012;
   dcenters[i] += dplin/(muA*(lens[i]+2.f*rads[i]));
 
   // FIXME: should probably store these so we don't recompute them
-  float4 Iinv[4];
+  double4 Iinv[4];
   cyl_inv_inertia_tensor(muA, len_i+2.f*rad_i, dir_i, Iinv);
-  float4 dL = 0.f;
+  double4 dL = 0.f;
   dL.s012 = deltap_i.s345;
-  float4 dpang = matmul(Iinv, dL);
-  float dpangmag = length(dpang);
+  double4 dpang = matmul(Iinv, dL);
+  double dpangmag = length(dpang);
   if (dpangmag>ANG_LIMIT)
   {
     dpang *= ANG_LIMIT/dpangmag;
   }
   dangs[i] += dpang;
   
-  float dplen = deltap_i.s6;
+  double dplen = deltap_i.s6;
   //dlens[i] += max(0.f, target_dlens[i] + dplen/gamma);
-  dlens[i] = max(0.f, dlens[i]+dplen/gamma);
+  dlens[i] = max((double)0.f, dlens[i]+dplen/gamma);
 }
-
-
