@@ -10,6 +10,8 @@ from reportlab.lib.colors import Color
 import numpy
 import cPickle
 
+mxsig0 = 0
+
 class CellModellerPDFGenerator(Canvas):
     # ---
     # Class that extends reportlab pdf canvas to draw CellModeller simulations
@@ -17,7 +19,13 @@ class CellModellerPDFGenerator(Canvas):
     def __init__(self, name, data, bg_color):
         self.name = name
         self.states = data.get('cellStates')
-        self.signals = data.get('signals')
+        self.signals = False
+        if 'specData' in data:
+            self.signals = True
+            self.signal_levels = data.get('sigGrid')
+            self.signal_grid_orig = data.get('sigGridOrig')
+            self.signal_grid_dim = data.get('sigGridDim')
+            self.signal_grid_size = data.get('sigGridSize')
         self.parents = data.get('lineage')
         self.data = data
         self.bg_color = bg_color
@@ -85,25 +93,37 @@ class CellModellerPDFGenerator(Canvas):
         self.line(-100, -16, 100, -16)
         self.line(-100, 16, 100, 16)
 
-    mxsig0 = 0
-    def draw_signals(self):
+    def draw_signals(self, index=0, scale=0.0192, z=2):
+        '''
+        Function for drawing signal grids, currently limited to 1 signal a plane at a fixed z-axis level through the
+        grid
+
+        index = index of signal to render
+        scale = scale factor for signal level
+        z = height of slice through grid 
+        '''
         global mxsig0
         # for EdgeDetectorChamber-22-57-02-06-12
-        l, orig, dim, levels = self.signals
+        l, orig, dim, levels = self.signal_grid_size, \
+                                self.signal_grid_orig, \
+                                self.signal_grid_dim, \
+                                self.signal_levels
+        levels = levels.reshape(dim)
         l = map(float,l)
         for i in range(dim[1]):
             x = l[0]*i + orig[0]
             for j in range(dim[2]):
                 y = l[1]*j + orig[1]
-                lvl = levels[0][i][j][2]/0.0129
-                mxsig0=max(lvl, mxsig0)
-                self.setFillColorRGB(1.0-lvl, 1.0-lvl, 1.0-lvl)
+                lvls = levels[index,i,j,z]/scale
+                mxsig0 = max(lvls, mxsig0)
+                self.setFillColorRGB(lvls, 0, 0)
                 self.rect(x-l[0]/2.0, y-l[1]/2.0, l[0], l[1], stroke=0, fill=1)
 
     def draw_frame(self, name, world, page, center):
         self.setup_canvas(name, world, page, center)
         #draw_chamber(c)
         if self.signals: 
+            print("Drawing signals")
             self.draw_signals()
         self.draw_cells()
         self.showPage()
