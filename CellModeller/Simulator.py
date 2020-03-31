@@ -107,12 +107,6 @@ visualised.
         self.dataOutputInitialised=False
         self.outputDirName = outputDirName
         self.setSaveOutput(saveOutput)
-        '''
-        self.saveOutput = saveOutput
-        if self.saveOutput:
-            self.outputSteps = outputSteps
-            self.init_data_output(outputFileDir)
-        '''
         
         # Call the user-defined setup function on ourself
         self.module.setup(self)
