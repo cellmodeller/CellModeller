@@ -54,6 +54,7 @@ class PyGLCMViewer(PyGLWidget):
             self.frameNo += 1
         # Make GUI button match simulator state for saving pickles
         self.setSavePicklesToggle.emit(sim.saveOutput)
+        print('saveOutput ', sim.saveOutput)
         # Get rid of any selected cell id
         self.selectedName = -1
 
@@ -145,9 +146,10 @@ class PyGLCMViewer(PyGLWidget):
 
     @pyqtSlot()
     def loadPickle(self):
-        qs = QFileDialog.getOpenFileName(self, 'Load pickle file', '', '*.pickle')
+        qs,_ = QFileDialog.getOpenFileName(self, 'Load pickle file', '', '*.pickle')
         if qs and self.getOpenCLPlatDev():
             filename = str(qs)
+            print(filename)
             data = pickle.load(open(filename,'rb'))
             if isinstance(data, dict):
                 self.modName = data['moduleName']
@@ -160,9 +162,9 @@ class PyGLCMViewer(PyGLWidget):
                                     clDeviceNum=self.clDeviceNum, \
                                     is_gui=True) 
  
-                self.setSimulator(sim) 
                 self.loadingFromPickle = True
-                self.sim.loadFromPickle(data)
+                sim.loadFromPickle(data)
+                self.setSimulator(sim)
                 # Note: the pickle loaded contains the stepNum, hence we now
                 # need to set the GUI frameNo to match
                 self.frameNo = self.sim.stepNum
@@ -174,9 +176,10 @@ class PyGLCMViewer(PyGLWidget):
 
     @pyqtSlot()
     def load(self):
-        qs = QFileDialog.getOpenFileName(self, 'Load Python module', '', '*.py')
+        qs,_ = QFileDialog.getOpenFileName(self, 'Load Python module', '', '*.py')
         if qs:
             modfile = str(qs)
+            print(modfile)
             self.loadModelFile(modfile)
 
     def loadModelFile(self, modname):
@@ -261,11 +264,11 @@ class PyGLCMViewer(PyGLWidget):
         glEnable(GL_LINE_SMOOTH)
         glLineWidth(1.0)
         glBegin(GL_LINES)
-        for i in range(5):
-            glVertex(-20, (i-2)*10)
-            glVertex(20, (i-2)*10)
-            glVertex((i-2)*10, -20)
-            glVertex((i-2)*10, 20)
+        for i in range(25):
+            glVertex(-120, (i-12)*10)
+            glVertex(120, (i-12)*10)
+            glVertex((i-12)*10, -120)
+            glVertex((i-12)*10, 120)
         glEnd()
 
         # Draw x,y,z axes
@@ -273,13 +276,13 @@ class PyGLCMViewer(PyGLWidget):
         glBegin(GL_LINES)
         glColor3f(1.0,0.0,0.0)
         glVertex(0,0,0)
-        glVertex(5,0,0)
+        glVertex(25,0,0)
         glColor3f(0.0,1.0,0.0)
         glVertex(0,0,0)
-        glVertex(0,5,0)
+        glVertex(0,25,0)
         glColor3f(0.0,0.0,1.0)
         glVertex(0,0,0)
-        glVertex(0,0,5)
+        glVertex(0,0,25)
         glEnd()
         glEnable(GL_DEPTH_TEST)
         glEnable(GL_LIGHTING)
