@@ -67,7 +67,7 @@ class NeighbourDiffusion:
 	self.idToIdx = {}
 	lvlView = levels.reshape(self.nCells, self.nSignals)
 	for i in range(self.nCells):
-	    cell = self.sim.cellStates.values()[i]
+	    cell = list(self.sim.cellStates.values())[i]
 	    lvlView[i,:] = cell.signals
 	    self.idToIdx[cell.id] = i
         
@@ -82,7 +82,7 @@ class NeighbourDiffusion:
 	"""
 	sigRates = signalRates.reshape(self.nCells, self.nSignals)
 	sigLevels = signalLevels.reshape(self.nCells, self.nSignals)
-	states = self.sim.cellStates.values()
+	states = list(self.sim.cellStates.values())
 	for i in range(self.nCells):
 	    cell = states[i]
 	    sigRates[i,:] = 0.0

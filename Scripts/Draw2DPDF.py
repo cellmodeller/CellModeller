@@ -8,7 +8,7 @@ from reportlab.lib import units
 from reportlab.lib.colors import Color
 
 import numpy
-import cPickle
+import pickle
 
 mxsig0 = 0
 
@@ -79,7 +79,7 @@ class CellModellerPDFGenerator(Canvas):
         self.restoreState()
 
     def draw_cells(self):
-        for id, state in self.states.items():
+        for id, state in list(self.states.items()):
             p = state.pos
             d = state.dir
             l = state.length
@@ -109,7 +109,7 @@ class CellModellerPDFGenerator(Canvas):
                                 self.signal_grid_dim, \
                                 self.signal_levels
         levels = levels.reshape(dim)
-        l = map(float,l)
+        l = list(map(float,l))
         for i in range(dim[1]):
             x = l[0]*i + orig[0]
             for j in range(dim[2]):
@@ -140,7 +140,7 @@ class CellModellerPDFGenerator(Canvas):
         mnx = -20
         mxy = 20
         mny = -20
-        for (id,s) in self.states.iteritems():
+        for (id,s) in self.states.items():
             pos = s.pos    
             l = s.length    # add/sub length to keep cell in frame
             mxx = max(mxx,pos[0]+l) 
@@ -155,8 +155,8 @@ class CellModellerPDFGenerator(Canvas):
 
 def importPickle(fname):
     if fname[-7:]=='.pickle':
-        print 'Importing CellModeller pickle file: %s'%fname
-        data = cPickle.load(open(fname, 'rb'))
+        print('Importing CellModeller pickle file: %s'%fname)
+        data = pickle.load(open(fname, 'rb'))
 
         # Check for old-style pickle that is tuple, 
         # just extract cellStates from 1st element
@@ -189,17 +189,17 @@ def main():
     for infn in infns:
         # File names
         if infn[-7:]!='.pickle':
-            print 'Ignoring file %s, because its not a pickle...'%(infn)
+            print('Ignoring file %s, because its not a pickle...'%(infn))
             continue
 
         outfn = string.replace(infn, '.pickle', '.pdf')
         outfn = os.path.basename(outfn) # Put output in this dir
-        print 'Processing %s to generate %s'%(infn,outfn)
+        print('Processing %s to generate %s'%(infn,outfn))
         
         # Import data
         data = importPickle(infn)
         if not data:
-            print "Problem importing data!"
+            print("Problem importing data!")
             return
 
         # Create a pdf canvas thing
@@ -218,7 +218,7 @@ def main():
         center = (0,0)
 
         # Render pdf
-        print 'Rendering PDF output to %s'%outfn
+        print('Rendering PDF output to %s'%outfn)
         pdf.draw_frame(outfn, world, page, center)
 
 if __name__ == "__main__": 

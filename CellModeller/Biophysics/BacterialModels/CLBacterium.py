@@ -111,13 +111,13 @@ class CLBacterium:
     # Eventually prob better to have a generic editCell() that deals with this stuff
     #
     def moveCell(self, cellState, delta_pos):
-        print "cell idx = %d"%cellState.idx
+        print("cell idx = %d"%cellState.idx)
         i = cellState.idx
         cid = cellState.id
-        print "cell center = "
-        print self.cell_centers[i]
-        print "delta_pos"
-        print delta_pos
+        print("cell center = ")
+        print(self.cell_centers[i])
+        print("delta_pos")
+        print(delta_pos)
         pos = numpy.array(tuple(self.cell_centers[i]))
         pos[0:3] += numpy.array(tuple(delta_pos))
         self.cell_centers[i] = pos
@@ -149,7 +149,7 @@ class CLBacterium:
     def init_kernels(self):
         """Set up the OpenCL kernels."""
         from pkg_resources import resource_string
-        kernel_src = resource_string(__name__, 'CLBacterium.cl')
+        kernel_src = resource_string(__name__, 'CLBacterium.cl').decode()
 
         self.program = cl.Program(self.context, kernel_src).build(cache_dir=False)
         # Some kernels that seem like they should be built into pyopencl...
@@ -287,7 +287,7 @@ class CLBacterium:
     
 
     def load_from_cellstates(self, cell_states):
-        for (cid,cs) in cell_states.items():
+        for (cid,cs) in list(cell_states.items()):
             i = cs.idx
             self.cell_centers[i] = tuple(cs.pos)+(0,)
             self.cell_dirs[i] = tuple(cs.dir)+(0,)
@@ -301,10 +301,10 @@ class CLBacterium:
 
     def load_test_data(self):
         import CellModeller.Biophysics.BacterialModels.CLData as data
-        self.cell_centers.put(range(len(data.pos)), data.pos)
-        self.cell_dirs.put(range(len(data.dirs)), data.dirs)
-        self.cell_lens.put(range(len(data.lens)), data.lens)
-        self.cell_rads.put(range(len(data.rads)), data.rads)
+        self.cell_centers.put(list(range(len(data.pos))), data.pos)
+        self.cell_dirs.put(list(range(len(data.dirs))), data.dirs)
+        self.cell_lens.put(list(range(len(data.lens))), data.lens)
+        self.cell_rads.put(list(range(len(data.rads))), data.rads)
         self.n_cells = data.n_cells
         self.set_cells()
 
@@ -455,13 +455,13 @@ class CLBacterium:
                         if ii!=self.n_cells-1 or jj!=6:
                             opstring = opstring + '\t'
                 opstring = opstring + '\n'
-        print "MTM"
-        print opstring
+        print("MTM")
+        print(opstring)
         open('CellModeller/Biophysics/BacterialModels/matrix.mat', 'w').write(opstring)
 
 
     def dump_cell_data(self, n):
-        import cPickle
+        import pickle
         filename = 'data/data-%04i.pickle'%n
         outfile = open(filename, 'wb')
         data = (self.n_cells,
@@ -470,7 +470,7 @@ class CLBacterium:
                 self.cell_lens_dev.get(),
                 self.cell_rads_dev.get(),
                 self.parents),
-        cPickle.dump(data, outfile, protocol=-1)
+        pickle.dump(data, outfile, protocol=-1)
 
     def dydt(self):
         self.set_cells()
@@ -479,7 +479,7 @@ class CLBacterium:
         # pull cells from the device and update simulator
         if self.simulator:
             self.get_cells()
-            for state in self.simulator.cellStates.values():
+            for state in list(self.simulator.cellStates.values()):
                 self.updateCellState(state)
 
     def progress_init(self, dt):
@@ -508,7 +508,7 @@ class CLBacterium:
         self.minutes_elapsed = (numpy.float32(self.seconds_elapsed) / 60.0)  
         self.hours_elapsed = (numpy.float32(self.minutes_elapsed) / 60.0)  
         if self.frame_no % 10 == 0:
-            print '% 8i    % 8i cells    % 8i contacts    %f hour(s) or %f minute(s) or %f second(s)' % (self.frame_no, self.n_cells, self.n_cts, self.hours_elapsed, self.minutes_elapsed, self.seconds_elapsed)
+            print('% 8i    % 8i cells    % 8i contacts    %f hour(s) or %f minute(s) or %f second(s)' % (self.frame_no, self.n_cells, self.n_cts, self.hours_elapsed, self.minutes_elapsed, self.seconds_elapsed))
         # pull cells from the device and update simulator
         if self.simulator:
             self.get_cells()
@@ -517,7 +517,7 @@ class CLBacterium:
             # TJR: add flag for this cos a bit time consuming
             if self.computeNeighbours:
                 self.updateCellNeighbours(self.simulator.idxToId)
-            for state in self.simulator.cellStates.values():
+            for state in list(self.simulator.cellStates.values()):
                 self.updateCellState(state)
 
     def step(self, dt):
@@ -926,8 +926,8 @@ class CLBacterium:
         rsfirst = rsold
         if math.sqrt(rsold/self.n_cells) < self.cgs_tol:
             if self.printing and self.frame_no%10==0:
-                print '% 5i'%self.frame_no + '% 6i cells  % 6i cts  % 6i iterations  residual = %f' % (self.n_cells,
-            self.n_cts, 0, rsold)
+                print('% 5i'%self.frame_no + '% 6i cells  % 6i cts  % 6i iterations  residual = %f' % (self.n_cells,
+            self.n_cts, 0, rsold))
             return (0.0, rsold)
 
         # iterate
@@ -970,7 +970,7 @@ class CLBacterium:
             #print '        ',iter,rsold
 
         if self.printing and self.frame_no%10==0:
-            print '% 5i'%self.frame_no + '% 6i cells  % 6i cts  % 6i iterations  residual = %f' % (self.n_cells, self.n_cts, iter+1, rsnew)
+            print('% 5i'%self.frame_no + '% 6i cells  % 6i cts  % 6i iterations  residual = %f' % (self.n_cells, self.n_cts, iter+1, rsnew))
         return (iter+1, math.sqrt(rsnew/self.n_cells))
 
 
@@ -1062,14 +1062,18 @@ class CLBacterium:
             if not self.jitter_z: jitter[2] = 0.0
             cdir[0:3] += jitter
             cdir /= numpy.linalg.norm(cdir)
-            self.cell_dirs[a] = cdir
+            self.cell_dirs[a][0] = cdir[0]
+            self.cell_dirs[a][1] = cdir[1]
+            self.cell_dirs[a][2] = cdir[2]
 
             cdir = numpy.array(parent_dir)
             jitter = numpy.random.uniform(-0.001,0.001,3)
             if not self.jitter_z: jitter[2] = 0.0
             cdir[0:3] += jitter
             cdir /= numpy.linalg.norm(cdir)
-            self.cell_dirs[b] = cdir
+            self.cell_dirs[b][0] = cdir[0]
+            self.cell_dirs[b][1] = cdir[1]
+            self.cell_dirs[b][2] = cdir[2]
         else:
             cdir = numpy.array(parent_dir)
             tmp = cdir[0]
@@ -1141,7 +1145,7 @@ class CLBacterium:
             self.sorted_ids_dev.set(self.sorted_ids) # push changes to the device
             self.sq_inds_dev.set(self.sq_inds)
         t2 = time.clock()
-        print "Grid stuff timing for 1000 calls, time per call (s) = %f"%((t2-t1)*0.001)
+        print("Grid stuff timing for 1000 calls, time per call (s) = %f"%((t2-t1)*0.001))
         open("grid_prof","a").write( "%i, %i, %f\n"%(self.n_cells,self.n_cts,(t2-t1)*0.001) )
 
 
@@ -1167,7 +1171,7 @@ class CLBacterium:
             self.compact_cts()
             self.ct_inds_dev.set(self.ct_inds)
         t2 = time.clock()
-        print "Find contacts timing for 1000 calls, time per call (s) = %f"%((t2-t1)*0.001)
+        print("Find contacts timing for 1000 calls, time per call (s) = %f"%((t2-t1)*0.001))
         open("findcts_prof","a").write( "%i, %i, %f\n"%(self.n_cells,self.n_cts,(t2-t1)*0.001) )
 
     def profileCGS(self):
@@ -1179,9 +1183,9 @@ class CLBacterium:
         for i in range(1000):
             self.build_matrix(dt) # Calculate entries of the matrix
             (iters, res) = self.CGSSolve()
-            print "cgs prof: iters=%i, res=%f"%(iters,res)
+            print("cgs prof: iters=%i, res=%f"%(iters,res))
         t2 = time.clock()
-        print "CGS timing for 1000 calls, time per call (s) = %f"%((t2-t1)*0.001)
+        print("CGS timing for 1000 calls, time per call (s) = %f"%((t2-t1)*0.001))
         open("cgs_prof","a").write( "%i, %i, %i, %f\n"%(self.n_cells,self.n_cts,iters,(t2-t1)*0.001) )
 
 

@@ -1,8 +1,9 @@
-import PyQt4
-from PyQt4 import QtCore, QtGui
-from PyQt4.Qt import Qt
-from PyQt4.QtCore import QObject, QTimer, pyqtSignal, pyqtSlot, QStringList
-from PyGLWidget import PyGLWidget
+import PyQt5
+from PyQt5 import QtCore, QtGui
+from PyQt5.Qt import Qt
+from PyQt5.QtCore import QObject, QTimer, pyqtSignal, pyqtSlot
+from PyQt5.QtWidgets import QInputDialog, QFileDialog
+from .PyGLWidget import PyGLWidget
 from OpenGL.GL import *
 from OpenGL.GLU import *
 
@@ -11,8 +12,9 @@ from CellModeller.Simulator import Simulator
 from CellModeller.CellState import CellState
 import os
 import sys
-import cPickle
+import pickle
 import pyopencl as cl
+import importlib
 
 class PyGLCMViewer(PyGLWidget):
 
@@ -62,20 +64,20 @@ class PyGLCMViewer(PyGLWidget):
         # Pop dialogs to get user to choose OpenCL platform 
         platforms = cl.get_platforms()
 
-        platlist = QStringList([str(p.name) for p in platforms])
-        platdict = dict(zip(platlist, range(len(platlist))))
+        platlist = [str(p.name) for p in platforms]
+        platdict = dict(list(zip(platlist, list(range(len(platlist))))))
 
         if len(platlist)==1:
             self.clPlatformNum = 0
             return True
 
-        qsPlatformName, ok = QtGui.QInputDialog.getItem(self, \
+        qsPlatformName, ok = QInputDialog.getItem(self, \
                                             'Choose OpenCL platform', \
                                             'Available platforms:', \
                                             platlist, \
                                             editable=False)
         if not ok:
-            print "You didn't select a OpenCL platform..."
+            print("You didn't select a OpenCL platform...")
             return False
         else:
             self.clPlatformNum = platdict[qsPlatformName]
@@ -86,20 +88,20 @@ class PyGLCMViewer(PyGLWidget):
         platforms = cl.get_platforms()
         devices = platforms[self.clPlatformNum].get_devices()
 
-        devlist = QStringList([str(d.name) for d in devices])
-        devdict = dict(zip(devlist, range(len(devlist))))
+        devlist = [str(d.name) for d in devices]
+        devdict = dict(list(zip(devlist, list(range(len(devlist))))))
         
         if len(devlist)==1:
             self.clDeviceNum = 0
             return True
         
-        qsDeviceName, ok = QtGui.QInputDialog.getItem(self, \
+        qsDeviceName, ok = QInputDialog.getItem(self, \
                                             'Choose OpenCL device', \
                                             'Available devices:', \
                                             devlist, \
                                             editable=False)
         if not ok:
-            print "You didn't select a OpenCL device..."
+            print("You didn't select a OpenCL device...")
             return False
         else:
             self.clDeviceNum = devdict[qsDeviceName]
@@ -121,7 +123,7 @@ class PyGLCMViewer(PyGLWidget):
     def reset(self):
         # Note: we don't ask user to choose OpenCL platform/device on reset, only load
         if not self.loadingFromPickle:
-            reload(self.sim.module)
+            importlib.reload(self.sim.module)
 
         if self.loadingFromPickle:
             sim = Simulator(self.modName, \
@@ -143,10 +145,10 @@ class PyGLCMViewer(PyGLWidget):
 
     @pyqtSlot()
     def loadPickle(self):
-        qs = QtGui.QFileDialog.getOpenFileName(self, 'Load pickle file', '', '*.pickle')
+        qs = QFileDialog.getOpenFileName(self, 'Load pickle file', '', '*.pickle')
         if qs and self.getOpenCLPlatDev():
             filename = str(qs)
-            data = cPickle.load(open(filename,'rb'))
+            data = pickle.load(open(filename,'rb'))
             if isinstance(data, dict):
                 self.modName = data['moduleName']
                 self.moduleStr = data['moduleStr']
@@ -168,11 +170,11 @@ class PyGLCMViewer(PyGLWidget):
                     self.frameNo += 1
                 self.updateGL()
             else:
-                print "Pickle is in an unsupported format, sorry"
+                print("Pickle is in an unsupported format, sorry")
 
     @pyqtSlot()
     def load(self):
-        qs = QtGui.QFileDialog.getOpenFileName(self, 'Load Python module', '', '*.py')
+        qs = QFileDialog.getOpenFileName(self, 'Load Python module', '', '*.py')
         if qs:
             modfile = str(qs)
             self.loadModelFile(modfile)
@@ -206,10 +208,10 @@ class PyGLCMViewer(PyGLWidget):
             states = self.sim.cellStates
             cid = self.selectedName
             txt = ''
-            if states.has_key(cid):
+            if cid in states:
                 txt += 'Selected Cell (id = %d)\n---\n'%(cid)
                 s = states[cid]
-                for (name,val) in s.__dict__.items():
+                for (name,val) in list(s.__dict__.items()):
                     if name not in CellState.excludeAttr:
                         txt += name + ': '
                         txt += str(val)
@@ -228,7 +230,7 @@ class PyGLCMViewer(PyGLWidget):
         # currently the translation is not great due to the way PyGLWidget works
         if False: #self.sim and self.sim.cellStates.has_key(cid):
             self.sim.moveCell(cid, _trans)
-            print "Called self.sim.moveCell"
+            print("Called self.sim.moveCell")
             self.updateSelectedCell()
         else:
             # Translate the object by _trans

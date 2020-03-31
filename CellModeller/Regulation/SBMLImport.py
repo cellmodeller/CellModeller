@@ -1,7 +1,7 @@
 from libsbml import * 
 import math
 import new
-import urllib2
+import urllib.request, urllib.error, urllib.parse
 
 
 # indicates whether we should perform SBML document consistency check.
@@ -11,8 +11,8 @@ supressConsistencyCheck = True
 
 # get the array index of given species ID:
 def getSpecIndex(specIdToArrayIndexDict, specId):
-    if not specIdToArrayIndexDict.has_key(specId):
-        specIdToArrayIndexDict[specId] = len(specIdToArrayIndexDict.keys())    
+    if specId not in specIdToArrayIndexDict:
+        specIdToArrayIndexDict[specId] = len(list(specIdToArrayIndexDict.keys()))    
     return specIdToArrayIndexDict[specId]       
 
 
@@ -31,7 +31,7 @@ def checkSBMLConsistency(document):
     if numFailures > 0:
         failureMsg = ""
         for failureNum in range(numFailures):
-            print "Failure " + str(failureNum) + ": " + document.getError(failureNum).getShortMessage() + "\n"
+            print("Failure " + str(failureNum) + ": " + document.getError(failureNum).getShortMessage() + "\n")
         raise Exception(failureMsg)
             
             
@@ -40,11 +40,11 @@ def SBMLModelFromSBMLFile(sbmlFile):
     reader = SBMLReader()    
     document = reader.readSBML(sbmlFile)
     if document.getNumErrors()>0:
-	print "Errors in reading SBML file..."
+	print("Errors in reading SBML file...")
     checkSBMLConsistency(document)
     model = document.getModel()
     if not model:
-	print "No model!"
+	print("No model!")
     return model
 
 
@@ -120,7 +120,7 @@ def pythonMathFromASTNode(astNode, kineticLaw, model):
         
         # something weird -- return 1 and issue warning:
         else:
-            print "WARNING: unknown identifier " + nodeName + ", defaulting to 1. Globals: " + str(model.getNumParameters()) + ". Locals: " + str(kineticLaw.getNumParameters())
+            print("WARNING: unknown identifier " + nodeName + ", defaulting to 1. Globals: " + str(model.getNumParameters()) + ". Locals: " + str(kineticLaw.getNumParameters()))
             return "1"
         
     else:    
@@ -184,7 +184,7 @@ def pythonStrFromSBMLModel(model):
             reactantSpecId = reactantSpecRef.getSpecies()        
             
             # add key to hash table if it doesn't exist:       
-            if not specIdToExpDict.has_key(reactantSpecId):       
+            if reactantSpecId not in specIdToExpDict:       
                 specIdToExpDict[reactantSpecId] = ""
                    
             if stoich == 1:
@@ -204,7 +204,7 @@ def pythonStrFromSBMLModel(model):
             productSpecId = productSpecRef.getSpecies()        
                    
             # add key to hash table if it doesn't exist:       
-            if not specIdToExpDict.has_key(productSpecId):       
+            if productSpecId not in specIdToExpDict:       
                 specIdToExpDict[productSpecId] = ""       
                    
             if stoich == 1:
@@ -217,7 +217,7 @@ def pythonStrFromSBMLModel(model):
     pythonVarDefs = ""
     pythonRateUpdateExps = ""        
     specIdLst = [0]*len(specIdToExpDict)
-    for specId in specIdToExpDict.keys():
+    for specId in list(specIdToExpDict.keys()):
         # get index into species array:
         index = getSpecIndex(specIdToArrayIndexDict, specId)
         
@@ -302,13 +302,13 @@ def pythonStrFromSBMLModel(model):
 # create python module from code dynamically.    
 def pythonModuleFromPythonStr(pythonStr):
     module = new.module("sbmlPythonEncoding")
-    exec pythonStr in module.__dict__
+    exec(pythonStr, module.__dict__)
     return module    
 
 
 # get text from given channel.    
 def TextFromChannel(channelName):
-    f = urllib2.urlopen('http://async-message-passer.appspot.com/?content_only=1&channel_name=' + channelName)
+    f = urllib.request.urlopen('http://async-message-passer.appspot.com/?content_only=1&channel_name=' + channelName)
     return f.read()    
 
 
@@ -318,7 +318,7 @@ def pythonModuleFromFile(fileName):
     checkSBMLConsistency(document)    
     model = document.getModel()   
     pstr = pythonStrFromSBMLModel(model)
-    print "Got python str: " + pstr
+    print("Got python str: " + pstr)
     pythonModule = pythonModuleFromPythonStr(pstr)
     return pythonModule
 
@@ -344,7 +344,7 @@ def pythonModuleFromChannel(channelName):
         
                 
     pythonStr = pythonStrFromSBMLModel(model)
-    print "Got python str: " + pythonStr
+    print("Got python str: " + pythonStr)
     pythonModule = pythonModuleFromPythonStr(pythonStr)
     return pythonModule
 

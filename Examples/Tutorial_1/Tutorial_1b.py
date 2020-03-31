@@ -32,7 +32,7 @@ def setup(sim):
 def max_y_coord(cells):
     #finds the largest y-coordinate in the colony
     my = 0.0
-    for i,cell in cells.items():
+    for i,cell in list(cells.items()):
         my = max(my, cell.pos[1])
     return my
 
@@ -46,7 +46,7 @@ def init(cell):
 def update(cells):
     #Iterate through each cell and flag cells that reach target size for division
     maxy = max_y_coord(cells)
-    for (id, cell) in cells.iteritems():
+    for (id, cell) in cells.items():
         dist = maxy - cell.pos[1]
         growthZone = 5.0 #width of the growth zone
         if dist < growthZone:

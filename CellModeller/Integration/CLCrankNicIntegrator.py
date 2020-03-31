@@ -7,6 +7,7 @@ import pyopencl as cl
 import pyopencl.array as cl_array
 from pyopencl.array import vec
 import math
+from functools import reduce
 
 
 def unique_stable(ar, return_index=False, return_inverse=False):
@@ -102,7 +103,7 @@ class CLCrankNicIntegrator:
 
         # set the species for existing states to views of the levels array
         cs = self.cellStates
-        for id,c in cs.items():
+        for id,c in list(cs.items()):
             c.species = self.specLevel[c.idx,:]
 
 
@@ -135,7 +136,7 @@ class CLCrankNicIntegrator:
         self.greensFunc = self.greensFunc[:, min(inds[:,1]):max(inds[:,1])+1, \
                                             min(inds[:,2]):max(inds[:,2])+1, \
                                             min(inds[:,3]):max(inds[:,3])+1]
-        print "Truncated Green's function size is " + str(self.greensFunc.shape)
+        print("Truncated Green's function size is " + str(self.greensFunc.shape))
 
 
     def addCell(self, cellState):
@@ -203,7 +204,7 @@ class CLCrankNicIntegrator:
         sigRateKernel = self.regul.sigRateCL()
         #kernel_src = open('CellModeller/Integration/CLCrankNicIntegrator.cl', 'r').read()
         from pkg_resources import resource_string
-        kernel_src = resource_string(__name__, 'CLCrankNicIntegrator.cl')
+        kernel_src = resource_string(__name__, 'CLCrankNicIntegrator.cl').decode()
         # substitute user defined kernel code, and number of signals
         kernel_src = kernel_src % {'sigKernel': sigRateKernel,
                                    'specKernel': specRateKernel,
@@ -292,7 +293,7 @@ class CLCrankNicIntegrator:
 
     def step(self, dt):
         if dt!=self.dt:
-            print "I can only integrate at fixed dt!"
+            print("I can only integrate at fixed dt!")
             return
 
         self.nCells = len(self.cellStates)
@@ -301,9 +302,9 @@ class CLCrankNicIntegrator:
             s = self.specLevel[self.nCells-1]
         except IndexError:
             # Could resize here, then would have to rebuild views
-            print "Number of cells exceeded " \
+            print("Number of cells exceeded " \
                     + self.__class__.__name__ \
-                    + "::maxCells (" + self.maxCells + ")"
+                    + "::maxCells (" + self.maxCells + ")")
 
         self.dataLen = self.signalDataLen + self.nCells*self.nSpecies
 
@@ -343,7 +344,7 @@ class CLCrankNicIntegrator:
 #                c.signals = self.signalling.signals(c, self.signalLevel)
 
         # Update cellType array
-        for (id,c) in self.cellStates.items():
+        for (id,c) in list(self.cellStates.items()):
             self.celltype[c.idx] = numpy.int32(c.cellType)
         self.celltype_dev.set(self.celltype)
 
@@ -366,7 +367,7 @@ class CLCrankNicIntegrator:
         self.specLevel_dev.set(self.specLevel)
         self.cellSigLevels_dev.set(self.cellSigLevels)
         cs = self.cellStates
-        for id,c in cs.items(): #make sure everything is correct here
+        for id,c in list(cs.items()): #make sure everything is correct here
             c.species = self.specLevel[c.idx,:]
             c.signals = self.cellSigLevels[c.idx,:]
             self.celltype[c.idx] = numpy.int32(c.cellType)

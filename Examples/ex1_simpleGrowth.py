@@ -25,7 +25,7 @@ def setup(sim):
         therenderer = Renderers.GLBacteriumRenderer(sim)
         sim.addRenderer(therenderer)
     else:
-        print "Running in batch mode: no display will be output"
+        print("Running in batch mode: no display will be output")
 
     sim.pickleSteps = 10
     sim.saveOutput = True
@@ -39,7 +39,7 @@ def init(cell):
 
 def update(cells):
     #Iterate through each cell and flag cells that reach target size for division
-    for (id, cell) in cells.iteritems():
+    for (id, cell) in cells.items():
         if cell.volume > cell.targetVol:
             cell.divideFlag = True
 

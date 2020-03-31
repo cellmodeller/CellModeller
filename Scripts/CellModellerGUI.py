@@ -6,8 +6,8 @@
 # Tim Rudge
 # Jan 2011
 
-from PyQt4.QtGui import QApplication
-from PyQt4 import uic
+from PyQt5.QtWidgets import QApplication
+from PyQt5 import uic
 
 import CellModeller.GUI.Renderers
 from CellModeller import Simulator

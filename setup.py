@@ -22,8 +22,8 @@ except:
 
 
 setup(name='CellModeller',
-    install_requires=['numpy==1.9.2', 'scipy', 'pyopengl', 'pyopencl==2014.1', 'reportlab', 'matplotlib'],
-    setup_requires=['numpy==1.9.2', 'scipy', 'pyopengl', 'pyopencl==2014.1', 'reportlab', 'matplotlib'],
+    install_requires=['numpy', 'scipy', 'pyopengl', 'pyopencl', 'reportlab', 'matplotlib'],
+    setup_requires=['numpy', 'scipy', 'pyopengl', 'pyopencl', 'reportlab', 'matplotlib'],
     #setup_requires=['python=2'],
     #setup_requires=['numpy', 'pyopengl', 'mako', 'pyopencl'],
     packages=['CellModeller',

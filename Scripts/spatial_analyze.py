@@ -3,12 +3,12 @@ import os
 import math
 import numpy as np
 sys.path.append('.')
-import cPickle
+import pickle
 import CellModeller
 import matplotlib.pyplot as plt
 
 pname= sys.argv[1]
-print('opening '+ pname)
+print(('opening '+ pname))
 fout=open('spatial.txt', "w")
 fout.write("r spec_level \n")
 
@@ -18,12 +18,12 @@ rad_max=95
 narray=np.zeros(bin_num)
 specArray=np.zeros(bin_num)
 
-data = cPickle.load(open(pname,'r'))
+data = pickle.load(open(pname,'r'))
 cs = data['cellStates']
 it = iter(cs)
 n = len(cs)
 
-rArray = np.multiply(range(0,bin_num),rad_max/bin_num)
+rArray = np.multiply(list(range(0,bin_num)),rad_max/bin_num)
 
 for it in cs:
     r = np.sqrt(cs[it].pos[0]*cs[it].pos[0]+cs[it].pos[1]*cs[it].pos[1])

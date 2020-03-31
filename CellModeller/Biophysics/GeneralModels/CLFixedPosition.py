@@ -81,7 +81,7 @@ class CLFixedPosition:
 
         if self.simulator:
             self.get_cells()
-            for state in self.simulator.cellStates.values():
+            for state in list(self.simulator.cellStates.values()):
                 self.updateCellState(state)
 
         return True
