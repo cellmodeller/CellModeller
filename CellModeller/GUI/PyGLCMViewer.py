@@ -146,7 +146,9 @@ class PyGLCMViewer(PyGLWidget):
 
     @pyqtSlot()
     def loadPickle(self):
-        qs,_ = QFileDialog.getOpenFileName(self, 'Load pickle file', '', '*.pickle')
+        options = QFileDialog.Options()
+        options |= QFileDialog.DontUseNativeDialog
+        qs,_ = QFileDialog.getOpenFileName(self, 'Load pickle file', '', '*.pickle', options=options)
         if qs and self.getOpenCLPlatDev():
             filename = str(qs)
             print(filename)
@@ -176,7 +178,9 @@ class PyGLCMViewer(PyGLWidget):
 
     @pyqtSlot()
     def load(self):
-        qs,_ = QFileDialog.getOpenFileName(self, 'Load Python module', '', '*.py')
+        options = QFileDialog.Options()
+        options |= QFileDialog.DontUseNativeDialog
+        qs,_ = QFileDialog.getOpenFileName(self, 'Load Python module', '', '*.py', options=options)
         if qs:
             modfile = str(qs)
             print(modfile)
