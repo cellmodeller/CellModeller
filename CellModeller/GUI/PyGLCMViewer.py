@@ -15,6 +15,7 @@ import sys
 import pickle
 import pyopencl as cl
 import importlib
+import numpy as np
 
 class PyGLCMViewer(PyGLWidget):
 
@@ -222,13 +223,18 @@ class PyGLCMViewer(PyGLWidget):
             cid = self.selectedName
             txt = ''
             if cid in states:
-                txt += 'Selected Cell (id = %d)\n---\n'%(cid)
+                txt += '<b>Selected Cell (id = %d)</b><br>'%(cid)
                 s = states[cid]
                 for (name,val) in list(s.__dict__.items()):
                     if name not in CellState.excludeAttr:
-                        txt += name + ': '
-                        txt += str(val)
-                        txt += '\n'
+                        txt += '<b>' + name + '</b>:\t'
+                        if type(val) in [float, np.float32, np.float64]:
+                            txt += '%.3g'%val
+                        elif type(val) in [list, tuple, np.array]:
+                            txt += ', '.join(['%.3g'%v for v in val])
+                        else:
+                            txt += str(val)
+                        txt += '<br>'
             self.selectedCell.emit(txt)
             self.updateGL()
 
