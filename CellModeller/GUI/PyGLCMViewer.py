@@ -42,8 +42,14 @@ class PyGLCMViewer(PyGLWidget):
         self.translate([0,0,20])
         self.rotate([1,0,0],-45)
 
+        # Assume no pixel scaling unless explicitly set
+        self.pix_ratio = 1.
+
     def help(self):
         pass
+
+    def setPixelRatio(self, ratio):
+        self.pix_ratio = ratio
 
     def setSimulator(self, sim):
         if self.sim:

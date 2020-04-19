@@ -26,6 +26,8 @@ ui = uic.loadUi(uifile)
 ui.show()
 ui.raise_()
 cmv = ui.PyGLCMViewer
+pix_ratio = qapp.devicePixelRatio()
+cmv.setPixelRatio(pix_ratio)
 
 # Load a model if specified
 if len(sys.argv) > 1: cmv.loadModelFile(sys.argv[1])

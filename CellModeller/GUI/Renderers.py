@@ -208,930 +208,946 @@ class GLPlantRenderer:
     
     
 class GLBacteriumRenderer:
-	def __init__(self, sim, properties=None, scales = None):
-		self.ncells_list = 0
-		self.ncells_names_list = 0
-		self.dlist = None
-		self.dlist_names = None
-		self.cellcol = [1, 1, 1] 
-		self.sim = sim 
-		self.quad = gluNewQuadric()
-		self.properties = properties
-		self.scales = scales
+        def __init__(self, sim, properties=None, scales = None):
+                self.ncells_list = 0
+                self.ncells_names_list = 0
+                self.dlist = None
+                self.dlist_names = None
+                self.cellcol = [1, 1, 1] 
+                self.sim = sim 
+                self.quad = gluNewQuadric()
+                self.properties = properties
+                self.scales = scales
 
-	def init_gl(self):
-		pass
-	
-	#def render_text(self, position, textString, fontSize):
-	#	pygame.font.init() 
-	#	font = pygame.font.Font (None, fontSize)
-	#	textSurface = font.render(textString, True, (0,0,0,225), (255,255,255,255))     
-	#	textData = pygame.image.tostring(textSurface, "RGBA", True)     
-	#	glRasterPos3d(*position)     
-	#	glDrawPixels(textSurface.get_width(), textSurface.get_height(), GL_RGBA, GL_UNSIGNED_BYTE, textData)
+        def init_gl(self):
+                pass
+        
+        #def render_text(self, position, textString, fontSize):
+        #       pygame.font.init() 
+        #       font = pygame.font.Font (None, fontSize)
+        #       textSurface = font.render(textString, True, (0,0,0,225), (255,255,255,255))     
+        #       textData = pygame.image.tostring(textSurface, "RGBA", True)     
+        #       glRasterPos3d(*position)     
+        #       glDrawPixels(textSurface.get_width(), textSurface.get_height(), GL_RGBA, GL_UNSIGNED_BYTE, textData)
 
-	def build_list(self, cells):
-		if self.dlist:
-			glDeleteLists(self.dlist, 1)
-		index = glGenLists(1)
-		glNewList(index, GL_COMPILE)
-		self.render_cells()
-		glEndList()
-		self.dlist = index
+        def build_list(self, cells):
+                if self.dlist:
+                        glDeleteLists(self.dlist, 1)
+                index = glGenLists(1)
+                glNewList(index, GL_COMPILE)
+                self.render_cells()
+                glEndList()
+                self.dlist = index
 
-	def build_list_names(self, cells):
-		if self.dlist_names:
-			glDeleteLists(self.dlist_names, 1)
-		index = glGenLists(1)
-		glNewList(index, GL_COMPILE)
-		self.render_cell_names()
-		glEndList()
-		self.dlist_names = index
+        def build_list_names(self, cells):
+                if self.dlist_names:
+                        glDeleteLists(self.dlist_names, 1)
+                index = glGenLists(1)
+                glNewList(index, GL_COMPILE)
+                self.render_cell_names()
+                glEndList()
+                self.dlist_names = index
 
-	def render_gl(self, selection=None):
-		cells = self.sim.cellStates.values()
-		states = self.sim.cellStates.items()
-	# FIXED =============================================================================
-		# Before, the renderer would only draw cells when the number of cells changed.
-		# Now it draws them whenever render_gl is called (by paintGL in PyGLCMViewer.py)
-		self.build_list(cells)
-		self.ncells_list = len(cells)
+        def render_gl(self, selection=None):
+                cells = self.sim.cellStates.values()
+                states = self.sim.cellStates.items()
+        # FIXED =============================================================================
+                # Before, the renderer would only draw cells when the number of cells changed.
+                # Now it draws them whenever render_gl is called (by paintGL in PyGLCMViewer.py)
+                if len(cells)!=self.ncells_list or len(cells)<500:
+                        self.build_list(cells)
+                        self.ncells_list = len(cells)
 
-		#if len(cells)!=self.ncells_list:
-		#    self.build_list(cells)
-		#    self.ncells_list = len(cells)
-	#====================================================================================
-		glCallList(self.dlist)
-		#for cell in cells: self.render_cell(cell, selection)
-
-
-	def renderNames_gl(self, selection=None):
-		cells = self.sim.cellStates.values()
-		if len(cells)!=self.ncells_names_list:
-			self.build_list_names(cells)
-			self.ncells_names_list = len(cells)
-		glCallList(self.dlist_names)
-		#for cell in cells: self.render_cell_name(cell, selection)
+                #if len(cells)!=self.ncells_list:
+                #    self.build_list(cells)
+                #    self.ncells_list = len(cells)
+        #====================================================================================
+                glCallList(self.dlist)
+                #for cell in cells: self.render_cell(cell, selection)
 
 
-	def render_cell_names(self):
-	   # glDisable(GL_DEPTH_TEST)
-		glDisable(GL_LIGHTING)
-		for cell in self.sim.cellStates.values():
-			l = cell.length
-			r = cell.radius
-
-			(e1,e2) = cell.ends
-			ae1 = numpy.array(e1)
-			ae2 = numpy.array(e2)
-			zaxis = numpy.array([0,0,1])
-			caxis = numpy.array(cell.dir) #(ae2-ae1)/l
-			rotaxis = numpy.cross(caxis, zaxis)
-			rotangle = numpy.arccos(numpy.dot(caxis,zaxis))
-		
-			cid = cell.id
-			glPushName(cid) 
-	
-			glMatrixMode(GL_MODELVIEW)
-			glPushMatrix()
-			glTranslatef(e1[0],e1[1],e1[2])
-			glRotatef(-rotangle*180.0/numpy.pi, rotaxis[0], rotaxis[1], rotaxis[2])
-			gluCylinder(self.quad, r, r , l, 8, 1)
-			gluSphere(self.quad, r, 8, 8)
-			glPopMatrix() 
-			glPushMatrix()
-			glTranslatef(e2[0],e2[1],e2[2])
-			gluSphere(self.quad, r, 8, 8)
-			glPopMatrix() 
-
-			glPopName()
-
-			glEnable(GL_LIGHTING)
+        def renderNames_gl(self, selection=None):
+                cells = self.sim.cellStates.values()
+                if len(cells)!=self.ncells_names_list or len(cells)<500:
+                        self.build_list_names(cells)
+                        self.ncells_names_list = len(cells)
+                glCallList(self.dlist_names)
+                #for cell in cells: self.render_cell_name(cell, selection)
 
 
-	def render_cells(self, selection=None):
-	
-		# PLACEHOLDER
-	
-		#glDisable(GL_DEPTH_TEST)
-		glDisable(GL_LIGHTING)
-		cells = self.sim.cellStates.values()
-		for cell in cells:
-			l = cell.length
-			#r = cell.radius*2.0
-			r = cell.radius
+        def render_cell_names(self):
+           # glDisable(GL_DEPTH_TEST)
+                glDisable(GL_LIGHTING)
+                for cell in self.sim.cellStates.values():
+                        l = cell.length
+                        r = cell.radius
 
-			(e1,e2) = cell.ends
-			ae1 = numpy.array(e1)
-			ae2 = numpy.array(e2)
-			zaxis = numpy.array([0,0,1])
-			caxis = numpy.array(cell.dir) #(ae2-ae1)/l
-			rotaxis = numpy.cross(caxis, zaxis)
-			rotangle = numpy.arccos(numpy.dot(caxis,zaxis))
-	   
-			cid = cell.id
-			cidx = cell.idx
-			if False:
-			   self.render_text(0.5*(e1+e2), str(cidx), 24)
-		
-			if selection==cid:
-				cellcol = [1,0,0]
-			else:
-			   cellcol = cell.color #self.cellcol #[random.uniform(0,1), random.uniform(0,1), random.uniform(0,1)] 
-			if self.properties:
-				cellcol = []
-				for p in self.properties:
-					if hasattr(cell,p):
-						cellcol.append(getattr(cell,p))
-					else:
-						cellcol.append(0)
-				for i in range(3):
-					cellcol[i] *= self.scales[i]
-					cellcol[i] = min(1,cellcol[i])
+                        (e1,e2) = cell.ends
+                        ae1 = numpy.array(e1)
+                        ae2 = numpy.array(e2)
+                        zaxis = numpy.array([0,0,1])
+                        caxis = numpy.array(cell.dir) #(ae2-ae1)/l
+                        rotaxis = numpy.cross(caxis, zaxis)
+                        rotangle = numpy.arccos(numpy.dot(caxis,zaxis))
+                
+                        cid = cell.id
+                        glPushName(cid) 
+        
+                        '''
+                        glMatrixMode(GL_MODELVIEW)
+                        glPushMatrix()
+                        glTranslatef(e1[0],e1[1],e1[2])
+                        glRotatef(-rotangle*180.0/numpy.pi, rotaxis[0], rotaxis[1], rotaxis[2])
+                        gluCylinder(self.quad, r, r , l, 8, 1)
+                        gluSphere(self.quad, r, 8, 8)
+                        glPopMatrix() 
+                        glPushMatrix()
+                        glTranslatef(e2[0],e2[1],e2[2])
+                        gluSphere(self.quad, r, 8, 8)
+                        glPopMatrix() 
+                        '''
+                        glMatrixMode(GL_MODELVIEW)
+                        glPushMatrix()
+                        glTranslatef(e1[0],e1[1],e1[2])
+                        glScalef(0.8,0.8,0.8)
+                        gluSphere(self.quad, r, 8, 8)
+                        #glScalef(1.25,1.0,1.0)
+                        glRotatef(-rotangle*180.0/numpy.pi, rotaxis[0], rotaxis[1], rotaxis[2])
+                        gluCylinder(self.quad, r, r , l*1.25, 8, 1)
+                        glPopMatrix() 
+                        glPushMatrix()
+                        glTranslatef(e2[0],e2[1],e2[2])
+                        glScalef(0.8,0.8,0.8)
+                        gluSphere(self.quad, r, 8, 8)
+                        glPopMatrix() 
 
-			# draw the outlines antialiased in black
-			glColor3f(0.0, 0.0, 0.0)
-			glEnable(GL_BLEND)
-			glBlendFunc(GL_SRC_ALPHA ,GL_ONE_MINUS_SRC_ALPHA)
-			glEnable(GL_LINE_SMOOTH)
-			glLineWidth(8.0)
-			# draw wireframe for back facing polygons and cull front-facing ones
-			glPolygonMode(GL_BACK, GL_FILL)
-			glEnable(GL_CULL_FACE)
-			glCullFace(GL_FRONT)
-			glDepthFunc(GL_LEQUAL)
+                        glPopName()
 
-			glMatrixMode(GL_MODELVIEW)
-			glPushMatrix()
-			glTranslatef(e1[0],e1[1],e1[2])
-			gluSphere(self.quad, r, 8, 8)
-			glRotatef(-rotangle*180.0/numpy.pi, rotaxis[0], rotaxis[1], rotaxis[2])
-			gluCylinder(self.quad, r, r , l, 8, 1)
-			glPopMatrix() 
-			glPushMatrix()
-			glTranslatef(e2[0],e2[1],e2[2])
-			gluSphere(self.quad, r, 8, 8)
-			glPopMatrix() 
+                glEnable(GL_LIGHTING)
+
+        def render_cells(self, selection=None):
+        
+                # PLACEHOLDER
+        
+                #glDisable(GL_DEPTH_TEST)
+                glDisable(GL_LIGHTING)
+                cells = self.sim.cellStates.values()
+                for cell in cells:
+                        l = cell.length
+                        #r = cell.radius*2.0
+                        r = cell.radius
+
+                        (e1,e2) = cell.ends
+                        ae1 = numpy.array(e1)
+                        ae2 = numpy.array(e2)
+                        zaxis = numpy.array([0,0,1])
+                        caxis = numpy.array(cell.dir) #(ae2-ae1)/l
+                        rotaxis = numpy.cross(caxis, zaxis)
+                        rotangle = numpy.arccos(numpy.dot(caxis,zaxis))
+           
+                        cid = cell.id
+                        cidx = cell.idx
+                        if False:
+                           self.render_text(0.5*(e1+e2), str(cidx), 24)
+                
+                        if selection==cid:
+                                cellcol = [1,0,0]
+                        else:
+                           cellcol = cell.color #self.cellcol #[random.uniform(0,1), random.uniform(0,1), random.uniform(0,1)] 
+                        if self.properties:
+                                cellcol = []
+                                for p in self.properties:
+                                        if hasattr(cell,p):
+                                                cellcol.append(getattr(cell,p))
+                                        else:
+                                                cellcol.append(0)
+                                for i in range(3):
+                                        cellcol[i] *= self.scales[i]
+                                        cellcol[i] = min(1,cellcol[i])
+
+                        # draw the outlines antialiased in black
+                        glColor3f(0.0, 0.0, 0.0)
+                        glEnable(GL_BLEND)
+                        glBlendFunc(GL_SRC_ALPHA ,GL_ONE_MINUS_SRC_ALPHA)
+                        glEnable(GL_LINE_SMOOTH)
+                        glLineWidth(8.0)
+                        # draw wireframe for back facing polygons and cull front-facing ones
+                        glPolygonMode(GL_BACK, GL_FILL)
+                        glEnable(GL_CULL_FACE)
+                        glCullFace(GL_FRONT)
+                        glDepthFunc(GL_LEQUAL)
+
+                        glMatrixMode(GL_MODELVIEW)
+                        glPushMatrix()
+                        glTranslatef(e1[0],e1[1],e1[2])
+                        gluSphere(self.quad, r, 8, 8)
+                        glRotatef(-rotangle*180.0/numpy.pi, rotaxis[0], rotaxis[1], rotaxis[2])
+                        gluCylinder(self.quad, r, r , l, 8, 1)
+                        glPopMatrix() 
+                        glPushMatrix()
+                        glTranslatef(e2[0],e2[1],e2[2])
+                        gluSphere(self.quad, r, 8, 8)
+                        glPopMatrix() 
 
 
-			glDepthFunc(GL_LESS)
-			glDisable(GL_CULL_FACE)
-			glPolygonMode(GL_FRONT, GL_FILL)
-			glDisable(GL_LINE_SMOOTH)
-			glDisable(GL_BLEND)
+                        glDepthFunc(GL_LESS)
+                        glDisable(GL_CULL_FACE)
+                        glPolygonMode(GL_FRONT, GL_FILL)
+                        glDisable(GL_LINE_SMOOTH)
+                        glDisable(GL_BLEND)
 
-			glColor3fv(cellcol)
-			glMatrixMode(GL_MODELVIEW)
-			glPushMatrix()
-			glTranslatef(e1[0],e1[1],e1[2])
-			glScalef(0.8,0.8,0.8)
-			gluSphere(self.quad, r, 8, 8)
-			#glScalef(1.25,1.0,1.0)
-			glRotatef(-rotangle*180.0/numpy.pi, rotaxis[0], rotaxis[1], rotaxis[2])
-			gluCylinder(self.quad, r, r , l*1.25, 8, 1)
-			glPopMatrix() 
-			glPushMatrix()
-			glTranslatef(e2[0],e2[1],e2[2])
-			glScalef(0.8,0.8,0.8)
-			gluSphere(self.quad, r, 8, 8)
-			glPopMatrix() 
+                        glColor3fv(cellcol)
+                        glMatrixMode(GL_MODELVIEW)
+                        glPushMatrix()
+                        glTranslatef(e1[0],e1[1],e1[2])
+                        glScalef(0.8,0.8,0.8)
+                        gluSphere(self.quad, r, 8, 8)
+                        #glScalef(1.25,1.0,1.0)
+                        glRotatef(-rotangle*180.0/numpy.pi, rotaxis[0], rotaxis[1], rotaxis[2])
+                        gluCylinder(self.quad, r, r , l*1.25, 8, 1)
+                        glPopMatrix() 
+                        glPushMatrix()
+                        glTranslatef(e2[0],e2[1],e2[2])
+                        glScalef(0.8,0.8,0.8)
+                        gluSphere(self.quad, r, 8, 8)
+                        glPopMatrix() 
 
-			#glColor3f(68.0 / 256, 81.0 / 256, 44.0 / 256)
-			#glLineWidth(2)
-			#glBegin(GL_LINES)
-			#glVertex3f(e1[0], e1[1], e1[2])
-			#glVertex3f(e2[0], e2[1], e2[2])
-			#glEnd()    
-			#
-			#glColor3f(1.0, 1.0, 0.0)
-			#glPointSize(3)
-			#glBegin(GL_POINTS)
-			#glVertex3f(e1[0], e1[1], e1[2])
-			#glVertex3f(e2[0], e2[1], e2[2])
-			#glEnd()  
+                        #glColor3f(68.0 / 256, 81.0 / 256, 44.0 / 256)
+                        #glLineWidth(2)
+                        #glBegin(GL_LINES)
+                        #glVertex3f(e1[0], e1[1], e1[2])
+                        #glVertex3f(e2[0], e2[1], e2[2])
+                        #glEnd()    
+                        #
+                        #glColor3f(1.0, 1.0, 0.0)
+                        #glPointSize(3)
+                        #glBegin(GL_POINTS)
+                        #glVertex3f(e1[0], e1[1], e1[2])
+                        #glVertex3f(e2[0], e2[1], e2[2])
+                        #glEnd()  
 
-			# draw contact points
-			if False: #hasattr(cells[0], 'contacts'):
-				glDisable(GL_DEPTH_TEST)
-				glDisable(GL_LIGHTING)
-				for cell in cells:
-					contacts = cell.contacts
-					glBegin(GL_LINES)
-					for ct in contacts:
-						glColor3fv(ct[6:9])
-						glVertex3fv(ct[0:3])
-						glVertex3fv(ct[3:6])
-					glEnd()
-					glBegin(GL_POINTS)
-					for ct in contacts:
-						glColor3fv(ct[6:9])
-						glVertex3fv(ct[0:3])
-					glEnd()
-					glEnable(GL_DEPTH_TEST)
-					glEnable(GL_LIGHTING)
+                        # draw contact points
+                        if False: #hasattr(cells[0], 'contacts'):
+                                glDisable(GL_DEPTH_TEST)
+                                glDisable(GL_LIGHTING)
+                                for cell in cells:
+                                        contacts = cell.contacts
+                                        glBegin(GL_LINES)
+                                        for ct in contacts:
+                                                glColor3fv(ct[6:9])
+                                                glVertex3fv(ct[0:3])
+                                                glVertex3fv(ct[3:6])
+                                        glEnd()
+                                        glBegin(GL_POINTS)
+                                        for ct in contacts:
+                                                glColor3fv(ct[6:9])
+                                                glVertex3fv(ct[0:3])
+                                        glEnd()
+                                        glEnable(GL_DEPTH_TEST)
+                                        glEnable(GL_LIGHTING)
 
 class GLBacteriumRendererWithPeriodicImages:
-	def __init__(self, sim, properties=None, scales = None):
-		self.ncells_list = 0
-		self.ncells_names_list = 0
-		self.dlist = None
-		self.dlist_names = None
-		self.cellcol = [1, 1, 1] 
-		self.sim = sim 
-		self.quad = gluNewQuadric()
-		self.properties = properties
-		self.scales = scales
+        def __init__(self, sim, properties=None, scales = None):
+                self.ncells_list = 0
+                self.ncells_names_list = 0
+                self.dlist = None
+                self.dlist_names = None
+                self.cellcol = [1, 1, 1] 
+                self.sim = sim 
+                self.quad = gluNewQuadric()
+                self.properties = properties
+                self.scales = scales
 
-	def init_gl(self):
-		pass
+        def init_gl(self):
+                pass
 
-	def build_list(self, cells):
-		if self.dlist:
-		   glDeleteLists(self.dlist, 1)
-		index = glGenLists(1)
-		glNewList(index, GL_COMPILE)
-		self.render_cells()
-		textString = 'CellModeller4 Development Version' #self.render_text(position, textString, 40)
-		position = numpy.array([-40.0,30.0,0.0])
-		glEndList()
-		self.dlist = index
+        def build_list(self, cells):
+                if self.dlist:
+                   glDeleteLists(self.dlist, 1)
+                index = glGenLists(1)
+                glNewList(index, GL_COMPILE)
+                self.render_cells()
+                textString = 'CellModeller4 Development Version' #self.render_text(position, textString, 40)
+                position = numpy.array([-40.0,30.0,0.0])
+                glEndList()
+                self.dlist = index
 
-	def build_list_names(self, cells):
-		if self.dlist_names:
-			glDeleteLists(self.dlist_names, 1)
-		index = glGenLists(1)
-		glNewList(index, GL_COMPILE)
-		self.render_cell_names()
-		glEndList()
-		self.dlist_names = index
+        def build_list_names(self, cells):
+                if self.dlist_names:
+                        glDeleteLists(self.dlist_names, 1)
+                index = glGenLists(1)
+                glNewList(index, GL_COMPILE)
+                self.render_cell_names()
+                glEndList()
+                self.dlist_names = index
 
-	def render_gl(self, selection=None):
-		cells = self.sim.cellStates.values()
-		states = self.sim.cellStates.items()
-	# FIXED =============================================================================
-		# Before, the renderer would only draw cells when the number of cells changed.
-		# Now it draws them whenever render_gl is called (by paintGL in PyGLCMViewer.py)
+        def render_gl(self, selection=None):
+                cells = self.sim.cellStates.values()
+                states = self.sim.cellStates.items()
+        # FIXED =============================================================================
+                # Before, the renderer would only draw cells when the number of cells changed.
+                # Now it draws them whenever render_gl is called (by paintGL in PyGLCMViewer.py)
 
-		names = False
-		if not names:
-			self.build_list(cells)
-			self.ncells_list = len(cells)
-			glCallList(self.dlist)
-		else:
-		# added to try and render cell ids
-			self.build_list_names(cells)
-			self.ncells_names_list = len(cells)
-			glCallList(self.dlist_names)
+                names = False
+                if not names:
+                        self.build_list(cells)
+                        self.ncells_list = len(cells)
+                        glCallList(self.dlist)
+                else:
+                # added to try and render cell ids
+                        self.build_list_names(cells)
+                        self.ncells_names_list = len(cells)
+                        glCallList(self.dlist_names)
 
-		#if len(cells)!=self.ncells_list:
-		#    self.build_list(cells)
-		#    self.ncells_list = len(cells)
-	#====================================================================================
-		#glCallList(self.dlist)
-		#glCallList(self.dlist_names)
-		#for cell in cells: self.render_cell(cell, selection)
-
-
-	def renderNames_gl(self, selection=None):
-		cells = self.sim.cellStates.values()
-		if len(cells)!=self.ncells_names_list:
-			self.build_list_names(cells)
-			self.ncells_names_list = len(cells)
-		glCallList(self.dlist_names)
-		#for cell in cells: self.render_cell_name(cell, selection)
+                #if len(cells)!=self.ncells_list:
+                #    self.build_list(cells)
+                #    self.ncells_list = len(cells)
+        #====================================================================================
+                #glCallList(self.dlist)
+                #glCallList(self.dlist_names)
+                #for cell in cells: self.render_cell(cell, selection)
 
 
-	def render_cell_names(self):
-	   # glDisable(GL_DEPTH_TEST)
-		glDisable(GL_LIGHTING)
-		for cell in self.sim.cellStates.values():
-			l = cell.length
-			r = cell.radius
+        def renderNames_gl(self, selection=None):
+                cells = self.sim.cellStates.values()
+                if len(cells)!=self.ncells_names_list:
+                        self.build_list_names(cells)
+                        self.ncells_names_list = len(cells)
+                glCallList(self.dlist_names)
+                #for cell in cells: self.render_cell_name(cell, selection)
 
-			(e1,e2) = cell.ends
-			ae1 = numpy.array(e1)
-			ae2 = numpy.array(e2)
-			zaxis = numpy.array([0,0,1])
-			caxis = numpy.array(cell.dir) #(ae2-ae1)/l
-			rotaxis = numpy.cross(caxis, zaxis)
-			rotangle = numpy.arccos(numpy.dot(caxis,zaxis))
-		
-			cid = cell.id
-			glPushName(cid) 
-	
-			glMatrixMode(GL_MODELVIEW)
-			glPushMatrix()
-			glTranslatef(e1[0],e1[1],e1[2])
-			glRotatef(-rotangle*180.0/numpy.pi, rotaxis[0], rotaxis[1], rotaxis[2])
-			gluCylinder(self.quad, r, r , l, 8, 1)
-			gluSphere(self.quad, r, 8, 8)
-			glPopMatrix() 
-			glPushMatrix()
-			glTranslatef(e2[0],e2[1],e2[2])
-			gluSphere(self.quad, r, 8, 8)
-			glPopMatrix() 
 
-			glPopName()
+        def render_cell_names(self):
+           # glDisable(GL_DEPTH_TEST)
+                glDisable(GL_LIGHTING)
+                for cell in self.sim.cellStates.values():
+                        l = cell.length
+                        r = cell.radius
 
-			glEnable(GL_LIGHTING)
+                        (e1,e2) = cell.ends
+                        ae1 = numpy.array(e1)
+                        ae2 = numpy.array(e2)
+                        zaxis = numpy.array([0,0,1])
+                        caxis = numpy.array(cell.dir) #(ae2-ae1)/l
+                        rotaxis = numpy.cross(caxis, zaxis)
+                        rotangle = numpy.arccos(numpy.dot(caxis,zaxis))
+                
+                        cid = cell.id
+                        glPushName(cid) 
+        
+                        glMatrixMode(GL_MODELVIEW)
+                        glPushMatrix()
+                        glTranslatef(e1[0],e1[1],e1[2])
+                        glRotatef(-rotangle*180.0/numpy.pi, rotaxis[0], rotaxis[1], rotaxis[2])
+                        gluCylinder(self.quad, r, r , l, 8, 1)
+                        gluSphere(self.quad, r, 8, 8)
+                        glPopMatrix() 
+                        glPushMatrix()
+                        glTranslatef(e2[0],e2[1],e2[2])
+                        gluSphere(self.quad, r, 8, 8)
+                        glPopMatrix() 
 
-	#def render_text(self, position, textString, fontSize):
-	#	pygame.font.init() 
-	#	font = pygame.font.Font (None, fontSize)
-	#	textSurface = font.render(textString, True, (0,0,0,225), (255,255,255,255))     
-	#	textData = pygame.image.tostring(textSurface, "RGBA", True)     
-	#	glRasterPos3d(*position)     
-	#	glDrawPixels(textSurface.get_width(), textSurface.get_height(), GL_RGBA, GL_UNSIGNED_BYTE, textData)
-	#	#glClear(GL_DEPTH_BUFFER_BIT)
+                        glPopName()
 
-	def render_cells(self, selection=None):
-		#glDisable(GL_DEPTH_TEST)
-		glDisable(GL_LIGHTING)
-		cells = self.sim.cellStates.values()
-		for cell in cells:
-			l = cell.length
-			#r = cell.radius*2.0
-			r = cell.radius
+                        glEnable(GL_LIGHTING)
 
-			(e1,e2) = cell.ends
-			
-			L_x = self.sim.phys.max_x_coord - self.sim.phys.min_x_coord
-			L_y = self.sim.phys.max_y_coord - self.sim.phys.min_y_coord
-			offset_x = numpy.array([L_x,0.0,0.0])
-			offset_y = numpy.array([0.0,L_y,0.0])
-		
-			# top image
-			e1_t = e1 + offset_y
-			e2_t = e2 + offset_y
-			# bottom image
-			e1_b = e1 - offset_y
-			e2_b = e2 - offset_y
-			# left image
-			e1_l = e1 - offset_x
-			e2_l = e2 - offset_x
-			# right image
-			e1_r = e1 + offset_x
-			e2_r = e2 + offset_x
-		
-			zaxis = numpy.array([0,0,1])
-			caxis = numpy.array(cell.dir) #(ae2-ae1)/l
-			rotaxis = numpy.cross(caxis, zaxis)
-			rotangle = numpy.arccos(numpy.dot(caxis,zaxis))
-	   
-			cid = cell.id
-	#======================================================== Adding cell labels
-			cidx = cell.idx
-			#if self.sim.render_labels:
-			if False:
-			   self.render_text(0.5*(e1+e2), str(cidx), 24)
-	#========================================================
-			if selection==cid:
-				cellcol = [1,0,0]
-			else:
-			   cellcol = cell.color #self.cellcol #[random.uniform(0,1), random.uniform(0,1), random.uniform(0,1)] 
-			if self.properties:
-				cellcol = []
-				for p in self.properties:
-					if hasattr(cell,p):
-						cellcol.append(getattr(cell,p))
-					else:
-						cellcol.append(0)
-				for i in range(3):
-					cellcol[i] *= self.scales[i]
-					cellcol[i] = min(1,cellcol[i])
+        #def render_text(self, position, textString, fontSize):
+        #       pygame.font.init() 
+        #       font = pygame.font.Font (None, fontSize)
+        #       textSurface = font.render(textString, True, (0,0,0,225), (255,255,255,255))     
+        #       textData = pygame.image.tostring(textSurface, "RGBA", True)     
+        #       glRasterPos3d(*position)     
+        #       glDrawPixels(textSurface.get_width(), textSurface.get_height(), GL_RGBA, GL_UNSIGNED_BYTE, textData)
+        #       #glClear(GL_DEPTH_BUFFER_BIT)
 
-			# image cells are grey
-			cellcol2 = numpy.array([0.9,0.9,0.9])	
-		
-		# main image
-			# draw the outlines initialized in black
-			glColor3f(0.0, 0.0, 0.0)
-			glEnable(GL_BLEND)
-			glBlendFunc(GL_SRC_ALPHA ,GL_ONE_MINUS_SRC_ALPHA)
-			glEnable(GL_LINE_SMOOTH)
-			glLineWidth(8.0)
-			# draw wireframe for back facing polygons and cull front-facing ones
-			glPolygonMode(GL_BACK, GL_FILL)
-			glEnable(GL_CULL_FACE)
-			glCullFace(GL_FRONT)
-			glDepthFunc(GL_LEQUAL)
+        def render_cells(self, selection=None):
+                #glDisable(GL_DEPTH_TEST)
+                glDisable(GL_LIGHTING)
+                cells = self.sim.cellStates.values()
+                for cell in cells:
+                        l = cell.length
+                        #r = cell.radius*2.0
+                        r = cell.radius
 
-			glMatrixMode(GL_MODELVIEW)
-			glPushMatrix()
-			glTranslatef(e1[0],e1[1],e1[2])
-			gluSphere(self.quad, r, 8, 8)
-			glRotatef(-rotangle*180.0/numpy.pi, rotaxis[0], rotaxis[1], rotaxis[2])
-			gluCylinder(self.quad, r, r , l, 8, 1)
-			glPopMatrix() 
-			glPushMatrix()
-			glTranslatef(e2[0],e2[1],e2[2])
-			gluSphere(self.quad, r, 8, 8)
-			glPopMatrix()
-	# FIXME =========================================
-			#()
-	#================================================			
-		
-			glDepthFunc(GL_LESS)
-			glDisable(GL_CULL_FACE)
-			glPolygonMode(GL_FRONT, GL_FILL)
-			glDisable(GL_LINE_SMOOTH)
-			glDisable(GL_BLEND)
+                        (e1,e2) = cell.ends
+                        
+                        L_x = self.sim.phys.max_x_coord - self.sim.phys.min_x_coord
+                        L_y = self.sim.phys.max_y_coord - self.sim.phys.min_y_coord
+                        offset_x = numpy.array([L_x,0.0,0.0])
+                        offset_y = numpy.array([0.0,L_y,0.0])
+                
+                        # top image
+                        e1_t = e1 + offset_y
+                        e2_t = e2 + offset_y
+                        # bottom image
+                        e1_b = e1 - offset_y
+                        e2_b = e2 - offset_y
+                        # left image
+                        e1_l = e1 - offset_x
+                        e2_l = e2 - offset_x
+                        # right image
+                        e1_r = e1 + offset_x
+                        e2_r = e2 + offset_x
+                
+                        zaxis = numpy.array([0,0,1])
+                        caxis = numpy.array(cell.dir) #(ae2-ae1)/l
+                        rotaxis = numpy.cross(caxis, zaxis)
+                        rotangle = numpy.arccos(numpy.dot(caxis,zaxis))
+           
+                        cid = cell.id
+        #======================================================== Adding cell labels
+                        cidx = cell.idx
+                        #if self.sim.render_labels:
+                        if False:
+                           self.render_text(0.5*(e1+e2), str(cidx), 24)
+        #========================================================
+                        if selection==cid:
+                                cellcol = [1,0,0]
+                        else:
+                           cellcol = cell.color #self.cellcol #[random.uniform(0,1), random.uniform(0,1), random.uniform(0,1)] 
+                        if self.properties:
+                                cellcol = []
+                                for p in self.properties:
+                                        if hasattr(cell,p):
+                                                cellcol.append(getattr(cell,p))
+                                        else:
+                                                cellcol.append(0)
+                                for i in range(3):
+                                        cellcol[i] *= self.scales[i]
+                                        cellcol[i] = min(1,cellcol[i])
 
-			glColor3fv(cellcol)
-			glMatrixMode(GL_MODELVIEW)
-			glPushMatrix()
-			glTranslatef(e1[0],e1[1],e1[2])
-			glScalef(0.8,0.8,0.8)
-			gluSphere(self.quad, r, 8, 8)
-			#glScalef(1.25,1.0,1.0)
-			glRotatef(-rotangle*180.0/numpy.pi, rotaxis[0], rotaxis[1], rotaxis[2])
-			gluCylinder(self.quad, r, r , l*1.25, 8, 1)
-			glPopMatrix() 
-			glPushMatrix()
-			glTranslatef(e2[0],e2[1],e2[2])
-			glScalef(0.8,0.8,0.8)
-			gluSphere(self.quad, r, 8, 8)
-			glPopMatrix()
+                        # image cells are grey
+                        cellcol2 = numpy.array([0.9,0.9,0.9])   
+                
+                # main image
+                        # draw the outlines initialized in black
+                        glColor3f(0.0, 0.0, 0.0)
+                        glEnable(GL_BLEND)
+                        glBlendFunc(GL_SRC_ALPHA ,GL_ONE_MINUS_SRC_ALPHA)
+                        glEnable(GL_LINE_SMOOTH)
+                        glLineWidth(8.0)
+                        # draw wireframe for back facing polygons and cull front-facing ones
+                        glPolygonMode(GL_BACK, GL_FILL)
+                        glEnable(GL_CULL_FACE)
+                        glCullFace(GL_FRONT)
+                        glDepthFunc(GL_LEQUAL)
 
-			# draw contact points
-	#=========================================================
-			if hasattr(cells[0], 'contacts'): 
-	#========================================================= used to always be false but it won't work anyway - see below
-				glDisable(GL_DEPTH_TEST)
-				glDisable(GL_LIGHTING)
-				for cell in cells:
-					contacts = cell.contacts # this won't work because cellStates no longer have a contacts attribute 
-					glBegin(GL_LINES)
-					for ct in contacts:
-						glColor3fv(ct[6:9])
-						glVertex3fv(ct[0:3])
-						glVertex3fv(ct[3:6])
-					glEnd()
-					glBegin(GL_POINTS)
-					for ct in contacts:
-						glColor3fv(ct[6:9])
-						glVertex3fv(ct[0:3])
-					glEnd()
-					glEnable(GL_DEPTH_TEST)
-					glEnable(GL_LIGHTING)
-		
-		# top image
-		#==========================================
-			# draw the outlines initialized in black
-			glColor3f(0.0, 0.0, 0.0)
-			glEnable(GL_BLEND)
-			glBlendFunc(GL_SRC_ALPHA ,GL_ONE_MINUS_SRC_ALPHA)
-			glEnable(GL_LINE_SMOOTH)
-			glLineWidth(8.0)
-		
-			# draw wireframe for back facing polygons and cull front-facing ones
-			glPolygonMode(GL_BACK, GL_FILL)
-			glEnable(GL_CULL_FACE)
-			glCullFace(GL_FRONT)
-			glDepthFunc(GL_LEQUAL)
-			glMatrixMode(GL_MODELVIEW)
-			glPushMatrix()
-			glTranslatef(e1_t[0],e1_t[1],e1_t[2])
-			gluSphere(self.quad, r, 8, 8)
-			glRotatef(-rotangle*180.0/numpy.pi, rotaxis[0], rotaxis[1], rotaxis[2])
-			gluCylinder(self.quad, r, r , l, 8, 1)
-			glPopMatrix() 
-			glPushMatrix()
-			glTranslatef(e2_t[0],e2_t[1],e2_t[2])
-			gluSphere(self.quad, r, 8, 8)
-			glPopMatrix() 
-		
-			glDepthFunc(GL_LESS)
-			glDisable(GL_CULL_FACE)
-			glPolygonMode(GL_FRONT, GL_FILL)
-			glDisable(GL_LINE_SMOOTH)
-			glDisable(GL_BLEND)
+                        glMatrixMode(GL_MODELVIEW)
+                        glPushMatrix()
+                        glTranslatef(e1[0],e1[1],e1[2])
+                        gluSphere(self.quad, r, 8, 8)
+                        glRotatef(-rotangle*180.0/numpy.pi, rotaxis[0], rotaxis[1], rotaxis[2])
+                        gluCylinder(self.quad, r, r , l, 8, 1)
+                        glPopMatrix() 
+                        glPushMatrix()
+                        glTranslatef(e2[0],e2[1],e2[2])
+                        gluSphere(self.quad, r, 8, 8)
+                        glPopMatrix()
+        # FIXME =========================================
+                        #()
+        #================================================                       
+                
+                        glDepthFunc(GL_LESS)
+                        glDisable(GL_CULL_FACE)
+                        glPolygonMode(GL_FRONT, GL_FILL)
+                        glDisable(GL_LINE_SMOOTH)
+                        glDisable(GL_BLEND)
 
-			glColor3fv(cellcol2)
-			glMatrixMode(GL_MODELVIEW)
-			glPushMatrix()
-			glTranslatef(e1_t[0],e1_t[1],e1_t[2])
-			glScalef(0.8,0.8,0.8)
-			gluSphere(self.quad, r, 8, 8)
-			#glScalef(1.25,1.0,1.0)
-			glRotatef(-rotangle*180.0/numpy.pi, rotaxis[0], rotaxis[1], rotaxis[2])
-			gluCylinder(self.quad, r, r , l*1.25, 8, 1)
-			glPopMatrix() 
-			glPushMatrix()
-			glTranslatef(e2_t[0],e2_t[1],e2_t[2])
-			glScalef(0.8,0.8,0.8)
-			gluSphere(self.quad, r, 8, 8)
-			glPopMatrix() 
-		#============================================
-	
-		# bottom image
-		#==========================================
-			# draw the outlines initialized in black
-			glColor3f(0.0, 0.0, 0.0)
-			glEnable(GL_BLEND)
-			glBlendFunc(GL_SRC_ALPHA ,GL_ONE_MINUS_SRC_ALPHA)
-			glEnable(GL_LINE_SMOOTH)
-			glLineWidth(8.0)
-		
-			# draw wireframe for back facing polygons and cull front-facing ones
-			glPolygonMode(GL_BACK, GL_FILL)
-			glEnable(GL_CULL_FACE)
-			glCullFace(GL_FRONT)
-			glDepthFunc(GL_LEQUAL)
-			glMatrixMode(GL_MODELVIEW)
-			glPushMatrix()
-			glTranslatef(e1_b[0],e1_b[1],e1_b[2])
-			gluSphere(self.quad, r, 8, 8)
-			glRotatef(-rotangle*180.0/numpy.pi, rotaxis[0], rotaxis[1], rotaxis[2])
-			gluCylinder(self.quad, r, r , l, 8, 1)
-			glPopMatrix() 
-			glPushMatrix()
-			glTranslatef(e2_b[0],e2_b[1],e2_b[2])
-			gluSphere(self.quad, r, 8, 8)
-			glPopMatrix() 
-		
-			glDepthFunc(GL_LESS)
-			glDisable(GL_CULL_FACE)
-			glPolygonMode(GL_FRONT, GL_FILL)
-			glDisable(GL_LINE_SMOOTH)
-			glDisable(GL_BLEND)
+                        glColor3fv(cellcol)
+                        glMatrixMode(GL_MODELVIEW)
+                        glPushMatrix()
+                        glTranslatef(e1[0],e1[1],e1[2])
+                        glScalef(0.8,0.8,0.8)
+                        gluSphere(self.quad, r, 8, 8)
+                        #glScalef(1.25,1.0,1.0)
+                        glRotatef(-rotangle*180.0/numpy.pi, rotaxis[0], rotaxis[1], rotaxis[2])
+                        gluCylinder(self.quad, r, r , l*1.25, 8, 1)
+                        glPopMatrix() 
+                        glPushMatrix()
+                        glTranslatef(e2[0],e2[1],e2[2])
+                        glScalef(0.8,0.8,0.8)
+                        gluSphere(self.quad, r, 8, 8)
+                        glPopMatrix()
 
-			glColor3fv(cellcol2)
-			glMatrixMode(GL_MODELVIEW)
-			glPushMatrix()
-			glTranslatef(e1_b[0],e1_b[1],e1_b[2])
-			glScalef(0.8,0.8,0.8)
-			gluSphere(self.quad, r, 8, 8)
-			#glScalef(1.25,1.0,1.0)
-			glRotatef(-rotangle*180.0/numpy.pi, rotaxis[0], rotaxis[1], rotaxis[2])
-			gluCylinder(self.quad, r, r , l*1.25, 8, 1)
-			glPopMatrix() 
-			glPushMatrix()
-			glTranslatef(e2_b[0],e2_b[1],e2_b[2])
-			glScalef(0.8,0.8,0.8)
-			gluSphere(self.quad, r, 8, 8)
-			glPopMatrix() 
-		#============================================
-	
-		# left image
-		#==========================================
-			# draw the outlines initialized in black
-			glColor3f(0.0, 0.0, 0.0)
-			glEnable(GL_BLEND)
-			glBlendFunc(GL_SRC_ALPHA ,GL_ONE_MINUS_SRC_ALPHA)
-			glEnable(GL_LINE_SMOOTH)
-			glLineWidth(8.0)
-		
-			# draw wireframe for back facing polygons and cull front-facing ones
-			glPolygonMode(GL_BACK, GL_FILL)
-			glEnable(GL_CULL_FACE)
-			glCullFace(GL_FRONT)
-			glDepthFunc(GL_LEQUAL)
-			glMatrixMode(GL_MODELVIEW)
-			glPushMatrix()
-			glTranslatef(e1_l[0],e1_l[1],e1_l[2])
-			gluSphere(self.quad, r, 8, 8)
-			glRotatef(-rotangle*180.0/numpy.pi, rotaxis[0], rotaxis[1], rotaxis[2])
-			gluCylinder(self.quad, r, r , l, 8, 1)
-			glPopMatrix() 
-			glPushMatrix()
-			glTranslatef(e2_l[0],e2_l[1],e2_l[2])
-			gluSphere(self.quad, r, 8, 8)
-			glPopMatrix() 
-		
-			glDepthFunc(GL_LESS)
-			glDisable(GL_CULL_FACE)
-			glPolygonMode(GL_FRONT, GL_FILL)
-			glDisable(GL_LINE_SMOOTH)
-			glDisable(GL_BLEND)
+                        # draw contact points
+        #=========================================================
+                        if hasattr(cells[0], 'contacts'): 
+        #========================================================= used to always be false but it won't work anyway - see below
+                                glDisable(GL_DEPTH_TEST)
+                                glDisable(GL_LIGHTING)
+                                for cell in cells:
+                                        contacts = cell.contacts # this won't work because cellStates no longer have a contacts attribute 
+                                        glBegin(GL_LINES)
+                                        for ct in contacts:
+                                                glColor3fv(ct[6:9])
+                                                glVertex3fv(ct[0:3])
+                                                glVertex3fv(ct[3:6])
+                                        glEnd()
+                                        glBegin(GL_POINTS)
+                                        for ct in contacts:
+                                                glColor3fv(ct[6:9])
+                                                glVertex3fv(ct[0:3])
+                                        glEnd()
+                                        glEnable(GL_DEPTH_TEST)
+                                        glEnable(GL_LIGHTING)
+                
+                # top image
+                #==========================================
+                        # draw the outlines initialized in black
+                        glColor3f(0.0, 0.0, 0.0)
+                        glEnable(GL_BLEND)
+                        glBlendFunc(GL_SRC_ALPHA ,GL_ONE_MINUS_SRC_ALPHA)
+                        glEnable(GL_LINE_SMOOTH)
+                        glLineWidth(8.0)
+                
+                        # draw wireframe for back facing polygons and cull front-facing ones
+                        glPolygonMode(GL_BACK, GL_FILL)
+                        glEnable(GL_CULL_FACE)
+                        glCullFace(GL_FRONT)
+                        glDepthFunc(GL_LEQUAL)
+                        glMatrixMode(GL_MODELVIEW)
+                        glPushMatrix()
+                        glTranslatef(e1_t[0],e1_t[1],e1_t[2])
+                        gluSphere(self.quad, r, 8, 8)
+                        glRotatef(-rotangle*180.0/numpy.pi, rotaxis[0], rotaxis[1], rotaxis[2])
+                        gluCylinder(self.quad, r, r , l, 8, 1)
+                        glPopMatrix() 
+                        glPushMatrix()
+                        glTranslatef(e2_t[0],e2_t[1],e2_t[2])
+                        gluSphere(self.quad, r, 8, 8)
+                        glPopMatrix() 
+                
+                        glDepthFunc(GL_LESS)
+                        glDisable(GL_CULL_FACE)
+                        glPolygonMode(GL_FRONT, GL_FILL)
+                        glDisable(GL_LINE_SMOOTH)
+                        glDisable(GL_BLEND)
 
-			glColor3fv(cellcol2)
-			glMatrixMode(GL_MODELVIEW)
-			glPushMatrix()
-			glTranslatef(e1_l[0],e1_l[1],e1_l[2])
-			glScalef(0.8,0.8,0.8)
-			gluSphere(self.quad, r, 8, 8)
-			#glScalef(1.25,1.0,1.0)
-			glRotatef(-rotangle*180.0/numpy.pi, rotaxis[0], rotaxis[1], rotaxis[2])
-			gluCylinder(self.quad, r, r , l*1.25, 8, 1)
-			glPopMatrix() 
-			glPushMatrix()
-			glTranslatef(e2_l[0],e2_l[1],e2_l[2])
-			glScalef(0.8,0.8,0.8)
-			gluSphere(self.quad, r, 8, 8)
-			glPopMatrix() 
-		#============================================
-		# right image
-		#==========================================
-			# draw the outlines initialized in black
-			glColor3f(0.0, 0.0, 0.0)
-			glEnable(GL_BLEND)
-			glBlendFunc(GL_SRC_ALPHA ,GL_ONE_MINUS_SRC_ALPHA)
-			glEnable(GL_LINE_SMOOTH)
-			glLineWidth(8.0)
-		
-			# draw wireframe for back facing polygons and cull front-facing ones
-			glPolygonMode(GL_BACK, GL_FILL)
-			glEnable(GL_CULL_FACE)
-			glCullFace(GL_FRONT)
-			glDepthFunc(GL_LEQUAL)
-			glMatrixMode(GL_MODELVIEW)
-			glPushMatrix()
-			glTranslatef(e1_r[0],e1_r[1],e1_r[2])
-			gluSphere(self.quad, r, 8, 8)
-			glRotatef(-rotangle*180.0/numpy.pi, rotaxis[0], rotaxis[1], rotaxis[2])
-			gluCylinder(self.quad, r, r , l, 8, 1)
-			glPopMatrix() 
-			glPushMatrix()
-			glTranslatef(e2_r[0],e2_r[1],e2_r[2])
-			gluSphere(self.quad, r, 8, 8)
-			glPopMatrix() 
-		
-			glDepthFunc(GL_LESS)
-			glDisable(GL_CULL_FACE)
-			glPolygonMode(GL_FRONT, GL_FILL)
-			glDisable(GL_LINE_SMOOTH)
-			glDisable(GL_BLEND)
+                        glColor3fv(cellcol2)
+                        glMatrixMode(GL_MODELVIEW)
+                        glPushMatrix()
+                        glTranslatef(e1_t[0],e1_t[1],e1_t[2])
+                        glScalef(0.8,0.8,0.8)
+                        gluSphere(self.quad, r, 8, 8)
+                        #glScalef(1.25,1.0,1.0)
+                        glRotatef(-rotangle*180.0/numpy.pi, rotaxis[0], rotaxis[1], rotaxis[2])
+                        gluCylinder(self.quad, r, r , l*1.25, 8, 1)
+                        glPopMatrix() 
+                        glPushMatrix()
+                        glTranslatef(e2_t[0],e2_t[1],e2_t[2])
+                        glScalef(0.8,0.8,0.8)
+                        gluSphere(self.quad, r, 8, 8)
+                        glPopMatrix() 
+                #============================================
+        
+                # bottom image
+                #==========================================
+                        # draw the outlines initialized in black
+                        glColor3f(0.0, 0.0, 0.0)
+                        glEnable(GL_BLEND)
+                        glBlendFunc(GL_SRC_ALPHA ,GL_ONE_MINUS_SRC_ALPHA)
+                        glEnable(GL_LINE_SMOOTH)
+                        glLineWidth(8.0)
+                
+                        # draw wireframe for back facing polygons and cull front-facing ones
+                        glPolygonMode(GL_BACK, GL_FILL)
+                        glEnable(GL_CULL_FACE)
+                        glCullFace(GL_FRONT)
+                        glDepthFunc(GL_LEQUAL)
+                        glMatrixMode(GL_MODELVIEW)
+                        glPushMatrix()
+                        glTranslatef(e1_b[0],e1_b[1],e1_b[2])
+                        gluSphere(self.quad, r, 8, 8)
+                        glRotatef(-rotangle*180.0/numpy.pi, rotaxis[0], rotaxis[1], rotaxis[2])
+                        gluCylinder(self.quad, r, r , l, 8, 1)
+                        glPopMatrix() 
+                        glPushMatrix()
+                        glTranslatef(e2_b[0],e2_b[1],e2_b[2])
+                        gluSphere(self.quad, r, 8, 8)
+                        glPopMatrix() 
+                
+                        glDepthFunc(GL_LESS)
+                        glDisable(GL_CULL_FACE)
+                        glPolygonMode(GL_FRONT, GL_FILL)
+                        glDisable(GL_LINE_SMOOTH)
+                        glDisable(GL_BLEND)
 
-			glColor3fv(cellcol2)
-			glMatrixMode(GL_MODELVIEW)
-			glPushMatrix()
-			glTranslatef(e1_r[0],e1_r[1],e1_r[2])
-			glScalef(0.8,0.8,0.8)
-			gluSphere(self.quad, r, 8, 8)
-			#glScalef(1.25,1.0,1.0)
-			glRotatef(-rotangle*180.0/numpy.pi, rotaxis[0], rotaxis[1], rotaxis[2])
-			gluCylinder(self.quad, r, r , l*1.25, 8, 1)
-			glPopMatrix() 
-			glPushMatrix()
-			glTranslatef(e2_r[0],e2_r[1],e2_r[2])
-			glScalef(0.8,0.8,0.8)
-			gluSphere(self.quad, r, 8, 8)
-			glPopMatrix() 
-		#============================================
-			if True:
-				# prepare diagonal images
-				# top right image
-				e1_tr = e1 + offset_y + offset_x
-				e2_tr = e2 + offset_y + offset_x
-				# bottom right image
-				e1_br = e1 - offset_y + offset_x
-				e2_br = e2 - offset_y + offset_x
-				# top left image
-				e1_tl = e1 - offset_x + offset_y
-				e2_tl = e2 - offset_x + offset_y
-				# bottom left image
-				e1_bl = e1 - offset_x - offset_y
-				e2_bl = e2 - offset_x - offset_y
-			# top-right image
-			#==========================================
-				# draw the outlines initialized in black
-				glColor3f(0.0, 0.0, 0.0)
-				glEnable(GL_BLEND)
-				glBlendFunc(GL_SRC_ALPHA ,GL_ONE_MINUS_SRC_ALPHA)
-				glEnable(GL_LINE_SMOOTH)
-				glLineWidth(8.0)
-		
-				# draw wireframe for back facing polygons and cull front-facing ones
-				glPolygonMode(GL_BACK, GL_FILL)
-				glEnable(GL_CULL_FACE)
-				glCullFace(GL_FRONT)
-				glDepthFunc(GL_LEQUAL)
-				glMatrixMode(GL_MODELVIEW)
-				glPushMatrix()
-				glTranslatef(e1_tr[0],e1_tr[1],e1_tr[2])
-				gluSphere(self.quad, r, 8, 8)
-				glRotatef(-rotangle*180.0/numpy.pi, rotaxis[0], rotaxis[1], rotaxis[2])
-				gluCylinder(self.quad, r, r , l, 8, 1)
-				glPopMatrix() 
-				glPushMatrix()
-				glTranslatef(e2_tr[0],e2_tr[1],e2_tr[2])
-				gluSphere(self.quad, r, 8, 8)
-				glPopMatrix() 
-		
-				glDepthFunc(GL_LESS)
-				glDisable(GL_CULL_FACE)
-				glPolygonMode(GL_FRONT, GL_FILL)
-				glDisable(GL_LINE_SMOOTH)
-				glDisable(GL_BLEND)
+                        glColor3fv(cellcol2)
+                        glMatrixMode(GL_MODELVIEW)
+                        glPushMatrix()
+                        glTranslatef(e1_b[0],e1_b[1],e1_b[2])
+                        glScalef(0.8,0.8,0.8)
+                        gluSphere(self.quad, r, 8, 8)
+                        #glScalef(1.25,1.0,1.0)
+                        glRotatef(-rotangle*180.0/numpy.pi, rotaxis[0], rotaxis[1], rotaxis[2])
+                        gluCylinder(self.quad, r, r , l*1.25, 8, 1)
+                        glPopMatrix() 
+                        glPushMatrix()
+                        glTranslatef(e2_b[0],e2_b[1],e2_b[2])
+                        glScalef(0.8,0.8,0.8)
+                        gluSphere(self.quad, r, 8, 8)
+                        glPopMatrix() 
+                #============================================
+        
+                # left image
+                #==========================================
+                        # draw the outlines initialized in black
+                        glColor3f(0.0, 0.0, 0.0)
+                        glEnable(GL_BLEND)
+                        glBlendFunc(GL_SRC_ALPHA ,GL_ONE_MINUS_SRC_ALPHA)
+                        glEnable(GL_LINE_SMOOTH)
+                        glLineWidth(8.0)
+                
+                        # draw wireframe for back facing polygons and cull front-facing ones
+                        glPolygonMode(GL_BACK, GL_FILL)
+                        glEnable(GL_CULL_FACE)
+                        glCullFace(GL_FRONT)
+                        glDepthFunc(GL_LEQUAL)
+                        glMatrixMode(GL_MODELVIEW)
+                        glPushMatrix()
+                        glTranslatef(e1_l[0],e1_l[1],e1_l[2])
+                        gluSphere(self.quad, r, 8, 8)
+                        glRotatef(-rotangle*180.0/numpy.pi, rotaxis[0], rotaxis[1], rotaxis[2])
+                        gluCylinder(self.quad, r, r , l, 8, 1)
+                        glPopMatrix() 
+                        glPushMatrix()
+                        glTranslatef(e2_l[0],e2_l[1],e2_l[2])
+                        gluSphere(self.quad, r, 8, 8)
+                        glPopMatrix() 
+                
+                        glDepthFunc(GL_LESS)
+                        glDisable(GL_CULL_FACE)
+                        glPolygonMode(GL_FRONT, GL_FILL)
+                        glDisable(GL_LINE_SMOOTH)
+                        glDisable(GL_BLEND)
 
-				glColor3fv(cellcol2)
-				glMatrixMode(GL_MODELVIEW)
-				glPushMatrix()
-				glTranslatef(e1_tr[0],e1_tr[1],e1_tr[2])
-				glScalef(0.8,0.8,0.8)
-				gluSphere(self.quad, r, 8, 8)
-				#glScalef(1.25,1.0,1.0)
-				glRotatef(-rotangle*180.0/numpy.pi, rotaxis[0], rotaxis[1], rotaxis[2])
-				gluCylinder(self.quad, r, r , l*1.25, 8, 1)
-				glPopMatrix() 
-				glPushMatrix()
-				glTranslatef(e2_tr[0],e2_tr[1],e2_tr[2])
-				glScalef(0.8,0.8,0.8)
-				gluSphere(self.quad, r, 8, 8)
-				glPopMatrix() 
-			#============================================
-	
-			# bottom right image
-			#==========================================
-				# draw the outlines initialized in black
-				glColor3f(0.0, 0.0, 0.0)
-				glEnable(GL_BLEND)
-				glBlendFunc(GL_SRC_ALPHA ,GL_ONE_MINUS_SRC_ALPHA)
-				glEnable(GL_LINE_SMOOTH)
-				glLineWidth(8.0)
-		
-				# draw wireframe for back facing polygons and cull front-facing ones
-				glPolygonMode(GL_BACK, GL_FILL)
-				glEnable(GL_CULL_FACE)
-				glCullFace(GL_FRONT)
-				glDepthFunc(GL_LEQUAL)
-				glMatrixMode(GL_MODELVIEW)
-				glPushMatrix()
-				glTranslatef(e1_br[0],e1_br[1],e1_br[2])
-				gluSphere(self.quad, r, 8, 8)
-				glRotatef(-rotangle*180.0/numpy.pi, rotaxis[0], rotaxis[1], rotaxis[2])
-				gluCylinder(self.quad, r, r , l, 8, 1)
-				glPopMatrix() 
-				glPushMatrix()
-				glTranslatef(e2_br[0],e2_br[1],e2_br[2])
-				gluSphere(self.quad, r, 8, 8)
-				glPopMatrix() 
-		
-				glDepthFunc(GL_LESS)
-				glDisable(GL_CULL_FACE)
-				glPolygonMode(GL_FRONT, GL_FILL)
-				glDisable(GL_LINE_SMOOTH)
-				glDisable(GL_BLEND)
+                        glColor3fv(cellcol2)
+                        glMatrixMode(GL_MODELVIEW)
+                        glPushMatrix()
+                        glTranslatef(e1_l[0],e1_l[1],e1_l[2])
+                        glScalef(0.8,0.8,0.8)
+                        gluSphere(self.quad, r, 8, 8)
+                        #glScalef(1.25,1.0,1.0)
+                        glRotatef(-rotangle*180.0/numpy.pi, rotaxis[0], rotaxis[1], rotaxis[2])
+                        gluCylinder(self.quad, r, r , l*1.25, 8, 1)
+                        glPopMatrix() 
+                        glPushMatrix()
+                        glTranslatef(e2_l[0],e2_l[1],e2_l[2])
+                        glScalef(0.8,0.8,0.8)
+                        gluSphere(self.quad, r, 8, 8)
+                        glPopMatrix() 
+                #============================================
+                # right image
+                #==========================================
+                        # draw the outlines initialized in black
+                        glColor3f(0.0, 0.0, 0.0)
+                        glEnable(GL_BLEND)
+                        glBlendFunc(GL_SRC_ALPHA ,GL_ONE_MINUS_SRC_ALPHA)
+                        glEnable(GL_LINE_SMOOTH)
+                        glLineWidth(8.0)
+                
+                        # draw wireframe for back facing polygons and cull front-facing ones
+                        glPolygonMode(GL_BACK, GL_FILL)
+                        glEnable(GL_CULL_FACE)
+                        glCullFace(GL_FRONT)
+                        glDepthFunc(GL_LEQUAL)
+                        glMatrixMode(GL_MODELVIEW)
+                        glPushMatrix()
+                        glTranslatef(e1_r[0],e1_r[1],e1_r[2])
+                        gluSphere(self.quad, r, 8, 8)
+                        glRotatef(-rotangle*180.0/numpy.pi, rotaxis[0], rotaxis[1], rotaxis[2])
+                        gluCylinder(self.quad, r, r , l, 8, 1)
+                        glPopMatrix() 
+                        glPushMatrix()
+                        glTranslatef(e2_r[0],e2_r[1],e2_r[2])
+                        gluSphere(self.quad, r, 8, 8)
+                        glPopMatrix() 
+                
+                        glDepthFunc(GL_LESS)
+                        glDisable(GL_CULL_FACE)
+                        glPolygonMode(GL_FRONT, GL_FILL)
+                        glDisable(GL_LINE_SMOOTH)
+                        glDisable(GL_BLEND)
 
-				glColor3fv(cellcol2)
-				glMatrixMode(GL_MODELVIEW)
-				glPushMatrix()
-				glTranslatef(e1_br[0],e1_br[1],e1_br[2])
-				glScalef(0.8,0.8,0.8)
-				gluSphere(self.quad, r, 8, 8)
-				#glScalef(1.25,1.0,1.0)
-				glRotatef(-rotangle*180.0/numpy.pi, rotaxis[0], rotaxis[1], rotaxis[2])
-				gluCylinder(self.quad, r, r , l*1.25, 8, 1)
-				glPopMatrix() 
-				glPushMatrix()
-				glTranslatef(e2_br[0],e2_br[1],e2_br[2])
-				glScalef(0.8,0.8,0.8)
-				gluSphere(self.quad, r, 8, 8)
-				glPopMatrix() 
-			#============================================
-	
-			# top left image
-			#==========================================
-				# draw the outlines initialized in black
-				glColor3f(0.0, 0.0, 0.0)
-				glEnable(GL_BLEND)
-				glBlendFunc(GL_SRC_ALPHA ,GL_ONE_MINUS_SRC_ALPHA)
-				glEnable(GL_LINE_SMOOTH)
-				glLineWidth(8.0)
-		
-				# draw wireframe for back facing polygons and cull front-facing ones
-				glPolygonMode(GL_BACK, GL_FILL)
-				glEnable(GL_CULL_FACE)
-				glCullFace(GL_FRONT)
-				glDepthFunc(GL_LEQUAL)
-				glMatrixMode(GL_MODELVIEW)
-				glPushMatrix()
-				glTranslatef(e1_tl[0],e1_tl[1],e1_tl[2])
-				gluSphere(self.quad, r, 8, 8)
-				glRotatef(-rotangle*180.0/numpy.pi, rotaxis[0], rotaxis[1], rotaxis[2])
-				gluCylinder(self.quad, r, r , l, 8, 1)
-				glPopMatrix() 
-				glPushMatrix()
-				glTranslatef(e2_tl[0],e2_tl[1],e2_tl[2])
-				gluSphere(self.quad, r, 8, 8)
-				glPopMatrix() 
-		
-				glDepthFunc(GL_LESS)
-				glDisable(GL_CULL_FACE)
-				glPolygonMode(GL_FRONT, GL_FILL)
-				glDisable(GL_LINE_SMOOTH)
-				glDisable(GL_BLEND)
+                        glColor3fv(cellcol2)
+                        glMatrixMode(GL_MODELVIEW)
+                        glPushMatrix()
+                        glTranslatef(e1_r[0],e1_r[1],e1_r[2])
+                        glScalef(0.8,0.8,0.8)
+                        gluSphere(self.quad, r, 8, 8)
+                        #glScalef(1.25,1.0,1.0)
+                        glRotatef(-rotangle*180.0/numpy.pi, rotaxis[0], rotaxis[1], rotaxis[2])
+                        gluCylinder(self.quad, r, r , l*1.25, 8, 1)
+                        glPopMatrix() 
+                        glPushMatrix()
+                        glTranslatef(e2_r[0],e2_r[1],e2_r[2])
+                        glScalef(0.8,0.8,0.8)
+                        gluSphere(self.quad, r, 8, 8)
+                        glPopMatrix() 
+                #============================================
+                        if True:
+                                # prepare diagonal images
+                                # top right image
+                                e1_tr = e1 + offset_y + offset_x
+                                e2_tr = e2 + offset_y + offset_x
+                                # bottom right image
+                                e1_br = e1 - offset_y + offset_x
+                                e2_br = e2 - offset_y + offset_x
+                                # top left image
+                                e1_tl = e1 - offset_x + offset_y
+                                e2_tl = e2 - offset_x + offset_y
+                                # bottom left image
+                                e1_bl = e1 - offset_x - offset_y
+                                e2_bl = e2 - offset_x - offset_y
+                        # top-right image
+                        #==========================================
+                                # draw the outlines initialized in black
+                                glColor3f(0.0, 0.0, 0.0)
+                                glEnable(GL_BLEND)
+                                glBlendFunc(GL_SRC_ALPHA ,GL_ONE_MINUS_SRC_ALPHA)
+                                glEnable(GL_LINE_SMOOTH)
+                                glLineWidth(8.0)
+                
+                                # draw wireframe for back facing polygons and cull front-facing ones
+                                glPolygonMode(GL_BACK, GL_FILL)
+                                glEnable(GL_CULL_FACE)
+                                glCullFace(GL_FRONT)
+                                glDepthFunc(GL_LEQUAL)
+                                glMatrixMode(GL_MODELVIEW)
+                                glPushMatrix()
+                                glTranslatef(e1_tr[0],e1_tr[1],e1_tr[2])
+                                gluSphere(self.quad, r, 8, 8)
+                                glRotatef(-rotangle*180.0/numpy.pi, rotaxis[0], rotaxis[1], rotaxis[2])
+                                gluCylinder(self.quad, r, r , l, 8, 1)
+                                glPopMatrix() 
+                                glPushMatrix()
+                                glTranslatef(e2_tr[0],e2_tr[1],e2_tr[2])
+                                gluSphere(self.quad, r, 8, 8)
+                                glPopMatrix() 
+                
+                                glDepthFunc(GL_LESS)
+                                glDisable(GL_CULL_FACE)
+                                glPolygonMode(GL_FRONT, GL_FILL)
+                                glDisable(GL_LINE_SMOOTH)
+                                glDisable(GL_BLEND)
 
-				glColor3fv(cellcol2)
-				glMatrixMode(GL_MODELVIEW)
-				glPushMatrix()
-				glTranslatef(e1_tl[0],e1_tl[1],e1_tl[2])
-				glScalef(0.8,0.8,0.8)
-				gluSphere(self.quad, r, 8, 8)
-				#glScalef(1.25,1.0,1.0)
-				glRotatef(-rotangle*180.0/numpy.pi, rotaxis[0], rotaxis[1], rotaxis[2])
-				gluCylinder(self.quad, r, r , l*1.25, 8, 1)
-				glPopMatrix() 
-				glPushMatrix()
-				glTranslatef(e2_tl[0],e2_tl[1],e2_tl[2])
-				glScalef(0.8,0.8,0.8)
-				gluSphere(self.quad, r, 8, 8)
-				glPopMatrix() 
-			#============================================
-			# bottom left image
-			#==========================================
-				# draw the outlines initialized in black
-				glColor3f(0.0, 0.0, 0.0)
-				glEnable(GL_BLEND)
-				glBlendFunc(GL_SRC_ALPHA ,GL_ONE_MINUS_SRC_ALPHA)
-				glEnable(GL_LINE_SMOOTH)
-				glLineWidth(8.0)
-		
-				# draw wireframe for back facing polygons and cull front-facing ones
-				glPolygonMode(GL_BACK, GL_FILL)
-				glEnable(GL_CULL_FACE)
-				glCullFace(GL_FRONT)
-				glDepthFunc(GL_LEQUAL)
-				glMatrixMode(GL_MODELVIEW)
-				glPushMatrix()
-				glTranslatef(e1_bl[0],e1_bl[1],e1_bl[2])
-				gluSphere(self.quad, r, 8, 8)
-				glRotatef(-rotangle*180.0/numpy.pi, rotaxis[0], rotaxis[1], rotaxis[2])
-				gluCylinder(self.quad, r, r , l, 8, 1)
-				glPopMatrix() 
-				glPushMatrix()
-				glTranslatef(e2_bl[0],e2_bl[1],e2_bl[2])
-				gluSphere(self.quad, r, 8, 8)
-				glPopMatrix() 
-		
-				glDepthFunc(GL_LESS)
-				glDisable(GL_CULL_FACE)
-				glPolygonMode(GL_FRONT, GL_FILL)
-				glDisable(GL_LINE_SMOOTH)
-				glDisable(GL_BLEND)
+                                glColor3fv(cellcol2)
+                                glMatrixMode(GL_MODELVIEW)
+                                glPushMatrix()
+                                glTranslatef(e1_tr[0],e1_tr[1],e1_tr[2])
+                                glScalef(0.8,0.8,0.8)
+                                gluSphere(self.quad, r, 8, 8)
+                                #glScalef(1.25,1.0,1.0)
+                                glRotatef(-rotangle*180.0/numpy.pi, rotaxis[0], rotaxis[1], rotaxis[2])
+                                gluCylinder(self.quad, r, r , l*1.25, 8, 1)
+                                glPopMatrix() 
+                                glPushMatrix()
+                                glTranslatef(e2_tr[0],e2_tr[1],e2_tr[2])
+                                glScalef(0.8,0.8,0.8)
+                                gluSphere(self.quad, r, 8, 8)
+                                glPopMatrix() 
+                        #============================================
+        
+                        # bottom right image
+                        #==========================================
+                                # draw the outlines initialized in black
+                                glColor3f(0.0, 0.0, 0.0)
+                                glEnable(GL_BLEND)
+                                glBlendFunc(GL_SRC_ALPHA ,GL_ONE_MINUS_SRC_ALPHA)
+                                glEnable(GL_LINE_SMOOTH)
+                                glLineWidth(8.0)
+                
+                                # draw wireframe for back facing polygons and cull front-facing ones
+                                glPolygonMode(GL_BACK, GL_FILL)
+                                glEnable(GL_CULL_FACE)
+                                glCullFace(GL_FRONT)
+                                glDepthFunc(GL_LEQUAL)
+                                glMatrixMode(GL_MODELVIEW)
+                                glPushMatrix()
+                                glTranslatef(e1_br[0],e1_br[1],e1_br[2])
+                                gluSphere(self.quad, r, 8, 8)
+                                glRotatef(-rotangle*180.0/numpy.pi, rotaxis[0], rotaxis[1], rotaxis[2])
+                                gluCylinder(self.quad, r, r , l, 8, 1)
+                                glPopMatrix() 
+                                glPushMatrix()
+                                glTranslatef(e2_br[0],e2_br[1],e2_br[2])
+                                gluSphere(self.quad, r, 8, 8)
+                                glPopMatrix() 
+                
+                                glDepthFunc(GL_LESS)
+                                glDisable(GL_CULL_FACE)
+                                glPolygonMode(GL_FRONT, GL_FILL)
+                                glDisable(GL_LINE_SMOOTH)
+                                glDisable(GL_BLEND)
 
-				glColor3fv(cellcol2)
-				glMatrixMode(GL_MODELVIEW)
-				glPushMatrix()
-				glTranslatef(e1_bl[0],e1_bl[1],e1_bl[2])
-				glScalef(0.8,0.8,0.8)
-				gluSphere(self.quad, r, 8, 8)
-				#glScalef(1.25,1.0,1.0)
-				glRotatef(-rotangle*180.0/numpy.pi, rotaxis[0], rotaxis[1], rotaxis[2])
-				gluCylinder(self.quad, r, r , l*1.25, 8, 1)
-				glPopMatrix() 
-				glPushMatrix()
-				glTranslatef(e2_bl[0],e2_bl[1],e2_bl[2])
-				glScalef(0.8,0.8,0.8)
-				gluSphere(self.quad, r, 8, 8)
-				glPopMatrix() 
-			#============================================
-			#glColor3f(68.0 / 256, 81.0 / 256, 44.0 / 256)
-			#glLineWidth(2)
-			#glBegin(GL_LINES)
-			#glVertex3f(e1[0], e1[1], e1[2])
-			#glVertex3f(e2[0], e2[1], e2[2])
-			#glEnd()    
-			#
-			#glColor3f(1.0, 1.0, 0.0)
-			#glPointSize(3)
-			#glBegin(GL_POINTS)
-			#glVertex3f(e1[0], e1[1], e1[2])
-			#glVertex3f(e2[0], e2[1], e2[2])
-			#glEnd()
-		
+                                glColor3fv(cellcol2)
+                                glMatrixMode(GL_MODELVIEW)
+                                glPushMatrix()
+                                glTranslatef(e1_br[0],e1_br[1],e1_br[2])
+                                glScalef(0.8,0.8,0.8)
+                                gluSphere(self.quad, r, 8, 8)
+                                #glScalef(1.25,1.0,1.0)
+                                glRotatef(-rotangle*180.0/numpy.pi, rotaxis[0], rotaxis[1], rotaxis[2])
+                                gluCylinder(self.quad, r, r , l*1.25, 8, 1)
+                                glPopMatrix() 
+                                glPushMatrix()
+                                glTranslatef(e2_br[0],e2_br[1],e2_br[2])
+                                glScalef(0.8,0.8,0.8)
+                                gluSphere(self.quad, r, 8, 8)
+                                glPopMatrix() 
+                        #============================================
+        
+                        # top left image
+                        #==========================================
+                                # draw the outlines initialized in black
+                                glColor3f(0.0, 0.0, 0.0)
+                                glEnable(GL_BLEND)
+                                glBlendFunc(GL_SRC_ALPHA ,GL_ONE_MINUS_SRC_ALPHA)
+                                glEnable(GL_LINE_SMOOTH)
+                                glLineWidth(8.0)
+                
+                                # draw wireframe for back facing polygons and cull front-facing ones
+                                glPolygonMode(GL_BACK, GL_FILL)
+                                glEnable(GL_CULL_FACE)
+                                glCullFace(GL_FRONT)
+                                glDepthFunc(GL_LEQUAL)
+                                glMatrixMode(GL_MODELVIEW)
+                                glPushMatrix()
+                                glTranslatef(e1_tl[0],e1_tl[1],e1_tl[2])
+                                gluSphere(self.quad, r, 8, 8)
+                                glRotatef(-rotangle*180.0/numpy.pi, rotaxis[0], rotaxis[1], rotaxis[2])
+                                gluCylinder(self.quad, r, r , l, 8, 1)
+                                glPopMatrix() 
+                                glPushMatrix()
+                                glTranslatef(e2_tl[0],e2_tl[1],e2_tl[2])
+                                gluSphere(self.quad, r, 8, 8)
+                                glPopMatrix() 
+                
+                                glDepthFunc(GL_LESS)
+                                glDisable(GL_CULL_FACE)
+                                glPolygonMode(GL_FRONT, GL_FILL)
+                                glDisable(GL_LINE_SMOOTH)
+                                glDisable(GL_BLEND)
+
+                                glColor3fv(cellcol2)
+                                glMatrixMode(GL_MODELVIEW)
+                                glPushMatrix()
+                                glTranslatef(e1_tl[0],e1_tl[1],e1_tl[2])
+                                glScalef(0.8,0.8,0.8)
+                                gluSphere(self.quad, r, 8, 8)
+                                #glScalef(1.25,1.0,1.0)
+                                glRotatef(-rotangle*180.0/numpy.pi, rotaxis[0], rotaxis[1], rotaxis[2])
+                                gluCylinder(self.quad, r, r , l*1.25, 8, 1)
+                                glPopMatrix() 
+                                glPushMatrix()
+                                glTranslatef(e2_tl[0],e2_tl[1],e2_tl[2])
+                                glScalef(0.8,0.8,0.8)
+                                gluSphere(self.quad, r, 8, 8)
+                                glPopMatrix() 
+                        #============================================
+                        # bottom left image
+                        #==========================================
+                                # draw the outlines initialized in black
+                                glColor3f(0.0, 0.0, 0.0)
+                                glEnable(GL_BLEND)
+                                glBlendFunc(GL_SRC_ALPHA ,GL_ONE_MINUS_SRC_ALPHA)
+                                glEnable(GL_LINE_SMOOTH)
+                                glLineWidth(8.0)
+                
+                                # draw wireframe for back facing polygons and cull front-facing ones
+                                glPolygonMode(GL_BACK, GL_FILL)
+                                glEnable(GL_CULL_FACE)
+                                glCullFace(GL_FRONT)
+                                glDepthFunc(GL_LEQUAL)
+                                glMatrixMode(GL_MODELVIEW)
+                                glPushMatrix()
+                                glTranslatef(e1_bl[0],e1_bl[1],e1_bl[2])
+                                gluSphere(self.quad, r, 8, 8)
+                                glRotatef(-rotangle*180.0/numpy.pi, rotaxis[0], rotaxis[1], rotaxis[2])
+                                gluCylinder(self.quad, r, r , l, 8, 1)
+                                glPopMatrix() 
+                                glPushMatrix()
+                                glTranslatef(e2_bl[0],e2_bl[1],e2_bl[2])
+                                gluSphere(self.quad, r, 8, 8)
+                                glPopMatrix() 
+                
+                                glDepthFunc(GL_LESS)
+                                glDisable(GL_CULL_FACE)
+                                glPolygonMode(GL_FRONT, GL_FILL)
+                                glDisable(GL_LINE_SMOOTH)
+                                glDisable(GL_BLEND)
+
+                                glColor3fv(cellcol2)
+                                glMatrixMode(GL_MODELVIEW)
+                                glPushMatrix()
+                                glTranslatef(e1_bl[0],e1_bl[1],e1_bl[2])
+                                glScalef(0.8,0.8,0.8)
+                                gluSphere(self.quad, r, 8, 8)
+                                #glScalef(1.25,1.0,1.0)
+                                glRotatef(-rotangle*180.0/numpy.pi, rotaxis[0], rotaxis[1], rotaxis[2])
+                                gluCylinder(self.quad, r, r , l*1.25, 8, 1)
+                                glPopMatrix() 
+                                glPushMatrix()
+                                glTranslatef(e2_bl[0],e2_bl[1],e2_bl[2])
+                                glScalef(0.8,0.8,0.8)
+                                gluSphere(self.quad, r, 8, 8)
+                                glPopMatrix() 
+                        #============================================
+                        #glColor3f(68.0 / 256, 81.0 / 256, 44.0 / 256)
+                        #glLineWidth(2)
+                        #glBegin(GL_LINES)
+                        #glVertex3f(e1[0], e1[1], e1[2])
+                        #glVertex3f(e2[0], e2[1], e2[2])
+                        #glEnd()    
+                        #
+                        #glColor3f(1.0, 1.0, 0.0)
+                        #glPointSize(3)
+                        #glBegin(GL_POINTS)
+                        #glVertex3f(e1[0], e1[1], e1[2])
+                        #glVertex3f(e2[0], e2[1], e2[2])
+                        #glEnd()
+                
 
 class GLWillsMeshRenderer:
-	def __init__(self,sim):
-		self.sim = sim
-	
-	def render_gl(self, selection=None): # is it necessary to have this method? YES
-		self.render_mesh()
-	
-	def render_mesh(self):
+        def __init__(self,sim):
+                self.sim = sim
+        
+        def render_gl(self, selection=None): # is it necessary to have this method? YES
+                self.render_mesh()
+        
+        def render_mesh(self):
 
-		# choose mesh color
-		glColor3f(0,1,0) # green
-	
-		# get domain info
-		min_x = self.sim.phys.min_x_coord
-		min_y = self.sim.phys.min_y_coord
-		max_x = self.sim.phys.max_x_coord
-		max_y = self.sim.phys.max_y_coord
-		nx = self.sim.phys.grid_x_max - self.sim.phys.grid_x_min 
-		ny = self.sim.phys.grid_y_max - self.sim.phys.grid_y_min 
-		z_offset = -0.1
-		h = self.sim.phys.grid_spacing
-		glLineWidth(2)
-	
-		# render lines in x direction
-		for i in range(0,ny+1):
-			glBegin( GL_LINES )
-			glVertex3f(min_x, min_y + i*h, z_offset)
-			glVertex3f(max_x, min_y + i*h, z_offset)
-			glEnd( )
+                # choose mesh color
+                glColor3f(0,1,0) # green
+        
+                # get domain info
+                min_x = self.sim.phys.min_x_coord
+                min_y = self.sim.phys.min_y_coord
+                max_x = self.sim.phys.max_x_coord
+                max_y = self.sim.phys.max_y_coord
+                nx = self.sim.phys.grid_x_max - self.sim.phys.grid_x_min 
+                ny = self.sim.phys.grid_y_max - self.sim.phys.grid_y_min 
+                z_offset = -0.1
+                h = self.sim.phys.grid_spacing
+                glLineWidth(2)
+        
+                # render lines in x direction
+                for i in range(0,ny+1):
+                        glBegin( GL_LINES )
+                        glVertex3f(min_x, min_y + i*h, z_offset)
+                        glVertex3f(max_x, min_y + i*h, z_offset)
+                        glEnd( )
 
-		# render lines in y direction
-		for j in range(0,nx+1):
-			glBegin( GL_LINES )
-			glVertex3f(min_x + j*h, min_y, z_offset)
-			glVertex3f(min_x + j*h, max_y, z_offset)
-			glEnd( )
-			
+                # render lines in y direction
+                for j in range(0,nx+1):
+                        glBegin( GL_LINES )
+                        glVertex3f(min_x + j*h, min_y, z_offset)
+                        glVertex3f(min_x + j*h, max_y, z_offset)
+                        glEnd( )
+                        
 
 
-		
+                
 class GLStaticMeshRenderer:
     def __init__(self, mesh, regul):
         self.mesh = mesh
