@@ -298,6 +298,93 @@ float pt_to_plane_dist(float4 v, float4 n, float4 p)
   return dot((p-v), n);
 }
 
+// intest distance from a point p to a sphere at point v
+// with radius r
+float pt_to_sphere_dist(float4 v, float rad, float4 p)
+{
+  return length(p - v) - rad;
+}
+
+__kernel void find_sphere_contacts(const int max_cells,
+                                  const int max_contacts,
+                                  const int n_spheres,
+                                  __global const float4* sphere_pts,
+                                  __global const float* sphere_coeffs,
+                                  __global const float* sphere_rads,
+                                  __global const float4* centers,
+                                  __global const float4* dirs,
+                                  __global const float* lens,
+                                  __global const float* rads,
+                                  __global int* n_cts,
+                                  __global int* frs,
+                                  __global int* tos,
+                                  __global float* dists,
+                                  __global float4* pts,
+                                  __global float4* norms,
+                                  __global float* reldists,
+                                  __global float* stiff)
+{
+  int i = get_global_id(0);
+
+  // collision count
+  int k = n_cts[i]; //keep existing contacts
+
+  float4 end1 = centers[i] - 0.5f*lens[i]*dirs[i]; // 'left' end of the cell
+  float4 end2 = centers[i] + 0.5f*lens[i]*dirs[i]; // 'right' end of the cell
+
+  for (int n = 0; n < n_spheres; n++) { // loop through all spheres
+    int to1 = -2*n - 1; // 'to' if left end has contact with sphere n
+    int to2 = to1 - 1;  // 'to' if right end has contact with sphere n
+
+    float dist1 = pt_to_sphere_dist(sphere_pts[n], sphere_rads[n], end1)-rads[i];
+    float dist2 = pt_to_sphere_dist(sphere_pts[n], sphere_rads[n], end2)-rads[i];
+
+    // check for old contacts with this sphere
+    int cti1 = -1;
+    int cti2 = -1;
+    for (int m = i*max_contacts; m < i*max_contacts+n_cts[i]; m++) {
+      if (tos[m] == to1) cti1 = m;
+      else if (tos[m] == to2) cti2 = m;
+    }
+
+    bool two_pts = ((cti1 >= 0) || (dist1<0.f) ) && ( (cti2 >= 0) || (dist2<0.f) );
+    float stiffness = two_pts*ISQRT2 + (!two_pts)*1.0;
+
+    // if we're in contact, or we were in contact, recompute
+    if ((cti1 >= 0) || (dist1<0.f) ){
+      // need to make a new contact
+      if (cti1 < 0) {
+        cti1 = i*max_contacts+k;
+        k++;
+      }
+
+      frs[cti1] = i;
+      tos[cti1] = to1;
+      dists[cti1] = dist1;
+      pts[cti1] = end1; // FIXME: not really the right point
+      norms[cti1] = normalize(-end1 + sphere_pts[n]);
+      reldists[cti1] = stiffness*sphere_coeffs[n]*dist1;
+      stiff[cti1] = stiffness*sphere_coeffs[n];
+    }
+
+    if ( (cti2 >= 0) || (dist2<0.f) ){
+      if (cti2 < 0) {
+        cti2 = i*max_contacts+k;
+        k++;
+      }
+
+      frs[cti2] = i;
+      tos[cti2] = to2;
+      dists[cti2] = dist2;
+      pts[cti2] = end2;
+      norms[cti2] = normalize(-end2 + sphere_pts[n]);
+      reldists[cti2] = stiffness*sphere_coeffs[n]*dist2;
+      stiff[cti2] = stiffness*sphere_coeffs[n];
+    }
+  }
+  n_cts[i] = k;
+}
+
 
 __kernel void find_plane_contacts(const int max_cells,
                                   const int max_contacts,
@@ -676,7 +763,7 @@ __kernel void build_matrix(const int max_contacts,
 
   int b = tos[i];
 
-  // plane contacts have no to_ent, and have negative indices
+  // plane and sphere contacts have no to_ent, and have negative indices
   if (b < 0) {
     to_ents[i] = 0.f;
     return;

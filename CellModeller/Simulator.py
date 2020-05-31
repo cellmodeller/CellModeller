@@ -392,16 +392,16 @@ visualised.
         data['lineage'] = self.lineage
         data['moduleStr'] = self.moduleOutput
         data['moduleName'] = self.moduleName
-        if self.integ:
-            print("Writing new pickle format")
-            data['specData'] = self.integ.levels
-            data['sigGrid'] = self.integ.signalLevel
-            data['sigGridOrig'] = self.sig.gridOrig
-            data['sigGridDim'] = self.sig.gridDim
-            data['sigGridSize'] = self.sig.gridSize
-        if self.sig:
-            data['sigData'] = self.integ.cellSigLevels
-            data['sigGrid'] = self.integ.signalLevel
+        #if self.integ:
+        #    print("Writing new pickle format")
+        #    data['specData'] = self.integ.levels
+        #    data['sigGrid'] = self.integ.signalLevel
+        #    data['sigGridOrig'] = self.sig.gridOrig
+        #    data['sigGridDim'] = self.sig.gridDim
+        #    data['sigGridSize'] = self.sig.gridSize
+        #if self.sig:
+        #    data['sigData'] = self.integ.cellSigLevels
+        #    data['sigGrid'] = self.integ.signalLevel
         pickle.dump(data, outfile, protocol=-1)
         #output csv file with cell pos,dir,len - sig?
 

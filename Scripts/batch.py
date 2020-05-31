@@ -6,7 +6,7 @@ import shutil
 
 from CellModeller.Simulator import Simulator
 
-max_cells = 10000
+max_cells = 5000
 cell_buffer = 256
 
 def simulate(modfilename, platform, device, steps=50):
@@ -33,14 +33,14 @@ def main():
         platforms = cl.get_platforms()
         print("Select OpenCL platform:")
         for i in range(len(platforms)):
-            print('press '+str(i)+' for '+str(platforms[i]))
+            print(('press '+str(i)+' for '+str(platforms[i])))
         platnum = int(eval(input('Platform Number: ')))
 
         # Device
         devices = platforms[platnum].get_devices()
         print("Select OpenCL device:")
         for i in range(len(devices)):
-            print('press '+str(i)+' for '+str(devices[i]))
+            print(('press '+str(i)+' for '+str(devices[i])))
         devnum = int(eval(input('Device Number: ')))
     else:
         platnum = int(sys.argv[2])

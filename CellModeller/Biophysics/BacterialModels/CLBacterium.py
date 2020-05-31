@@ -22,6 +22,7 @@ class CLBacterium:
                  max_cells=10000,
                  max_contacts=24,
                  max_planes=4,
+                 max_spheres=4,
                  max_sqs=192**2,
                  grid_spacing=5.0,
                  muA=1.0,
@@ -49,6 +50,7 @@ class CLBacterium:
         self.max_cells = max_cells
         self.max_contacts = max_contacts
         self.max_planes = max_planes
+        self.max_spheres = max_spheres
         self.max_sqs = max_sqs
         self.grid_spacing = grid_spacing
         self.muA = muA
@@ -62,6 +64,7 @@ class CLBacterium:
         self.n_cells = 0
         self.n_cts = 0
         self.n_planes = 0
+        self.n_spheres = 0
 
         self.next_id = 0
 
@@ -88,6 +91,7 @@ class CLBacterium:
         self.n_cells=0
         self.n_cts=0
         self.n_planes=0
+        self.n_spheres=0
 
     def setRegulator(self, regulator):
         self.regulator = regulator
@@ -132,6 +136,14 @@ class CLBacterium:
         self.plane_norms[pidx] = tuple(norm) + (0,)
         self.plane_coeffs[pidx] = coeff
         self.set_planes()
+
+    def addSphere(self, pt, rad, coeff):
+        sidx = self.n_spheres
+        self.n_spheres += 1
+        self.sphere_pts[sidx] = tuple(pt)+(0,)
+        self.sphere_rads[sidx] = rad
+        self.sphere_coeffs[sidx] = coeff
+        self.set_spheres()
 
     def hasNeighbours(self):
         return False
@@ -232,6 +244,15 @@ class CLBacterium:
         self.plane_norms_dev = cl_array.zeros(self.queue, plane_geom, vec.float4)
         self.plane_coeffs = numpy.zeros(plane_geom, numpy.float32)
         self.plane_coeffs_dev = cl_array.zeros(self.queue, plane_geom, numpy.float32)
+
+        # constraint spheres
+        sphere_geom = (self.max_spheres,)
+        self.sphere_pts = numpy.zeros(sphere_geom, vec.float4)
+        self.sphere_pts_dev = cl_array.zeros(self.queue, sphere_geom, vec.float4)
+        self.sphere_rads = numpy.zeros(sphere_geom, numpy.float32)
+        self.sphere_rads_dev = cl_array.zeros(self.queue, sphere_geom, numpy.float32)
+        self.sphere_coeffs = numpy.zeros(sphere_geom, numpy.float32)
+        self.sphere_coeffs_dev = cl_array.zeros(self.queue, sphere_geom, numpy.float32)
 
         # contact data
         ct_geom = (self.max_cells, self.max_contacts)
@@ -425,6 +446,13 @@ class CLBacterium:
         self.plane_pts_dev[0:self.n_planes].set(self.plane_pts[0:self.n_planes])
         self.plane_norms_dev[0:self.n_planes].set(self.plane_norms[0:self.n_planes])
         self.plane_coeffs_dev[0:self.n_planes].set(self.plane_coeffs[0:self.n_planes])
+
+
+    def set_spheres(self):
+        """Copy sphere pts and coeffs to the device from local."""
+        self.sphere_pts_dev[0:self.n_spheres].set(self.sphere_pts[0:self.n_spheres])
+        self.sphere_rads_dev[0:self.n_spheres].set(self.sphere_rads[0:self.n_spheres])
+        self.sphere_coeffs_dev[0:self.n_spheres].set(self.sphere_coeffs[0:self.n_spheres])
 
 
     def get_cts(self):
@@ -745,6 +773,28 @@ class CLBacterium:
                                          self.plane_pts_dev.data,
                                          self.plane_norms_dev.data,
                                          self.plane_coeffs_dev.data,
+                                         centers.data,
+                                         dirs.data,
+                                         lens.data,
+                                         self.cell_rads_dev.data,
+                                         self.cell_n_cts_dev.data,
+                                         self.ct_frs_dev.data,
+                                         self.ct_tos_dev.data,
+                                         self.ct_dists_dev.data,
+                                         self.ct_pts_dev.data,
+                                         self.ct_norms_dev.data,
+                                         self.ct_reldists_dev.data,
+                                         self.ct_stiff_dev.data).wait()
+
+        self.program.find_sphere_contacts(self.queue,
+                                         (self.n_cells,),
+                                         None,
+                                         numpy.int32(self.max_cells),
+                                         numpy.int32(self.max_contacts),
+                                         numpy.int32(self.n_spheres),
+                                         self.sphere_pts_dev.data,
+                                         self.sphere_coeffs_dev.data,
+                                         self.sphere_rads_dev.data,
                                          centers.data,
                                          dirs.data,
                                          lens.data,

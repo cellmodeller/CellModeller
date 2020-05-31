@@ -140,7 +140,7 @@ class CellModellerPDFGenerator(Canvas):
         mnx = -20
         mxy = 20
         mny = -20
-        for (id,s) in self.states.items():
+        for (id,s) in list(self.states.items()):
             pos = s.pos    
             l = s.length    # add/sub length to keep cell in frame
             mxx = max(mxx,pos[0]+l) 
@@ -155,7 +155,7 @@ class CellModellerPDFGenerator(Canvas):
 
 def importPickle(fname):
     if fname[-7:]=='.pickle':
-        print('Importing CellModeller pickle file: %s'%fname)
+        print(('Importing CellModeller pickle file: %s'%fname))
         data = pickle.load(open(fname, 'rb'))
 
         # Check for old-style pickle that is tuple, 
@@ -182,19 +182,19 @@ def main():
     # e.g. outline color, page size, etc.
     #
     # For now, put these options into variables here:
-    bg_color = Color(1.0,1.0,1.0,alpha=1.0)
+    bg_color = Color(0,0,0,alpha=1.0)
 
     # For now just assume a list of files
     infns = sys.argv[1:]
     for infn in infns:
         # File names
         if infn[-7:]!='.pickle':
-            print('Ignoring file %s, because its not a pickle...'%(infn))
+            print(('Ignoring file %s, because its not a pickle...'%(infn)))
             continue
 
-        outfn = string.replace(infn, '.pickle', '.pdf')
+        outfn = infn.replace('.pickle', '.pdf')
         outfn = os.path.basename(outfn) # Put output in this dir
-        print('Processing %s to generate %s'%(infn,outfn))
+        print(('Processing %s to generate %s'%(infn,outfn)))
         
         # Import data
         data = importPickle(infn)
@@ -211,14 +211,14 @@ def main():
         '''(w,h) = pdf.computeBox()
         sqrt2 = math.sqrt(2)
         world = (w/sqrt2,h/sqrt2)'''
-        world = (250,250)
+        world = (100,100)
 
         # Page setup
         page = (20,20)
         center = (0,0)
 
         # Render pdf
-        print('Rendering PDF output to %s'%outfn)
+        print(('Rendering PDF output to %s'%outfn))
         pdf.draw_frame(outfn, world, page, center)
 
 if __name__ == "__main__": 
