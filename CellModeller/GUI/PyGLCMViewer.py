@@ -16,6 +16,7 @@ import pickle
 import pyopencl as cl
 import importlib
 import numpy as np
+from skimage.io import imsave
 
 class PyGLCMViewer(PyGLWidget):
 
@@ -216,7 +217,17 @@ class PyGLCMViewer(PyGLWidget):
                     self.updateSelectedCell()
                     if self.run:
                         self.frameNo += 1
-    
+                        if self.frameNo%5 == 0:
+                            img = self.grabFrameBuffer()
+                            img = img.convertToFormat(QtGui.QImage.Format.Format_RGB32)
+
+                            width = img.width()
+                            height = img.height()
+                            ptr = img.bits()
+                            ptr.setsize(height * width * 4)
+                            arr = np.frombuffer(ptr, np.uint8).reshape((height, width, 4))
+                            imsave('frame_grab%04d.png'%self.sim.stepNum, arr)
+
     def updateSelectedCell(self):
         if self.sim:
             states = self.sim.cellStates
@@ -267,7 +278,7 @@ class PyGLCMViewer(PyGLWidget):
 
     def paintGL(self):
         PyGLWidget.paintGL(self)
-        glClearColor(0.5,0.5,0.5,0.0)
+        glClearColor(1,1,1,0.0)
         glClear(GL_COLOR_BUFFER_BIT)
         glMatrixMode(GL_MODELVIEW)
         glPushMatrix()
@@ -276,7 +287,7 @@ class PyGLCMViewer(PyGLWidget):
 
         # Draw a grid in xy plane
         glDisable(GL_LIGHTING)
-        glColor3f(1.0, 1.0, 1.0)
+        glColor3f(.5, .5, .5)
         glEnable(GL_LINE_SMOOTH)
         glLineWidth(1.0)
         glBegin(GL_LINES)

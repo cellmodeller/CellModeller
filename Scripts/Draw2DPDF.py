@@ -20,12 +20,14 @@ class CellModellerPDFGenerator(Canvas):
         self.name = name
         self.states = data.get('cellStates')
         self.signals = False
+        '''
         if 'specData' in data:
             self.signals = True
             self.signal_levels = data.get('sigGrid')
             self.signal_grid_orig = data.get('sigGridOrig')
             self.signal_grid_dim = data.get('sigGridDim')
             self.signal_grid_size = data.get('sigGridSize')
+        '''
         self.parents = data.get('lineage')
         self.data = data
         self.bg_color = bg_color
@@ -140,7 +142,7 @@ class CellModellerPDFGenerator(Canvas):
         mnx = -20
         mxy = 20
         mny = -20
-        for (id,s) in self.states.items():
+        for (id,s) in list(self.states.items()):
             pos = s.pos    
             l = s.length    # add/sub length to keep cell in frame
             mxx = max(mxx,pos[0]+l) 
@@ -155,7 +157,7 @@ class CellModellerPDFGenerator(Canvas):
 
 def importPickle(fname):
     if fname[-7:]=='.pickle':
-        print('Importing CellModeller pickle file: %s'%fname)
+        print(('Importing CellModeller pickle file: %s'%fname))
         data = pickle.load(open(fname, 'rb'))
 
         # Check for old-style pickle that is tuple, 
@@ -173,8 +175,8 @@ class MyPDFGenerator(CellModellerPDFGenerator):
         # Generate Color objects from cellState, fill=stroke
         (r,g,b) = state.color
         # Return value is tuple of colors, (fill, stroke)
-        fcol = Color(r,g,b,alpha=1.0)
-        scol = Color(r*0.5,g*0.5,b*0.5,alpha=1.0)
+        fcol = Color(r*2,g*2,b*2,alpha=1.0)
+        scol = Color(r,g,b,alpha=1.0)
         return [fcol,scol]
 
 def main():
@@ -182,19 +184,19 @@ def main():
     # e.g. outline color, page size, etc.
     #
     # For now, put these options into variables here:
-    bg_color = Color(1.0,1.0,1.0,alpha=1.0)
+    bg_color = Color(1,1,1,alpha=1.0)
 
     # For now just assume a list of files
     infns = sys.argv[1:]
     for infn in infns:
         # File names
         if infn[-7:]!='.pickle':
-            print('Ignoring file %s, because its not a pickle...'%(infn))
+            print(('Ignoring file %s, because its not a pickle...'%(infn)))
             continue
 
-        outfn = string.replace(infn, '.pickle', '.pdf')
+        outfn = infn.replace('.pickle', '.pdf')
         outfn = os.path.basename(outfn) # Put output in this dir
-        print('Processing %s to generate %s'%(infn,outfn))
+        print(('Processing %s to generate %s'%(infn,outfn)))
         
         # Import data
         data = importPickle(infn)
@@ -211,16 +213,17 @@ def main():
         '''(w,h) = pdf.computeBox()
         sqrt2 = math.sqrt(2)
         world = (w/sqrt2,h/sqrt2)'''
-        world = (250,250)
+        world = (400,20)
 
         # Page setup
-        page = (20,20)
+        page = (40,2)
         center = (0,0)
 
         # Render pdf
-        print('Rendering PDF output to %s'%outfn)
+        print(('Rendering PDF output to %s'%outfn))
         pdf.draw_frame(outfn, world, page, center)
 
 if __name__ == "__main__": 
     main()
+
 

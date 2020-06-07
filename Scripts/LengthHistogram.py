@@ -20,7 +20,7 @@ def lengthHist(pickle, bins, file=False):
     cs = data['cellStates']
     it = iter(cs)
     n = len(cs)
-    print('Number of cells = '+str(n))
+    print(('Number of cells = '+str(n)))
     lens = []
     r = []
     for it in cs:
@@ -44,7 +44,7 @@ def dirLengthHist(dir,bins,file=False):
             number = f[5:-7]
             if file:
                 fout = open('LengthData'+number+'.csv')
-            print('step number = ', number)
+            print(('step number = ', number))
             n, lens = lengthHist(dir + f,bins,file)
             if file:
                 fout.close()

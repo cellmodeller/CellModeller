@@ -14,5 +14,5 @@ for f in os.listdir(dir):
         (cs,lin) = pickle.load(open(ff,'r'))
         n = len(cs)
         t = os.path.getmtime(ff)
-        print("%i\t%f"%(n,t))
+        print(("%i\t%f"%(n,t)))
 

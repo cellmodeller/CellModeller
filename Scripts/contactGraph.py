@@ -110,7 +110,7 @@ it = iter(cs)
 n = len(cs)
 oname = fname.replace('.pickle','_graph.pdf')
 
-print("num_cells = "+str(n))
+print(("num_cells = "+str(n)))
 
 cell_type={}
 pos_dict={}
@@ -120,9 +120,9 @@ for it in cs:
 
 get_current_contacts(G, data)
 
-print("num_contacts = " + str(networkx.number_of_edges(G)))
+print(("num_contacts = " + str(networkx.number_of_edges(G))))
 degrees = list(G.degree().values())
-print("mean degree = " + str(np.mean(degrees)))
+print(("mean degree = " + str(np.mean(degrees))))
 
 if list(networkx.get_edge_attributes(G,'color').items()):
     edges,ecolor = list(zip(*list(networkx.get_edge_attributes(G,'color').items())))

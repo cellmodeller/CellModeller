@@ -331,6 +331,8 @@ class GLBacteriumRenderer:
         
                 #glDisable(GL_DEPTH_TEST)
                 glDisable(GL_LIGHTING)
+                glEnable(GL_CLIP_PLANE0)
+                glClipPlane(GL_CLIP_PLANE0, (0,.1,0,0))
                 cells = self.sim.cellStates.values()
                 for cell in cells:
                         l = cell.length
@@ -445,6 +447,8 @@ class GLBacteriumRenderer:
                                         glEnd()
                                         glEnable(GL_DEPTH_TEST)
                                         glEnable(GL_LIGHTING)
+                glDisable(GL_CLIP_PLANE0)
+                
 
 class GLBacteriumRendererWithPeriodicImages:
         def __init__(self, sim, properties=None, scales = None):
