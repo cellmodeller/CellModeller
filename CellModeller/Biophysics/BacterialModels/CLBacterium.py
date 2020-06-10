@@ -296,8 +296,8 @@ class CLBacterium:
         self.deltap_dev = cl_array.zeros(self.queue, cell_geom, vec.float8)
         self.Mx = numpy.zeros(mat_geom, numpy.float32)
         self.Mx_dev = cl_array.zeros(self.queue, mat_geom, numpy.float32)
-        self.MTMx = numpy.zeros(cell_geom, vec.float8)
-        self.MTMx_dev = cl_array.zeros(self.queue, cell_geom, vec.float8)
+        self.BTBx = numpy.zeros(cell_geom, vec.float8)
+        self.BTBx_dev = cl_array.zeros(self.queue, cell_geom, vec.float8)
         self.Minvx_dev = cl_array.zeros(self.queue, cell_geom, vec.float8)
 
         # CGS intermediates
@@ -883,8 +883,6 @@ class CLBacterium:
                                   (self.n_cells, self.max_contacts),
                                   None,
                                   numpy.int32(self.max_contacts),
-                                  numpy.float32(self.muA),
-                                  numpy.float32(self.gamma),
                                   self.pred_cell_centers_dev.data,
                                   self.pred_cell_dirs_dev.data,
                                   self.pred_cell_lens_dev.data,
@@ -901,7 +899,7 @@ class CLBacterium:
 
     def calculate_Ax(self, Ax, x, dt):
 
-        self.program.calculate_Mx(self.queue,
+        self.program.calculate_Bx(self.queue,
                                   (self.n_cells, self.max_contacts),
                                   None,
                                   numpy.int32(self.max_contacts),
@@ -911,7 +909,7 @@ class CLBacterium:
                                   self.to_ents_dev.data,
                                   x.data,
                                   self.Mx_dev.data).wait()
-        self.program.calculate_MTMx(self.queue,
+        self.program.calculate_BTBx(self.queue,
                                     (self.n_cells,),
                                     None,
                                     numpy.int32(self.max_contacts),
@@ -926,7 +924,7 @@ class CLBacterium:
         #self.vaddkx(Ax, numpy.float32(0.01), Ax, x)
 
         # Energy mimizing regularization
-        self.program.calculate_Minv_x(self.queue,
+        self.program.calculate_Mx(self.queue,
                                       (self.n_cells,),
                                       None,
                                       numpy.float32(self.muA),
@@ -952,7 +950,7 @@ class CLBacterium:
         self.vclearf(self.rhs_dev[0:self.n_cells])
 
         # put M^T n^Tv_rel in rhs (b)
-        self.program.calculate_MTMx(self.queue,
+        self.program.calculate_BTBx(self.queue,
                                     (self.n_cells,),
                                     None,
                                     numpy.int32(self.max_contacts),
@@ -965,8 +963,8 @@ class CLBacterium:
                                     self.rhs_dev.data).wait()
 
         # res = b-Ax
-        self.calculate_Ax(self.MTMx_dev, self.deltap_dev, dt)
-        self.vsub(self.res_dev[0:self.n_cells], self.rhs_dev[0:self.n_cells], self.MTMx_dev[0:self.n_cells])
+        self.calculate_Ax(self.BTBx_dev, self.deltap_dev, dt)
+        self.vsub(self.res_dev[0:self.n_cells], self.rhs_dev[0:self.n_cells], self.BTBx_dev[0:self.n_cells])
 
         # p = res
         cl.enqueue_copy(self.queue, self.p_dev[0:self.n_cells].data, self.res_dev[0:self.n_cells].data)
