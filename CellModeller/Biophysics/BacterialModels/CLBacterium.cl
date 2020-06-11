@@ -150,10 +150,10 @@ void cyl_inertia_tensor(float muA, float l, float4 axis, float4 res[]) {
   transpose(M, MT);
 
   float4 I[4];
-  I[0][0] = 0.f;
-  I[1][1] = diag;
-  I[2][2] = diag;
-  I[3][3] = 0.f;
+  I[0].s0 = 0.f;
+  I[1].s1 = diag;
+  I[2].s2 = diag;
+  I[3].s3 = 0.f;
 
   // M^T(I)M
   float4 IM[4];
