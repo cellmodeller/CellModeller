@@ -875,19 +875,26 @@ __kernel void calculate_Mx(const float muA,
 			       __global float8* Mx)
 {
   int i = get_global_id(0);
+  float l = lens[i] + 2.f * rads[i];
 
   float8 xi = x[i];
   float8 v = 0.f;
-  v.s012 = xi.s012*(muA*(lens[i]+2.f*rads[i]));
+  v.s012 = xi.s012 * muA * l;
 
   float4 I[4];
-  cyl_inertia_tensor(muA, lens[i]+2.f*rads[i], dirs[i], I);
+  cyl_inertia_tensor(muA, l, dirs[i], I);
   float4 L = 0.f;
   L.s012 = xi.s345;
   float4 w = matmul(I, L);
   v.s345 = w.s012;
 
-  v.s6 = xi.s6*gamma;
+  //float4 w = 0.f;
+  //w.s012 = xi.s345;
+  //float4 a = dirs[i];
+  //float4 vv = (w - a*dot(a,w)) * muA * l*l*l / 12.f;
+  //v.s345 = vv.s012;
+  
+  v.s6 = xi.s6 * gamma;
 
   Mx[i] = v;
 }
@@ -1008,17 +1015,20 @@ __kernel void add_impulse(const float muA,
   dcenters[i] += dplin;
 
   // FIXME: should probably store these so we don't recompute them
-  float4 Iinv[4];
-  cyl_inv_inertia_tensor(muA, len_i+2.f*rad_i, dir_i, Iinv);
-  float4 dL = 0.f;
-  dL.s012 = deltap_i.s345;
-  float4 dpang = matmul(Iinv, dL);
+  //float4 Iinv[4];
+  //cyl_inv_inertia_tensor(muA, len_i+2.f*rad_i, dir_i, Iinv);
+  //float4 dL = 0.f;
+  //dL.s012 = deltap_i.s345;
+  //float4 dpang = matmul(Iinv, dL);
+
+  float4 dpang = 0.f;
+  dpang.s012 = deltap_i.s345;
   float dpangmag = length(dpang);
   if (dpangmag>ANG_LIMIT)
   {
     dpang *= ANG_LIMIT/dpangmag;
   }
-  dangs[i] += dL; //dpang;
+  dangs[i] += dpang;
   
   float dplen = deltap_i.s6;
   //dlens[i] += max(0.f, target_dlens[i] + dplen);

@@ -21,8 +21,8 @@ class CLBacterium:
                  max_substeps=8,
                  max_cells=10000,
                  max_contacts=24,
-                 max_planes=4,
-                 max_spheres=4,
+                 max_planes=1,
+                 max_spheres=1,
                  max_sqs=192**2,
                  grid_spacing=5.0,
                  muA=1.0,
@@ -177,6 +177,9 @@ class CLBacterium:
         self.vsubkx = ElementwiseKernel(self.context,
                                             "float8 *res, const float k, const float8 *in1, const float8 *in2",
                                             "res[i] = in1[i] - k*in2[i]", "vecsubkx")
+        self.vmulk = ElementwiseKernel(self.context,
+                                            "float8 *res, const float k, const float8 *in1",
+                                            "res[i] = k*in1[i]", "vecmulk")
 
         # cell geometry kernels
         self.calc_cell_area = ElementwiseKernel(self.context, "float* res, float* r, float* l",
@@ -517,7 +520,7 @@ class CLBacterium:
             self.n_ticks = int(math.ceil(dt/self.dt)) 
         else:
             self.n_ticks = 1 
-        #print "n_ticks = %d"%(self.n_ticks)
+        # print("n_ticks = %d"%(self.n_ticks))
         self.actual_dt = dt / float(self.n_ticks)
         self.progress_initialised = True
 
@@ -604,11 +607,12 @@ class CLBacterium:
         self.collect_tos()
 
         self.sub_tick_i += 1
+        alpha = 10**(self.sub_tick_i)
         new_cts = self.n_cts - old_n_cts
         if (new_cts>0 or self.sub_tick_i==0) and self.sub_tick_i<self.max_substeps:
             self.build_matrix() # Calculate entries of the matrix
             #print "max cell contacts = %i"%cl_array.max(self.cell_n_cts_dev).get()
-            self.CGSSolve(dt) # invert MTMx to find deltap
+            self.CGSSolve(dt, alpha) # invert MTMx to find deltap
             self.add_impulse()
             return False
         else:
@@ -897,7 +901,7 @@ class CLBacterium:
                                   self.ct_stiff_dev.data).wait()
     
 
-    def calculate_Ax(self, Ax, x, dt):
+    def calculate_Ax(self, Ax, x, dt, alpha):
 
         self.program.calculate_Bx(self.queue,
                                   (self.n_cells, self.max_contacts),
@@ -933,15 +937,17 @@ class CLBacterium:
                                       self.cell_lens_dev.data,
                                       self.cell_rads_dev.data,
                                       x.data,
-                                      self.Minvx_dev.data).wait()
+                                      self.Mx_dev.data).wait()
 
         #this was altered from dt*reg_param
-        self.vaddkx(Ax, self.reg_param, Ax, self.Minvx_dev).wait()
+        #self.vaddkx(Ax, self.gamma, Ax, self.Mx_dev).wait()
+        #self.vaddkx(Ax, alpha, self.Mx_dev, Ax).wait()
+        self.vaddkx(Ax, self.reg_param, Ax, self.Mx_dev).wait()
         # 1/math.sqrt(self.n_cells) removed from the reg_param NB
     
         #print(self.Minvx_dev)
 
-    def CGSSolve(self, dt, substep=False):
+    def CGSSolve(self, dt, alpha, substep=False):
         # Solve A^TA\deltap=A^Tb (Ax=b)
 
         # There must be a way to do this using built in pyopencl - what
@@ -962,8 +968,9 @@ class CLBacterium:
                                     self.ct_reldists_dev.data,
                                     self.rhs_dev.data).wait()
 
+
         # res = b-Ax
-        self.calculate_Ax(self.BTBx_dev, self.deltap_dev, dt)
+        self.calculate_Ax(self.BTBx_dev, self.deltap_dev, dt, alpha)
         self.vsub(self.res_dev[0:self.n_cells], self.rhs_dev[0:self.n_cells], self.BTBx_dev[0:self.n_cells])
 
         # p = res
@@ -985,7 +992,7 @@ class CLBacterium:
             
         for iter in range(max_iters):
             # Ap
-            self.calculate_Ax(self.Ap_dev[0:self.n_cells], self.p_dev[0:self.n_cells], dt)
+            self.calculate_Ax(self.Ap_dev[0:self.n_cells], self.p_dev[0:self.n_cells], dt, alpha)
 
             # p^TAp
             pAp = self.vdot(self.p_dev[0:self.n_cells], self.Ap_dev[0:self.n_cells]).get()
