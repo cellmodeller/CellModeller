@@ -325,6 +325,7 @@ class GLBacteriumRenderer:
                 self.quad = gluNewQuadric()
                 self.properties = properties
                 self.scales = scales
+                self.last_rendered_step = -1
 
         def init_gl(self):
                 pass
@@ -366,11 +367,13 @@ class GLBacteriumRenderer:
                 #        self.ncells_list = len(cells)
 
                 #if len(cells)!=self.ncells_list:
-                #    self.build_list(cells)
-                #    self.ncells_list = len(cells)
+                if self.last_rendered_step<self.sim.stepNum:
+                    self.build_list(cells)
+                    self.ncells_list = len(cells)
+                    self.last_rendered_step = self.sim.stepNum
         #====================================================================================
-                #glCallList(self.dlist)
-                self.render_cells(selection=selection)
+                glCallList(self.dlist)
+                #self.render_cells(selection=selection)
 
 
         def renderNames_gl(self, selection=None):
