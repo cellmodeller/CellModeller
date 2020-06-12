@@ -173,7 +173,7 @@ class MyPDFGenerator(CellModellerPDFGenerator):
         # Generate Color objects from cellState, fill=stroke
         (r,g,b) = state.color
         # Return value is tuple of colors, (fill, stroke)
-        fcol = Color(r*2,g*2,b*2,alpha=1.0)
+        fcol = Color(r,g,b,alpha=1.0)
         scol = Color(r*0.5,g*0.5,b*0.5,alpha=1.0)
         return [fcol,scol]
 
@@ -211,7 +211,7 @@ def main():
         '''(w,h) = pdf.computeBox()
         sqrt2 = math.sqrt(2)
         world = (w/sqrt2,h/sqrt2)'''
-        world = (200,200)
+        world = (20,20)
 
         # Page setup
         page = (20,20)

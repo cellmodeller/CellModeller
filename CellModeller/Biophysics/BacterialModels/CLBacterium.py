@@ -4,6 +4,7 @@ import numpy
 import pyopencl as cl
 import pyopencl.array as cl_array
 from pyopencl.array import vec
+from pyopencl.array import max as device_max
 from pyopencl.elementwise import ElementwiseKernel
 from pyopencl.reduction import ReductionKernel
 import random
@@ -1025,7 +1026,7 @@ class CLBacterium:
             #print '        ',iter,rsold
 
         if self.printing and self.frame_no%10==0:
-            print('% 5i'%self.frame_no + '% 6i cells  % 6i cts  % 6i iterations  residual = %f' % (self.n_cells, self.n_cts, iter+1, rsnew))
+            print('% 5i'%self.frame_no + '% 6i cells  % 6i cts  % 6i iterations  residual = %f' % (self.n_cells, self.n_cts, iter+1, math.sqrt(rsnew/self.n_cells)))
         return (iter+1, math.sqrt(rsnew/self.n_cells))
 
 
