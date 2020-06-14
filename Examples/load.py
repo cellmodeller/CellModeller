@@ -19,7 +19,6 @@ def setup(sim):
                             max_contacts=32, \
                             max_sqs=128**2, \
                             jitter_z=False, \
-                            reg_param=2, \
                             gamma=10)
 
     biophys.addPlane((0,0,-0.5), (0,0,1), 0.2)

@@ -9,7 +9,7 @@ outfile = 'all.csv'
 
 def setup(sim):
     # Set biophysics, signalling, and regulation models
-    biophys = CLBacterium(sim, jitter_z=False, max_cells=100000, reg_param=0.1, gamma=10., max_substeps=4)
+    biophys = CLBacterium(sim, jitter_z=False, max_cells=100000, gamma=10., max_substeps=4)
 
     # use this file for reg too
     regul = ModuleRegulator(sim, sim.moduleName)	
