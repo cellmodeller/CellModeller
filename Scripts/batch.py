@@ -6,7 +6,7 @@ import shutil
 
 from CellModeller.Simulator import Simulator
 
-max_cells = 5000
+max_cells = 50000
 cell_buffer = 256
 
 def simulate(modfilename, platform, device, steps=50):
