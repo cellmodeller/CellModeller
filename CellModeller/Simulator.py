@@ -10,6 +10,8 @@ import inspect
 import imp
 import configparser
 import importlib
+import pandas as pd
+import json
 
 class Simulator:
     """
@@ -364,7 +366,8 @@ visualised.
             self.integ.step(self.dt)
 
         if self.saveOutput and self.stepNum%self.pickleSteps==0:
-            self.writePickle()
+            #self.writePickle()
+            self.writeJSON()
 
         self.stepNum += 1
         return True
@@ -381,6 +384,19 @@ visualised.
             ndir = cdir/numpy.linalg.norm(cdir) #normalize cell dir just in case
             #this should probably also check for overlaps
             self.addCell(pos=tuple(cpos), dir=tuple(ndir), length=clen)
+
+    def writeJSON(self):
+        filename = os.path.join(self.outputDirPath, 'step-%05i.pickle' % self.stepNum)
+        outfile = open(filename, 'w')
+        data = {}
+        data['cellStates'] = pd.DataFrame()
+        data['cellStates'].append([c.__dict__ for id,c in self.cellStates.items()])
+        data['stepNum'] = self.stepNum
+        data['lineage'] = self.lineage
+        data['moduleStr'] = self.moduleOutput
+        data['moduleName'] = self.moduleName
+        json.dump(data, outfile)
+
 
     ## Write current simulation state to an output file
     def writePickle(self, csv=False):

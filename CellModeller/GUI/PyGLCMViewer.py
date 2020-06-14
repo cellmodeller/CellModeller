@@ -16,6 +16,7 @@ import pickle
 import pyopencl as cl
 import importlib
 import numpy as np
+import json
 
 class PyGLCMViewer(PyGLWidget):
 
@@ -159,7 +160,8 @@ class PyGLCMViewer(PyGLWidget):
         if qs and self.getOpenCLPlatDev():
             filename = str(qs)
             print(filename)
-            data = pickle.load(open(filename,'rb'))
+            #data = pickle.load(open(filename,'rb'))
+            data = json.load(open(filename,'r'))
             if isinstance(data, dict):
                 self.modName = data['moduleName']
                 self.moduleStr = data['moduleStr']
