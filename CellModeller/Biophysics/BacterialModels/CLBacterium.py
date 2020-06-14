@@ -181,6 +181,10 @@ class CLBacterium:
         self.vmulk = ElementwiseKernel(self.context,
                                             "float8 *res, const float k, const float8 *in1",
                                             "res[i] = k*in1[i]", "vecmulk")
+        self.vnorm = ElementwiseKernel(self.context,
+                                            "float8 *res, const float8 *in1",
+                                            "res[i] = dot(in1[i], in1[i]", "vecnorm")
+
 
         # cell geometry kernels
         self.calc_cell_area = ElementwiseKernel(self.context, "float* res, float* r, float* l",
@@ -983,7 +987,7 @@ class CLBacterium:
         if math.sqrt(rsold/self.n_cells) < self.cgs_tol:
             if self.printing and self.frame_no%10==0:
                 print('% 5i'%self.frame_no + '% 6i cells  % 6i cts  % 6i iterations  residual = %f' % (self.n_cells,
-            self.n_cts, 0, rsold))
+            self.n_cts, 0, math.sqrt(rsold/self.n_cells)))
             return (0.0, rsold)
 
         # iterate
