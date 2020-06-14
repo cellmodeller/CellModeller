@@ -350,6 +350,7 @@ __kernel void find_sphere_contacts(const int max_cells,
                                   __global const float4* sphere_pts,
                                   __global const float* sphere_coeffs,
                                   __global const float* sphere_rads,
+                                  __global const float* sphere_norms,
                                   __global const float4* centers,
                                   __global const float4* dirs,
                                   __global const float* lens,
@@ -375,8 +376,8 @@ __kernel void find_sphere_contacts(const int max_cells,
     int to1 = -2*n - 1; // 'to' if left end has contact with sphere n
     int to2 = to1 - 1;  // 'to' if right end has contact with sphere n
 
-    float dist1 = pt_to_sphere_dist(sphere_pts[n], sphere_rads[n], end1)-rads[i];
-    float dist2 = pt_to_sphere_dist(sphere_pts[n], sphere_rads[n], end2)-rads[i];
+    float dist1 = sphere_norms[n] * pt_to_sphere_dist(sphere_pts[n], sphere_rads[n], end1)-rads[i];
+    float dist2 = sphere_norms[n] * pt_to_sphere_dist(sphere_pts[n], sphere_rads[n], end2)-rads[i];
 
     // check for old contacts with this sphere
     int cti1 = -1;
@@ -401,7 +402,7 @@ __kernel void find_sphere_contacts(const int max_cells,
       tos[cti1] = to1;
       dists[cti1] = dist1;
       pts[cti1] = end1; // FIXME: not really the right point
-      norms[cti1] = normalize(-end1 + sphere_pts[n]);
+      norms[cti1] = sphere_norms[n] *  normalize(-end1 + sphere_pts[n]);
       reldists[cti1] = stiffness*sphere_coeffs[n]*dist1;
       stiff[cti1] = stiffness*sphere_coeffs[n];
     }
@@ -416,7 +417,7 @@ __kernel void find_sphere_contacts(const int max_cells,
       tos[cti2] = to2;
       dists[cti2] = dist2;
       pts[cti2] = end2;
-      norms[cti2] = normalize(-end2 + sphere_pts[n]);
+      norms[cti2] = sphere_norms[n] * normalize(-end2 + sphere_pts[n]);
       reldists[cti2] = stiffness*sphere_coeffs[n]*dist2;
       stiff[cti2] = stiffness*sphere_coeffs[n];
     }

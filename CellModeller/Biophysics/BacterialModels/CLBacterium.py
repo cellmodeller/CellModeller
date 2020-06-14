@@ -136,12 +136,13 @@ class CLBacterium:
         self.plane_coeffs[pidx] = coeff
         self.set_planes()
 
-    def addSphere(self, pt, rad, coeff):
+    def addSphere(self, pt, rad, coeff, norm):
         sidx = self.n_spheres
         self.n_spheres += 1
         self.sphere_pts[sidx] = tuple(pt)+(0,)
         self.sphere_rads[sidx] = rad
         self.sphere_coeffs[sidx] = coeff
+        self.sphere_norms[sidx] = norm
         self.set_spheres()
 
     def hasNeighbours(self):
@@ -259,6 +260,8 @@ class CLBacterium:
         self.sphere_rads_dev = cl_array.zeros(self.queue, sphere_geom, numpy.float32)
         self.sphere_coeffs = numpy.zeros(sphere_geom, numpy.float32)
         self.sphere_coeffs_dev = cl_array.zeros(self.queue, sphere_geom, numpy.float32)
+        self.sphere_norms = numpy.zeros(sphere_geom, numpy.float32)
+        self.sphere_norms_dev = cl_array.zeros(self.queue, sphere_geom, numpy.float32)
 
         # contact data
         ct_geom = (self.max_cells, self.max_contacts)
@@ -459,6 +462,7 @@ class CLBacterium:
         self.sphere_pts_dev[0:self.n_spheres].set(self.sphere_pts[0:self.n_spheres])
         self.sphere_rads_dev[0:self.n_spheres].set(self.sphere_rads[0:self.n_spheres])
         self.sphere_coeffs_dev[0:self.n_spheres].set(self.sphere_coeffs[0:self.n_spheres])
+        self.sphere_norms_dev[0:self.n_spheres].set(self.sphere_norms[0:self.n_spheres])
 
 
     def get_cts(self):
@@ -802,6 +806,7 @@ class CLBacterium:
                                          self.sphere_pts_dev.data,
                                          self.sphere_coeffs_dev.data,
                                          self.sphere_rads_dev.data,
+                                         self.sphere_norms_dev.data,
                                          centers.data,
                                          dirs.data,
                                          lens.data,
