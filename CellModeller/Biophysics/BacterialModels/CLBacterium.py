@@ -30,7 +30,6 @@ class CLBacterium:
                  gamma=10.0,
                  dt=None,
                  cgs_tol=5e-3,
-                 reg_param=0.1,
                  jitter_z=True,
                  alternate_divisions=False,
                  printing=True,
@@ -58,7 +57,6 @@ class CLBacterium:
         self.gamma = gamma
         self.dt = dt
         self.cgs_tol = cgs_tol
-        self.reg_param = numpy.float32(reg_param)
 
         self.max_substeps = max_substeps
 
@@ -947,7 +945,7 @@ class CLBacterium:
         #this was altered from dt*reg_param
         #self.vaddkx(Ax, self.gamma, Ax, self.Mx_dev).wait()
         #self.vaddkx(Ax, alpha, self.Mx_dev, Ax).wait()
-        self.vaddkx(Ax, self.reg_param, Ax, self.Mx_dev).wait()
+        self.vaddkx(Ax, 1/self.gamma, Ax, self.Mx_dev).wait()
         # 1/math.sqrt(self.n_cells) removed from the reg_param NB
     
         #print(self.Minvx_dev)
