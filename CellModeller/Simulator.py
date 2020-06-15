@@ -316,7 +316,7 @@ visualised.
         del self.idToIdx[pid]
 
         # Divide the cell in each model
-        asymm = getattr(pState, 'asymm', [1, 1])
+        asymm = pState.get('asymm', [1,1]) #getattr(pState, 'asymm', [1, 1])
         self.phys.divide(pState, d1State, d2State, f1=asymm[0], f2=asymm[1])
         if self.integ:
             self.integ.divide(pState, d1State, d2State)
@@ -386,17 +386,16 @@ visualised.
             self.addCell(pos=tuple(cpos), dir=tuple(ndir), length=clen)
 
     def writeJSON(self):
-        filename = os.path.join(self.outputDirPath, 'step-%05i.pickle' % self.stepNum)
-        outfile = open(filename, 'w')
+        filename = os.path.join(self.outputDirPath, 'step-%05i.json' % self.stepNum)
+        outfile = open(filename, 'wt')
         data = {}
-        data['cellStates'] = pd.DataFrame()
-        data['cellStates'].append([c.__dict__ for id,c in self.cellStates.items()])
+        data['cellStates'] = self.cellStates
         data['stepNum'] = self.stepNum
         data['lineage'] = self.lineage
         data['moduleStr'] = self.moduleOutput
         data['moduleName'] = self.moduleName
+        print(outfile)
         json.dump(data, outfile)
-
 
     ## Write current simulation state to an output file
     def writePickle(self, csv=False):
