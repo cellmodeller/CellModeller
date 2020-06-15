@@ -229,9 +229,9 @@ class PyGLCMViewer(PyGLWidget):
                     if name not in CellState.excludeAttr:
                         txt += '<b>' + name + '</b>:\t'
                         if type(val) in [float, np.float32, np.float64]:
-                            txt += '%.3g'%val
+                            txt += '%g'%val
                         elif type(val) in [list, tuple, np.array]:
-                            txt += ', '.join(['%.3g'%v for v in val])
+                            txt += ', '.join(['%g'%v for v in val])
                         else:
                             txt += str(val)
                         txt += '<br>'

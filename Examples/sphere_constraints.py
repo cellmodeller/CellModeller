@@ -23,7 +23,7 @@ def setup(sim):
     # Specify the initial cell and its location in the simulation
     sim.addCell(cellType=0, pos=(0,0,0))
 
-    biophys.addSphere((0,0,0), 20, 1.0, -1)
+    biophys.addSphere((0,0,0), 10, 1.0, -1)
 
 
     # Add some objects to draw the models
