@@ -352,6 +352,7 @@ visualised.
         self.reg.step(self.dt)
         states = dict(self.cellStates)
         for (cid,state) in list(states.items()):
+            state.time = self.stepNum * self.dt
             if state.divideFlag:
                 self.divide(state) #neighbours no longer current
 
