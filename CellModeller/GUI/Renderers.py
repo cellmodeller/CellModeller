@@ -115,10 +115,11 @@ class GLSphereRenderer:
                         self.render_cell(cell, selection)
 
 class GLGridRenderer:
-    def __init__(self, sig, integ, rng=None):
+    def __init__(self, sig, integ, rng=None, alpha=1.):
         self.sig = sig
         self.integ = integ
         self.rng = rng
+        self.alpha = alpha
         self.size = self.sig.gridSize
         self.dim = self.sig.gridDim[1:]
         self.len = self.dim[0]*self.dim[1]
@@ -162,18 +163,18 @@ class GLGridRenderer:
       
         glEnable(GL_TEXTURE_2D)
         glDisable(GL_LIGHTING)
-        glDisable(GL_DEPTH_TEST)
+        #glDisable(GL_DEPTH_TEST)
         glBindTexture(GL_TEXTURE_2D, self.texture)
         #Load the Data into the Texture
         glTexImage2D( GL_TEXTURE_2D, 0, GL_RGB, self.texDim, self.texDim, 0, GL_RGB, GL_UNSIGNED_BYTE, self.byteImageData )
 #        glTexSubImage2Dub( GL_TEXTURE_2D, 0, 0,0, GL_RED, GL_UNSIGNED_BYTE, self.imageData )
-        glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST)#GL_LINEAR)
-        glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST)#GL_LINEAR)
+        glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR)
+        glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR)
         #Define some Parameters for this Texture
         
         glEnable(GL_BLEND)
         glBlendFunc(GL_SRC_ALPHA ,GL_ONE_MINUS_SRC_ALPHA)
-        glColor4f(1.0,1.0,1.0,0.2)
+        glColor4f(1.0,1.0,1.0,self.alpha)
         glBegin(GL_QUADS)
         glTexCoord2f(0.0, 0.0)
         glVertex3f(self.orig[0], self.orig[1],  0.0)    # Bottom Left Of The Texture and Quad
@@ -185,7 +186,7 @@ class GLGridRenderer:
         glVertex3f(self.orig[0] , self.orig[1]+self.dim[1]*self.size[1],  0.0) 
         glEnd()
         glEnable(GL_LIGHTING)
-        glEnable(GL_DEPTH_TEST)
+        #glEnable(GL_DEPTH_TEST)
         glDisable(GL_BLEND)
         glDisable(GL_TEXTURE_2D)
 
@@ -456,7 +457,7 @@ class GLBacteriumRenderer:
                 if selection==cid:
                         linecol = [1,0,0]
                 else:
-                        linecol = [0,0,0]
+                        linecol = [1,1,1]
                 cellcol = cell.color
                 if self.properties:
                         cellcol = []
