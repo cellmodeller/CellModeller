@@ -19,13 +19,13 @@ class CellModellerPDFGenerator(Canvas):
     def __init__(self, name, data, bg_color):
         self.name = name
         self.states = data.get('cellStates')
-        self.signals = False
-        if 'specData' in data:
-            self.signals = True
-            self.signal_levels = data.get('sigGrid')
-            self.signal_grid_orig = data.get('sigGridOrig')
-            self.signal_grid_dim = data.get('sigGridDim')
-            self.signal_grid_size = data.get('sigGridSize')
+
+        self.signal_levels = data.get('sigGrid', None)
+        self.signal_grid_orig = data.get('sigGridOrig', None)
+        self.signal_grid_dim = data.get('sigGridDim', None)
+        self.signal_grid_size = data.get('sigGridSize', None)
+        self.signals = self.signal_levels is not None
+        
         self.parents = data.get('lineage')
         self.data = data
         self.bg_color = bg_color
@@ -93,7 +93,7 @@ class CellModellerPDFGenerator(Canvas):
         self.line(-100, -16, 100, -16)
         self.line(-100, 16, 100, 16)
 
-    def draw_signals(self, index=0, scale=0.0192, z=2):
+    def draw_signals(self, index=0, scale=0.0192, z=0):
         '''
         Function for drawing signal grids, currently limited to 1 signal a plane at a fixed z-axis level through the
         grid
@@ -109,12 +109,13 @@ class CellModellerPDFGenerator(Canvas):
                                 self.signal_grid_dim, \
                                 self.signal_levels
         levels = levels.reshape(dim)
+        mx = levels[index,:,:,z].max()
         l = list(map(float,l))
         for i in range(dim[1]):
             x = l[0]*i + orig[0]
             for j in range(dim[2]):
                 y = l[1]*j + orig[1]
-                lvls = levels[index,i,j,z]/scale
+                lvls = levels[index,i,j,z]/mx
                 mxsig0 = max(lvls, mxsig0)
                 self.setFillColorRGB(lvls, 0, 0)
                 self.rect(x-l[0]/2.0, y-l[1]/2.0, l[0], l[1], stroke=0, fill=1)
@@ -211,7 +212,7 @@ def main():
         '''(w,h) = pdf.computeBox()
         sqrt2 = math.sqrt(2)
         world = (w/sqrt2,h/sqrt2)'''
-        world = (450,450)
+        world = (150,150)
 
         # Page setup
         page = (20,20)
