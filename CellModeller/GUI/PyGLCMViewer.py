@@ -275,16 +275,17 @@ class PyGLCMViewer(PyGLWidget):
         #glScalef(s,s,s)
 
         # Draw a grid in xy plane
+        glEnable(GL_DEPTH_TEST)
         glDisable(GL_LIGHTING)
         glColor3f(1.0, 1.0, 1.0)
         glEnable(GL_LINE_SMOOTH)
         glLineWidth(1.0)
         glBegin(GL_LINES)
         for i in range(25):
-            glVertex(-120, (i-12)*10)
-            glVertex(120, (i-12)*10)
-            glVertex((i-12)*10, -120)
-            glVertex((i-12)*10, 120)
+            glVertex(-120, (i-12)*10, 0)
+            glVertex(120, (i-12)*10, 0)
+            glVertex((i-12)*10, -120, 0)
+            glVertex((i-12)*10, 120, 0)
         glEnd()
 
         # Draw x,y,z axes
