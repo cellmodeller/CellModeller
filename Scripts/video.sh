@@ -14,7 +14,8 @@ done
 for f in $( ls *.pdf ); do
     NAME=`basename $f .pdf`
     convert \
-           -verbose       \
+           -colorspace RGB \
+	   -verbose       \
            -density 150   \
             $NAME.pdf      \
             $NAME.png

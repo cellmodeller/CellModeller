@@ -408,6 +408,27 @@ visualised.
         #output csv file with cell pos,dir,len - sig?
 
     # Populate simulation from saved data pickle
+    def loadGeometryFromPickle(self, data):
+        self.setCellStates(data['cellStates'])
+        self.lineage = data['lineage']
+        idx_map = {}
+        id_map = {}
+        idmax = 0
+        for id,state in data['cellStates'].items():
+            idx_map[state.id] = state.idx
+            id_map[state.idx] = state.id
+            if id>idmax:
+                idmax=id
+        self.idToIdx = idx_map
+        self.idxToId = id_map
+        self._next_id = idmax+1
+        self._next_idx = len(data['cellStates'])
+        if self.integ:
+            self.integ.setCellStates(self.cellStates)
+        if self.sig:
+            self.integ.setCellStates(self.cellStates)
+
+    # Populate simulation from saved data pickle
     def loadFromPickle(self, data):
         self.setCellStates(data['cellStates'])
         self.lineage = data['lineage']

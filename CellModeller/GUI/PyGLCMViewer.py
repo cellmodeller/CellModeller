@@ -152,6 +152,24 @@ class PyGLCMViewer(PyGLWidget):
         self.updateGL()
 
     @pyqtSlot()
+    def loadGeometry(self):
+        options = QFileDialog.Options()
+        options |= QFileDialog.DontUseNativeDialog
+        qs,_ = QFileDialog.getOpenFileName(self, 'Load geometry from pickle file', '', '*.pickle', options=options)
+        if qs:
+            filename = str(qs)
+            print(filename)
+            data = pickle.load(open(filename,'rb'))
+            if isinstance(data, dict):
+                self.sim.loadGeometryFromPickle(data)
+                self.frameNo = self.sim.stepNum
+                if self.run:
+                    self.frameNo += 1
+                self.updateGL()
+            else:
+                print("Pickle is in an unsupported format, sorry")
+
+    @pyqtSlot()
     def loadPickle(self):
         options = QFileDialog.Options()
         options |= QFileDialog.DontUseNativeDialog

@@ -63,8 +63,6 @@ class CLEulerSigIntegrator:
         self.regul = regul
         self.boundcond = boundcond
 
-        self.cellStates = sim.cellStates
-        self.nCells = len(self.cellStates)
 
         self.nSpecies = nSpecies
         self.nSignals = nSignals
@@ -99,10 +97,18 @@ class CLEulerSigIntegrator:
         self.initArrays()
         #self.initKernels()
 
+        self.setCellStates(sim.cellStates)
+        
+
+    def setCellStates(self, cs):
         # set the species for existing states to views of the levels array
-        cs = self.cellStates
+        self.cellStates = cs
+        self.nCells = len(self.cellStates)
+        self.cellSigLevels[:,:] = 0
         for id,c in list(cs.items()):
             c.species = self.specLevel[c.idx,:]
+            c.signals = self.cellSigLevels[c.idx,:]
+            self.celltype[c.idx] = numpy.int32(c.cellType)
 
 
     def makeViews(self):
