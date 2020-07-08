@@ -73,6 +73,7 @@ class GLSphereRenderer:
                 for cell in self.sim.cellStates.values():
                         l = cell.length
                         p = cell.pos
+                        r = cell.radius
                 
                         cid = cell.id
                         glPushName(cid) 
@@ -91,18 +92,44 @@ class GLSphereRenderer:
                 r = cell.radius
                 p = cell.pos
                 cid = cell.id
+                linecol = [0,0,0]
                 if selection==cid:
                         cellcol = [1,0,0]
                 else:
                         cellcol = cell.color
 
-                glColor3fv(cellcol)
+                glColor3fv(linecol)
+                glEnable(GL_BLEND)
+                glBlendFunc(GL_SRC_ALPHA ,GL_ONE_MINUS_SRC_ALPHA)
+                glEnable(GL_LINE_SMOOTH)
+                glLineWidth(8.0)
+                # draw wireframe for back facing polygons and cull front-facing ones
+                glPolygonMode(GL_BACK, GL_FILL)
+                glEnable(GL_CULL_FACE)
+                glCullFace(GL_FRONT)
+                glDepthFunc(GL_LEQUAL)
 
                 glMatrixMode(GL_MODELVIEW)
                 glPushMatrix()
-                glTranslatef(p[0],p[1],p[2])
+                glTranslatef(p[0],p[1],p[2])                
                 gluSphere(self.quad, r, 8, 8)
                 glPopMatrix() 
+
+                glDepthFunc(GL_LESS)
+                glDisable(GL_CULL_FACE)
+                glPolygonMode(GL_FRONT, GL_FILL)
+                glDisable(GL_LINE_SMOOTH)
+                glDisable(GL_BLEND)
+
+                glColor3fv(cellcol)
+                glMatrixMode(GL_MODELVIEW)
+                glPushMatrix()
+                glTranslatef(p[0],p[1],p[2])
+                glScalef(0.8,0.8,0.8)
+                gluSphere(self.quad, r, 8, 8)
+                #glScalef(1.25,1.0,1.0)
+                glPopMatrix() 
+
 
         def render_cells(self, selection=None):
         
