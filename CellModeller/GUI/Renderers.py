@@ -11,6 +11,7 @@ class GLSphereRenderer:
         def __init__(self, sim, properties=None, scales = None):
                 self.ncells_list = 0
                 self.ncells_names_list = 0
+                self.stepNum = -1
                 self.dlist = None
                 self.dlist_names = None
                 self.cellcol = [1, 1, 1] 
@@ -43,19 +44,12 @@ class GLSphereRenderer:
         def render_gl(self, selection=None):
                 cells = self.sim.cellStates.values()
                 states = self.sim.cellStates.items()
-        # FIXED =============================================================================
-                # Before, the renderer would only draw cells when the number of cells changed.
-                # Now it draws them whenever render_gl is called (by paintGL in PyGLCMViewer.py)
-                #if len(cells)!=self.ncells_list or len(cells)<500:
-                #        self.build_list(cells)
-                #        self.ncells_list = len(cells)
-
-                #if len(cells)!=self.ncells_list:
-                #    self.build_list(cells)
-                #    self.ncells_list = len(cells)
-        #====================================================================================
-                #glCallList(self.dlist)
-                self.render_cells(selection=selection)
+                if self.sim.stepNum > self.stepNum:
+                    self.build_list(cells)
+                    self.ncells_list = len(cells)
+                    self.stepNum = self.sim.stepNum
+                glCallList(self.dlist)
+                #self.render_cells(selection=selection)
 
 
         def renderNames_gl(self, selection=None):
@@ -102,7 +96,7 @@ class GLSphereRenderer:
                 glEnable(GL_BLEND)
                 glBlendFunc(GL_SRC_ALPHA ,GL_ONE_MINUS_SRC_ALPHA)
                 glEnable(GL_LINE_SMOOTH)
-                glLineWidth(8.0)
+                glLineWidth(1.0)
                 # draw wireframe for back facing polygons and cull front-facing ones
                 glPolygonMode(GL_BACK, GL_FILL)
                 glEnable(GL_CULL_FACE)
@@ -112,7 +106,7 @@ class GLSphereRenderer:
                 glMatrixMode(GL_MODELVIEW)
                 glPushMatrix()
                 glTranslatef(p[0],p[1],p[2])                
-                gluSphere(self.quad, r, 8, 8)
+                gluSphere(self.quad, r, 16, 16)
                 glPopMatrix() 
 
                 glDepthFunc(GL_LESS)
@@ -126,7 +120,7 @@ class GLSphereRenderer:
                 glPushMatrix()
                 glTranslatef(p[0],p[1],p[2])
                 glScalef(0.8,0.8,0.8)
-                gluSphere(self.quad, r, 8, 8)
+                gluSphere(self.quad, r, 16, 16)
                 #glScalef(1.25,1.0,1.0)
                 glPopMatrix() 
 
