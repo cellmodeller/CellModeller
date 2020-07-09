@@ -8,6 +8,7 @@ from pyopencl.array import vec
 from pyopencl.array import max as device_max
 from pyopencl.elementwise import ElementwiseKernel
 from pyopencl.reduction import ReductionKernel
+from pyopencl.clmath import cos, sin
 import random
 import time
 from pyopencl.clrandom import PhiloxGenerator
@@ -102,7 +103,7 @@ class CLSPP:
         self.init_kernels()
 
 
-    def addCell(self, cellState, pos=(0,0,0), dir=(1,0,0), rad=0.5, **kwargs):
+    def addCell(self, cellState, pos=(0,0,0), dir=(1,0,0), rad=1.,**kwargs):
         i = cellState.idx
         self.n_cells += 1
         cid = cellState.id
@@ -165,10 +166,25 @@ class CLSPP:
         self.vmulk = ElementwiseKernel(self.context,
                                             "float8 *res, const float k, const float8 *in1",
                                             "res[i] = k*in1[i]", "vecmulk")
+        self.vmulk4 = ElementwiseKernel(self.context,
+                                            "float4 *res, const float k, const float4 *in1",
+                                            "res[i] = k*in1[i]", "vecmulk4")
         self.vnorm = ElementwiseKernel(self.context,
                                             "float8 *res, const float8 *in1",
                                             "res[i] = dot(in1[i], in1[i]", "vecnorm")
+        self.vcrop = ElementwiseKernel(self.context,
+                                            "float4 *res",
+                                            "res[i].s3 = 0.f", "veccrop")
 
+        self.vang = ElementwiseKernel(self.context,
+                                            "float *res, const float4* in",
+                                            "res[i] = atan2(in[i].s1, in[i].s0)", "vecang")
+
+        self.vadd_float = ElementwiseKernel(self.context, "float *res, const float *in",
+                                      "res[i] = res[i] + in[i]", "vecaddfloat")
+
+        self.vfill_vec2d = ElementwiseKernel(self.context, "float4 *res, const float *in1, const float* in2",
+                                      "res[i].s0 = in1[i]; res[i].s1 = in2[i]", "vecaddfloat")
 
         # cell geometry kernels
         self.calc_cell_area = ElementwiseKernel(self.context, "float* res, float* r, float* l",
@@ -193,6 +209,8 @@ class CLSPP:
         self.cell_centers = numpy.zeros(cell_geom, vec.float4)
         self.cell_centers_dev = cl_array.zeros(self.queue, cell_geom, vec.float4)
         self.cell_dirs = numpy.zeros(cell_geom, vec.float4)
+        self.cell_angs_dev = cl_array.zeros(self.queue, cell_geom, numpy.float32)
+        self.cell_angs = numpy.zeros(cell_geom, numpy.float32)
         self.cell_dirs_dev = cl_array.zeros(self.queue, cell_geom, vec.float4)
         self.pred_cell_centers = numpy.zeros(cell_geom, vec.float4)
         self.pred_cell_centers_dev = cl_array.zeros(self.queue, cell_geom, vec.float4)
@@ -206,8 +224,7 @@ class CLSPP:
         self.cell_n_cts_dev = cl_array.zeros(self.queue, cell_geom, numpy.int32)
         self.cell_dcenters = numpy.zeros(cell_geom, vec.float4)
         self.cell_dcenters_dev = cl_array.zeros(self.queue, cell_geom, vec.float4)
-        self.cell_dangs = numpy.zeros(cell_geom, vec.float4)
-        self.cell_dangs_dev = cl_array.zeros(self.queue, cell_geom, vec.float4)
+        self.cell_fmot_dev = cl_array.zeros(self.queue, cell_geom, vec.float4)
 
         # gridding
         self.sq_inds = numpy.zeros((self.max_sqs,), numpy.int32)
@@ -305,7 +322,6 @@ class CLSPP:
         self.cell_dirs[0:self.n_cells] = self.cell_dirs_dev[0:self.n_cells].get()
         self.cell_rads[0:self.n_cells] = self.cell_rads_dev[0:self.n_cells].get()
         self.cell_dcenters[0:self.n_cells] = self.cell_dcenters_dev[0:self.n_cells].get()
-        self.cell_dangs[0:self.n_cells] = self.cell_dangs_dev[0:self.n_cells].get()
 
     def set_cells(self):
         """Copy cell centers, dirs, lens, and rads to the device from local."""
@@ -313,7 +329,6 @@ class CLSPP:
         self.cell_dirs_dev[0:self.n_cells].set(self.cell_dirs[0:self.n_cells])
         self.cell_rads_dev[0:self.n_cells].set(self.cell_rads[0:self.n_cells])
         self.cell_dcenters_dev[0:self.n_cells].set(self.cell_dcenters[0:self.n_cells])
-        self.cell_dangs_dev[0:self.n_cells].set(self.cell_dangs[0:self.n_cells])
 
     def set_planes(self):
         """Copy plane pts, norms, and coeffs to the device from local."""
@@ -437,11 +452,19 @@ class CLSPP:
             return False
 
     def sub_tick_init(self, dt):
-        #noise = np.array([np.random.normal(0, 1, size=(self.n_cells,4))])
-        #self.cell_dcenters_dev[0:self.n_cells].set(dt*noise)
-        #self.rand.fill_normal(self.cell_dcenters_dev[0:self.n_cells], sigma=dt)
-        for c in range(self.n_cells):
-            self.cell_dcenters_dev[c:c+1] = np.array([(random.gauss(0,dt*5),random.gauss(0,dt*5),random.gauss(0,dt*5),0)], vec.float4)  #np.array([(0.1,0,0,0)], vec.float4)
+        # Compute angle of cell orientation
+        self.vang(self.cell_angs_dev, self.cell_dirs_dev)
+        noise = self.rand.normal(self.queue, sigma=0.25, shape=(self.n_cells,), dtype=np.float32)
+        self.vadd_float(self.cell_angs_dev, noise)
+        x = cos(self.cell_angs_dev[:self.n_cells])
+        y = sin(self.cell_angs_dev[:self.n_cells])
+        self.vfill_vec2d(self.cell_dirs_dev[:self.n_cells], x, y)
+        self.vfill_vec2d(self.cell_dcenters_dev[:self.n_cells], x, y)
+        self.vmulk4(self.cell_dcenters_dev, np.float32(dt*5), self.cell_dcenters_dev)
+
+
+        #self.rand.fill_normal(self.cell_dcenters_dev[0:self.n_cells], sigma=dt*5)
+        #self.vcrop(self.cell_dcenters_dev[0:self.n_cells])
         
         # redefine gridding based on the range of cell positions
         self.cell_centers[0:self.n_cells] = self.cell_centers_dev[0:self.n_cells].get()

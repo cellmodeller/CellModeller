@@ -1,9 +1,4 @@
-#define EPSILON 0.1f
-#define MARGIN 0.01f
-#define RHS_FRAC 1.f 
-#define ANG_LIMIT ((float)(5.f*3.14159f/180.f))
-#define ISQRT2 ((float)(1.f/sqrt(2.f)))
-#define POINT 0.01f
+#define MARGIN 0.0f
 
 // multiply a matrix and a vector
 //  m -- 4x4 matrix
@@ -344,7 +339,12 @@ __kernel void find_contacts(const int max_cells,
           }
         }
 
+	float dij = length(centers[i]-centers[j]);
         float dist = length(centers[i]-centers[j]) - rads[i]-rads[j];
+	const float a = 2.f;
+	const float b = -4.f;
+	//float dist_adh = a + b * (dij - rads[i]);
+	float dist_adh = dij - rads[i]*1.5f;
 	float4 pt = 0.5f * (centers[i]+centers[j]);
 	float4 norm = normalize(centers[j]-centers[i]);
 
@@ -361,20 +361,20 @@ __kernel void find_contacts(const int max_cells,
               k++; // next contact
               frs[ct_i] = i;
               tos[ct_i] = j;
-              dists[ct_i] = dist;
+              dists[ct_i] = dist_adh;
               pts[ct_i] = pt;
               norms[ct_i] = norm;
-              reldists[ct_i] = stiffness*RHS_FRAC*dist;
+              reldists[ct_i] = stiffness*dist_adh;
               stiff[ct_i] = stiffness;
             }
 	}
         if(n_existing_cts>0){
           // recompute dist etc. for existing contact
           int idx = existing_cts_idx[0];
-          dists[idx] = dist;
+          dists[idx] = dist_adh;
           pts[idx] = pt;
           norms[idx] = norm;
-          reldists[idx] = stiffness*RHS_FRAC*dist;
+          reldists[idx] = stiffness*dist_adh;
           stiff[idx] = stiffness;
         }
 
