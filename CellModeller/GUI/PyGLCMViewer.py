@@ -241,7 +241,7 @@ class PyGLCMViewer(PyGLWidget):
                     self.updateSelectedCell()
                     if self.run:
                         self.frameNo += 1
-                    if self.grab and self.frameNo%5 == 0:
+                    if self.grab and self.frameNo%10 == 0:
                         im = self.grabFrameBuffer()
                         im.save('cellmodeller-%05d.png'%self.frameNo)
     
