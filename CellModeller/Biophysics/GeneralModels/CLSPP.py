@@ -209,6 +209,10 @@ class CLSPP:
                 reduce_expr="a+b", map_expr="dot(x[i].s0123,y[i].s0123)+dot(x[i].s4567,y[i].s4567)",
                 arguments="__global float8 *x, __global float8 *y")
     
+        # Add a force to position part of generalised position vector
+        self.add_force = ElementwiseKernel(self.context,
+                                            "float8 *pos, const float mag, const float4 *dir",
+                                            "pos[i].s0123 = pos[i].s0123 + mag*dir[i]", "add_force")
 
     def init_data(self):
         """Set up the data OpenCL will store on the device."""
@@ -473,7 +477,7 @@ class CLSPP:
         self.vfill_vec2d(self.cell_dcenters_dev[:self.n_cells], x, y)
         self.vmulk4(self.cell_dcenters_dev, np.float32(dt), self.cell_dcenters_dev)
         '''
-        self.vmulk4(self.cell_dcenters_dev, np.float32(dt), self.cell_dirs_dev)
+        #self.vmulk4(self.cell_dcenters_dev, np.float32(dt), self.cell_dirs_dev)
 
         #self.rand.fill_normal(self.cell_dcenters_dev[0:self.n_cells], sigma=dt*5)
         #self.vcrop(self.cell_dcenters_dev[0:self.n_cells])
@@ -858,8 +862,8 @@ class CLSPP:
                                     self.to_ents_dev.data,
                                     self.ct_reldists_dev.data,
                                     self.rhs_dev.data).wait()
-        #self.vmulk(self.rhs_dev, dt, self.rhs_dev)
 
+        self.add_force(self.rhs_dev, numpy.float32(0.1), self.cell_dirs_dev)
 
         # res = b-Ax
         self.calculate_Ax(self.BTBx_dev, self.deltap_dev, dt, alpha)
