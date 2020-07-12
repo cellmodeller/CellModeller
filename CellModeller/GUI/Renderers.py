@@ -150,7 +150,7 @@ class GLSphereRenderer:
                 glPushMatrix()
                 glTranslatef(p[0],p[1],p[2])
                 glScalef(0.8,0.8,0.8)
-                gluSphere(self.quad, r, 12, 12)
+                gluSphere(self.quad, r, 16, 16)
                 #glScalef(1.25,1.0,1.0)
                 glPopMatrix() 
 
@@ -172,9 +172,27 @@ class GLSphereRenderer:
 
         def render_cells(self, selection=None):
                 glDisable(GL_LIGHTING)
+                glMatrixMode(GL_MODELVIEW)
+
+                '''
+                glLight(GL_LIGHT0, GL_POSITION,  (500, 500, 500, 0)) # point light from the left, top, front
+                glLightfv(GL_LIGHT0, GL_AMBIENT, (0, 0, 0, 1))
+                glLightfv(GL_LIGHT0, GL_DIFFUSE, (0, 0, 0, 1))
+                #glLightfv(GL_LIGHT0, GL_SPECULAR, (1, 1, 1, 1))
+
+                glEnable(GL_LIGHT0)
+                glEnable(GL_COLOR_MATERIAL)
+                glColorMaterial(GL_FRONT, GL_SPECULAR )
+                glColor3f(1,1,1)
+                '''
                 cells = self.sim.cellStates.values()
                 for cell in cells:
                         self.render_cell(cell, selection)
+                '''
+                glDisable(GL_LIGHT0)
+                glDisable(GL_LIGHTING)
+                glDisable(GL_COLOR_MATERIAL)
+                '''
 
 class GLGridRenderer:
     def __init__(self, sig, integ, rng=None, alpha=1.):
