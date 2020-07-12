@@ -8,7 +8,13 @@ import random
 #from pyopencl.array import vec
 
 class GLSphereRenderer:
-        def __init__(self, sim, properties=None, scales = None):
+        def __init__(self, sim, properties=None, scales = None, 
+                                draw_axis=False, 
+                                draw_nbr_dir=False,
+                                draw_sphere=False, 
+                                sphere_radius=0,
+                                sphere_color=[0,0,0,1]):
+
                 self.ncells_list = 0
                 self.ncells_names_list = 0
                 self.stepNum = -1
@@ -19,6 +25,11 @@ class GLSphereRenderer:
                 self.quad = gluNewQuadric()
                 self.properties = properties
                 self.scales = scales
+                self.draw_axis = draw_axis
+                self.draw_nbr_dir = draw_nbr_dir
+                self.draw_sphere = draw_sphere
+                self.sphere_radius = sphere_radius
+                self.sphere_color = sphere_color
 
         def init_gl(self):
                 pass
@@ -29,6 +40,23 @@ class GLSphereRenderer:
                 index = glGenLists(1)
                 glNewList(index, GL_COMPILE)
                 self.render_cells()
+
+                # Draw sphere
+                if self.draw_sphere:
+                    glDepthFunc(GL_LESS)
+                    glDisable(GL_CULL_FACE)
+                    glPolygonMode(GL_FRONT, GL_FILL)
+
+                    glEnable(GL_BLEND)
+                    glBlendFunc(GL_SRC_ALPHA ,GL_ONE_MINUS_SRC_ALPHA)
+
+                    glMatrixMode(GL_MODELVIEW)
+                    glPushMatrix()
+                    glTranslatef(0, 0, 0)
+                    glColor4fv(self.sphere_color)
+                    gluSphere(self.quad, self.sphere_radius, 64, 64)
+                    glPopMatrix() 
+
                 glEndList()
                 self.dlist = index
 
@@ -85,6 +113,8 @@ class GLSphereRenderer:
         def render_cell(self, cell, selection):
                 r = cell.radius
                 p = cell.pos
+                d = cell.dir
+                nd = cell.avg_neighbour_dir
                 cid = cell.id
                 linecol = [0,0,0]
                 if selection==cid:
@@ -106,7 +136,7 @@ class GLSphereRenderer:
                 glMatrixMode(GL_MODELVIEW)
                 glPushMatrix()
                 glTranslatef(p[0],p[1],p[2])                
-                gluSphere(self.quad, r, 16, 16)
+                gluSphere(self.quad, r, 12, 12)
                 glPopMatrix() 
 
                 glDepthFunc(GL_LESS)
@@ -120,16 +150,27 @@ class GLSphereRenderer:
                 glPushMatrix()
                 glTranslatef(p[0],p[1],p[2])
                 glScalef(0.8,0.8,0.8)
-                gluSphere(self.quad, r, 16, 16)
+                gluSphere(self.quad, r, 12, 12)
                 #glScalef(1.25,1.0,1.0)
                 glPopMatrix() 
 
+                # Draw cell direction and average neighbour pos direction vector
+                glDisable(GL_DEPTH_TEST)
+                glLineWidth(4)
+                glBegin(GL_LINES)
+                if self.draw_axis:
+                    glColor3f(0,0,0)
+                    glVertex3f(p[0], p[1], p[2])
+                    glVertex3f(p[0] + d[0]*2, p[1] + d[1]*2, p[2] + d[2]*2)
+                if self.draw_nbr_dir:
+                    glColor3f(0,1,0)
+                    glVertex3f(p[0], p[1], p[2])
+                    glVertex3f(p[0] + -nd[0]*2, p[1] + -nd[1]*2, p[2] + -nd[2]*2)
+                glEnd()
+                glEnable(GL_DEPTH_TEST)
+
 
         def render_cells(self, selection=None):
-        
-                # PLACEHOLDER
-        
-                #glDisable(GL_DEPTH_TEST)
                 glDisable(GL_LIGHTING)
                 cells = self.sim.cellStates.values()
                 for cell in cells:

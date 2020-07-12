@@ -80,6 +80,7 @@
    <addaction name="actionRun"/>
    <addaction name="separator"/>
    <addaction name="actionSave_Pickles"/>
+   <addaction name="actionGrab"/>
   </widget>
   <action name="actionRun">
    <property name="checkable">
@@ -153,6 +154,20 @@
     <string>Ctrl+S</string>
    </property>
   </action>
+  <action name="actionGrab">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Grab image frames</string>
+   </property>
+   <property name="toolTip">
+    <string>Grab image frames</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+G</string>
+   </property>
+  </action>
  </widget>
  <customwidgets>
   <customwidget>
@@ -160,6 +175,7 @@
    <extends>QWidget</extends>
    <header>CellModeller.GUI.PyGLCMViewer</header>
    <slots>
+    <signal>setGrab(bool)</signal>
     <signal>setSavePicklesToggle(bool)</signal>
     <slot>load()</slot>
     <slot>reset()</slot>
@@ -285,9 +301,41 @@
    </hints>
   </connection>
   <connection>
+   <sender>actionGrab</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>PyGLCMViewer</receiver>
+   <slot>toggleGrab(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>589</x>
+     <y>356</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
    <sender>PyGLCMViewer</sender>
    <signal>setSavePicklesToggle(bool)</signal>
    <receiver>actionSave_Pickles</receiver>
+   <slot>setChecked(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>589</x>
+     <y>356</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>PyGLCMViewer</sender>
+   <signal>setGrab(bool)</signal>
+   <receiver>actionGrab</receiver>
    <slot>setChecked(bool)</slot>
    <hints>
     <hint type="sourcelabel">

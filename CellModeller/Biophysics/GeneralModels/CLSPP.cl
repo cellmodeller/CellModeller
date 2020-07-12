@@ -284,6 +284,7 @@ __kernel void find_contacts(const int max_cells,
                             const int grid_y_max,
                             const int n_sqs,
                             const int max_contacts,
+                            const float Wc,
                             __global const float4* centers,
                             __global const float4* dirs,
                             __global const float* rads,
@@ -298,13 +299,18 @@ __kernel void find_contacts(const int max_cells,
                             __global float4* norms,
                             __global float* reldists,
                             __global float* stiff,
-                            __global float* overlap)
+                            __global float* overlap,
+			    __global float4* avg_neighbour_dir)
 {
   // our id
   int i = get_global_id(0);
 
+  float4 sum_nbr_dir_i = 0.f;
+  avg_neighbour_dir[i] = 0.f;
+
   // collision count
   int k = n_cts[i]; //keep existing contacts
+  int num_neighbours = 0; // count number of neighbours (note: not same as contacts since contacts are low-high index
 
   // what square are we in?
   int grid_x_range = grid_x_max-grid_x_min;
@@ -325,26 +331,37 @@ __kernel void find_contacts(const int max_cells,
       for (int n = sq_inds[sq]; n < (sq < n_sqs-1 ? sq_inds[sq+1] : n_cells); n++) {
 
         int j = sorted_ids[n]; // the neighboring cell
+        float dist = length(centers[i]-centers[j]) - rads[i]-rads[j];
+
+	int n_existing_cts=0;
+	int existing_cts_idx[2];
+	if (j>i)
+	{
+		// Look for any existing contacts, count them, and store idx's
+		for (int m=i*max_contacts; m<i*max_contacts+n_cts[i]; m++)
+		{
+		  if (tos[m]==j)
+		  {
+		     existing_cts_idx[n_existing_cts++] = m;
+		  }
+		}
+	}
+
+	// Compute sum to find average neighbour direction
+	if (dist < MARGIN || n_existing_cts>0)
+	{
+		num_neighbours++;
+		sum_nbr_dir_i = sum_nbr_dir_i + centers[j] - centers[i];
+	}
 
         if (j<=i) continue; // we can't collide with ourself, only find low -> hi contacts
 
-        // Look for any existing contacts, count them, and store idx's
-        int n_existing_cts=0;
-        int existing_cts_idx[2];
-        for (int m=i*max_contacts; m<i*max_contacts+n_cts[i]; m++)
-        {
-          if (tos[m]==j)
-          {
-             existing_cts_idx[n_existing_cts++] = m;
-          }
-        }
 
 	float dij = length(centers[i]-centers[j]);
-        float dist = length(centers[i]-centers[j]) - rads[i]-rads[j];
-	const float a = 2.f;
-	const float b = -4.f;
-	//float dist_adh = a + b * (dij - rads[i]);
-	float dist_adh = dij - rads[i]*1.5f;
+	const float R = 1.f;
+	//const float Wc = .1f;
+	const float Ws = 1.f;
+	float dist_adh = -(2.f/R) * ( Ws - (Ws + Wc) * (dij - R) / R );
 	float4 pt = 0.5f * (centers[i]+centers[j]);
 	float4 norm = normalize(centers[j]-centers[i]);
 
@@ -353,9 +370,9 @@ __kernel void find_contacts(const int max_cells,
 
         float stiffness = 1.f;
         
-        if (dist < MARGIN)
+        if (dist < MARGIN || n_existing_cts>0)
         {
-            if (n_existing_cts==0)
+	    if (n_existing_cts==0)
             {
               // make new contact and compute distance etc.
               k++; // next contact
@@ -367,21 +384,22 @@ __kernel void find_contacts(const int max_cells,
               reldists[ct_i] = stiffness*dist_adh;
               stiff[ct_i] = stiffness;
             }
+	if(n_existing_cts>0){
+	  // recompute dist etc. for existing contact
+	  int idx = existing_cts_idx[0];
+	  dists[idx] = dist;
+	  pts[idx] = pt;
+	  norms[idx] = norm;
+	  reldists[idx] = stiffness*dist_adh;
+	  stiff[idx] = stiffness;
 	}
-        if(n_existing_cts>0){
-          // recompute dist etc. for existing contact
-          int idx = existing_cts_idx[0];
-          dists[idx] = dist_adh;
-          pts[idx] = pt;
-          norms[idx] = norm;
-          reldists[idx] = stiffness*dist_adh;
-          stiff[idx] = stiffness;
-        }
 
+	}
 	}
      }
   }
   n_cts[i] = k;
+  avg_neighbour_dir[i] = normalize( sum_nbr_dir_i / (float) num_neighbours );
 
   // zero out unused contacts
   // this IS necessary for calculate_Mx to work
@@ -504,6 +522,7 @@ __kernel void calculate_Bx(const int max_contacts,
                            __global const float8* fr_ents,
                            __global const float8* to_ents,
                            __global const float8* deltap,
+			   const float Wc,
                            __global float* Bx)
 {
   int id = get_global_id(0);
@@ -514,8 +533,15 @@ __kernel void calculate_Bx(const int max_contacts,
   if (a == 0 && b == 0) return; // not a contact
   float8 to_ents_i = b < 0 ? 0.f : to_ents[i];
   //my machine can't dot float8s...
+
+  const float Ws = 1.f;
+  const float R = 1.f;
+
+  const float fac = 2.F * (Ws + Wc) / (R*R);
   float res0123 = dot(fr_ents[i].s0123, deltap[a].s0123) - dot(to_ents_i.s0123, deltap[b].s0123);
+  res0123 *= fac;
   float res4567 = dot(fr_ents[i].s4567, deltap[a].s4567) - dot(to_ents_i.s4567, deltap[b].s4567);
+  res4567 *= fac;
   Bx[i] = res0123 + res4567;
 }
 
@@ -532,20 +558,25 @@ __kernel void calculate_BTBx(const int max_contacts,
   int i = get_global_id(0);
   int base = i*max_contacts;
   float8 res = 0.f;
+  const float R = 1.f;
+  const float Wc = 0.1f;
+  const float Ws = 1.f;
   for (int k = base; k < base+n_cts[i]; k++) {
     float8 oldres = res;
-    res += fr_ents[k]*Bx[k];
+
+    float Fcc = Bx[k]; //-(2.f/R) * ( Ws - (Ws + Wc) * (Bx[k] + R) / R );
+    res += fr_ents[k]*Fcc;
   }
   for (int k = base; k < base+n_cell_tos[i]; k++) {
     int n = cell_tos[k];
     if (n < 0) continue;
-    res -= to_ents[n]*Bx[n];
+    float Fcc = Bx[n]; //-(2.f/R) * ( Ws - (Ws + Wc) * (Bx[n] + R) / R );
+    res -= to_ents[n]*Fcc;
   }
   BTBx[i] = res;
 }
 
-__kernel void calculate_Mx(const float muA,
-			       const float gamma,
+__kernel void calculate_Mx(const float gamma_s,
 			       __global const float4* dirs,
 			       __global const float* rads,
 			       __global const float8* x,
@@ -555,7 +586,7 @@ __kernel void calculate_Mx(const float muA,
 
   float8 xi = x[i];
   float8 v = 0.f;
-  v.s012 = xi.s012 * muA;
+  v.s012 = xi.s012 * gamma_s;
 
   Mx[i] = v;
 }
@@ -576,23 +607,7 @@ __kernel void predict(__global const float4* centers,
 
 }
 
-__kernel void integrate(__global float4* centers,
-                        __global float4* dirs,
-                        __global float4* dcenters)
-{
-  int i = get_global_id(0);
-  float4 center_i = centers[i];
-  float4 dir_i = dirs[i];
-  float4 dcenter_i = dcenters[i];
-
-  centers[i] = center_i + dcenter_i;
-
-  // fully damped
-  dcenters[i] = 0.f;
-}
-
-__kernel void add_impulse(const float muA,
-                          const float gamma,
+__kernel void add_impulse(const float gamma_s,
                           __global const float8* deltap,
                           __global const float4* dirs,
                           __global const float* rads,
@@ -609,4 +624,57 @@ __kernel void add_impulse(const float muA,
   dcenters[i] += dplin;
 }
 
+
+float angle_between_vectors(float4 vec1, float4 vec2, float4 normal)
+{
+    // Get the unsigned angle as arccos(dot product)
+    float ang = acos( clamp( dot(vec1, vec2), -1.f, 1.f ) );
+    // Find the sign of the angle from cross-product with normal
+    float4 cross_vec = cross(vec1, vec2);
+    float ang_sign = sign(dot(cross_vec, normal));
+    return ang * ang_sign;
+}
+
+// This kernel integrates the system while at each step rotating the orientation 
+// vector onto the tangent to a sphere at (0,0) (if spherical flag is set)
+__kernel void integrate(__global float4* centers,
+                        __global float4* dirs,
+                        __global float4* dcenters,
+			__global float4* avg_neighbour_dir,
+			__global float* noise,
+			const float fcil,
+			const float D,
+			const float dt,
+			const int spherical)
+{
+  int i = get_global_id(0);
+  float4 center_i = centers[i];
+  float4 dir_i = dirs[i];
+  float4 dcenter_i = dcenters[i];
+  float noise_i = noise[i];
+  float4 avg_neighbour_dir_i = avg_neighbour_dir[i];
+
+  float4 normal = {0.f, 0.f, 1.f, 0.f};
+  if (spherical==1) 
+  {
+	// Find new coordinate system tangent to sphere surface
+	normal = normalize(center_i);
+	float4 new_y_axis = cross(dir_i, normal);
+	dir_i = normalize(cross(normal, new_y_axis));
+  } 
+
+  // Rotate by change in angle around z-axis
+  float angle = D*noise_i;
+  if (length(avg_neighbour_dir_i)>0.f)
+  {
+	angle += fcil * angle_between_vectors(dir_i, -avg_neighbour_dir_i, normal);
+  }
+  dir_i = rot(normal, dt * angle, dir_i);
+  dirs[i] = normalize(dir_i);
+
+  centers[i] = center_i + dcenter_i;
+
+  // fully damped
+  dcenters[i] = 0.f;
+}
 

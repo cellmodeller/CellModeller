@@ -22,4 +22,4 @@ for f in $( ls *.pdf ); do
 done
 
 # Run ffmpeg to generate video file
-ffmpeg -framerate 7 -i %*.png -vf scale=1920:1080 -r 24 $1
+ffmpeg -framerate 24 -i %*.png -vf scale=1920:1080 -r 24 $1

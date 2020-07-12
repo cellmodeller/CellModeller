@@ -87,6 +87,7 @@ class CellModellerPDFGenerator(Canvas):
             fill, stroke = self.calc_cell_colors(state)
             self.draw_capsule(p, d, l, r, fill, stroke)
 
+
     def draw_chamber(self):
         # for EdgeDetectorChamber-22-57-02-06-12
         self.setLineWidth(0.015*units.cm)
@@ -174,16 +175,33 @@ class MyPDFGenerator(CellModellerPDFGenerator):
         # Generate Color objects from cellState, fill=stroke
         (r,g,b) = state.color
         # Return value is tuple of colors, (fill, stroke)
-        fcol = Color(r,g,b,alpha=1.0)
-        scol = Color(r*0.5,g*0.5,b*0.5,alpha=1.0)
+        fcol = Color(r,g,b,alpha=.5)
+        scol = Color(r*0.5,g*0.5,b*0.5,alpha=.5)
         return [fcol,scol]
+
+
+class SpherePDFGenerator(MyPDFGenerator):
+    def draw_cells(self):
+        for id, state in list(self.states.items()):
+            p = state.pos
+            r = state.radius
+            fill, stroke = self.calc_cell_colors(state)
+            self.draw_sphere(p, r, fill, stroke)
+
+    def draw_sphere(self, p, r, fill, stroke):
+        self.saveState()
+        self.setStrokeColor(stroke)
+        self.setFillColor(fill)
+        self.setLineWidth(0.01*units.cm)
+        self.circle(p[0], p[1], r, fill=1)
+        self.restoreState()
 
 def main():
     # To do: parse some useful arguments as rendering options here
     # e.g. outline color, page size, etc.
     #
     # For now, put these options into variables here:
-    bg_color = Color(0,0,0,alpha=1.0)
+    bg_color = Color(1,1,1,alpha=1.0)
 
     # For now just assume a list of files
     infns = sys.argv[1:]
@@ -204,7 +222,7 @@ def main():
             return
 
         # Create a pdf canvas thing
-        pdf = MyPDFGenerator(outfn, data, bg_color)
+        pdf = SpherePDFGenerator(outfn, data, bg_color)
 
         # Get the bounding square of the colony to size the image
         # This will resize the image to fit the page...
@@ -212,7 +230,7 @@ def main():
         '''(w,h) = pdf.computeBox()
         sqrt2 = math.sqrt(2)
         world = (w/sqrt2,h/sqrt2)'''
-        world = (150,150)
+        world = (165,165)
 
         # Page setup
         page = (20,20)

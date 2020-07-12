@@ -29,14 +29,20 @@ class CLSPP:
                  max_spheres=1,
                  max_sqs=192**2,
                  grid_spacing=5.0,
-                 muA=1.0,
-                 gamma=10.0,
+                 gamma_s=1.0,
+                 Wc=1.,
+                 fcil=2.,
+                 D=1.,
                  dt=None,
                  cgs_tol=5e-3,
                  jitter_z=True,
                  alternate_divisions=False,
                  printing=True,
-                 compNeighbours=False):
+                 compNeighbours=False,
+                 spherical=True):
+
+        # Is the simulaiton on a sphere?
+        self.spherical = spherical
 
         # Should we compute neighbours? (bit slow)
         self.computeNeighbours = compNeighbours
@@ -56,8 +62,10 @@ class CLSPP:
         self.max_spheres = max_spheres
         self.max_sqs = max_sqs
         self.grid_spacing = grid_spacing
-        self.muA = muA
-        self.gamma = gamma
+        self.gamma_s = gamma_s
+        self.Wc = Wc
+        self.fcil = fcil
+        self.D = D
         self.dt = dt
         self.cgs_tol = cgs_tol
 
@@ -224,7 +232,8 @@ class CLSPP:
         self.cell_n_cts_dev = cl_array.zeros(self.queue, cell_geom, numpy.int32)
         self.cell_dcenters = numpy.zeros(cell_geom, vec.float4)
         self.cell_dcenters_dev = cl_array.zeros(self.queue, cell_geom, vec.float4)
-        self.cell_fmot_dev = cl_array.zeros(self.queue, cell_geom, vec.float4)
+        self.avg_neighbour_dir  = numpy.zeros(cell_geom, vec.float4)
+        self.avg_neighbour_dir_dev = cl_array.zeros(self.queue, cell_geom, vec.float4)
 
         # gridding
         self.sq_inds = numpy.zeros((self.max_sqs,), numpy.int32)
@@ -311,7 +320,6 @@ class CLSPP:
             self.cell_centers[i] = tuple(cs.pos)+(0,)
             self.cell_dirs[i] = tuple(cs.dir)+(0,)
             self.cell_rads[i] = cs.radius
-            self.cell_lens[i] = cs.length
         
         self.n_cells = len(cell_states)
         self.set_cells()
@@ -320,6 +328,7 @@ class CLSPP:
         """Copy cell centers, dirs, lens, and rads from the device."""
         self.cell_centers[0:self.n_cells] = self.cell_centers_dev[0:self.n_cells].get()
         self.cell_dirs[0:self.n_cells] = self.cell_dirs_dev[0:self.n_cells].get()
+        self.avg_neighbour_dir[0:self.n_cells] = self.avg_neighbour_dir_dev[0:self.n_cells].get()
         self.cell_rads[0:self.n_cells] = self.cell_rads_dev[0:self.n_cells].get()
         self.cell_dcenters[0:self.n_cells] = self.cell_dcenters_dev[0:self.n_cells].get()
 
@@ -327,6 +336,7 @@ class CLSPP:
         """Copy cell centers, dirs, lens, and rads to the device from local."""
         self.cell_centers_dev[0:self.n_cells].set(self.cell_centers[0:self.n_cells])
         self.cell_dirs_dev[0:self.n_cells].set(self.cell_dirs[0:self.n_cells])
+        self.avg_neighbour_dir_dev[0:self.n_cells] = self.avg_neighbour_dir[0:self.n_cells]
         self.cell_rads_dev[0:self.n_cells].set(self.cell_rads[0:self.n_cells])
         self.cell_dcenters_dev[0:self.n_cells].set(self.cell_dcenters[0:self.n_cells])
 
@@ -453,6 +463,7 @@ class CLSPP:
 
     def sub_tick_init(self, dt):
         # Compute angle of cell orientation
+        '''
         self.vang(self.cell_angs_dev, self.cell_dirs_dev)
         noise = self.rand.normal(self.queue, sigma=0.25, shape=(self.n_cells,), dtype=np.float32)
         self.vadd_float(self.cell_angs_dev, noise)
@@ -460,8 +471,9 @@ class CLSPP:
         y = sin(self.cell_angs_dev[:self.n_cells])
         self.vfill_vec2d(self.cell_dirs_dev[:self.n_cells], x, y)
         self.vfill_vec2d(self.cell_dcenters_dev[:self.n_cells], x, y)
-        self.vmulk4(self.cell_dcenters_dev, np.float32(dt*5), self.cell_dcenters_dev)
-
+        self.vmulk4(self.cell_dcenters_dev, np.float32(dt), self.cell_dcenters_dev)
+        '''
+        self.vmulk4(self.cell_dcenters_dev, np.float32(dt), self.cell_dirs_dev)
 
         #self.rand.fill_normal(self.cell_dcenters_dev[0:self.n_cells], sigma=dt*5)
         #self.vcrop(self.cell_dcenters_dev[0:self.n_cells])
@@ -488,7 +500,7 @@ class CLSPP:
         if not self.sub_tick_initialised:
             self.sub_tick_init(dt)
         if self.sub_tick(dt):
-            self.sub_tick_finalise()
+            self.sub_tick_finalise(dt)
             return True
         else:
             return False
@@ -497,15 +509,23 @@ class CLSPP:
         old_n_cts = self.n_cts
         self.predict()
         # find all contacts
+        start = time.time()
         self.find_contacts()
+        end1 = time.time()
+        #print('find_contacts took %g'%(end1-start))
         # place 'backward' contacts in cells
         self.collect_tos()
+        end2 = time.time()
+        #print('collect_tos took %g'%(end2-end1))
 
         self.sub_tick_i += 1
         alpha = 10**(self.sub_tick_i)
         new_cts = self.n_cts - old_n_cts
         if (new_cts>0 or self.sub_tick_i==0) and self.sub_tick_i<self.max_substeps:
+            start = time.time()
             self.build_matrix() # Calculate entries of the matrix
+            end = time.time()
+            #print('build_matrix took %g'%(end-start))
             #print "max cell contacts = %i"%cl_array.max(self.cell_n_cts_dev).get()
             self.CGSSolve(dt, alpha) # invert MTMx to find deltap
             self.add_impulse()
@@ -513,9 +533,9 @@ class CLSPP:
         else:
             return True
 
-    def sub_tick_finalise(self):
+    def sub_tick_finalise(self, dt):
         #print "Substeps = %d"%self.sub_tick_i
-        self.integrate()
+        self.integrate(dt)
         self.sub_tick_initialised=False
 
     def initCellState(self, state):
@@ -523,6 +543,7 @@ class CLSPP:
         i = state.idx
         state.pos = [self.cell_centers[i][j] for j in range(3)]
         state.dir = [self.cell_dirs[i][j] for j in range(3)]
+        state.avg_neighbour_dir = [self.avg_neighbour_dir[i][j] for j in range(3)]
         state.radius = self.cell_rads[i]
         
         pa = numpy.array(state.pos)
@@ -549,6 +570,7 @@ class CLSPP:
         state.pos = [self.cell_centers[i][j] for j in range(3)]
         state.dir = [self.cell_dirs[i][j] for j in range(3)]
         state.radius = self.cell_rads[i]
+        state.avg_neighbour_dir = [self.avg_neighbour_dir[i][j] for j in range(3)]
 
         state.neighbours = [] #clear contacts
         if self.computeNeighbours: #populate cellstate.neighbours
@@ -610,6 +632,7 @@ class CLSPP:
 
         Calculates local sorted_ids and sq_inds.
         """
+        start = time.time()
         self.sorted_ids.put(numpy.arange(self.n_cells), numpy.argsort(self.cell_sqs[:self.n_cells]))
         self.sorted_ids_dev[0:self.n_cells].set(self.sorted_ids[0:self.n_cells])
 
@@ -617,6 +640,8 @@ class CLSPP:
         sorted_sqs = numpy.sort(self.cell_sqs[:self.n_cells])
         self.sq_inds.put(numpy.arange(self.n_sqs), numpy.searchsorted(sorted_sqs, numpy.arange(self.n_sqs), side='left'))
         self.sq_inds_dev.set(self.sq_inds)
+        end = time.time()
+        #print('sort_cells took %g'%(end-start))
 
 
     def find_contacts(self, predict=True):
@@ -690,6 +715,7 @@ class CLSPP:
                                    numpy.int32(self.grid_y_max),
                                    numpy.int32(self.n_sqs),
                                    numpy.int32(self.max_contacts),
+                                   numpy.float32(self.Wc),
                                    centers.data,
                                    dirs.data,
                                    self.cell_rads_dev.data,
@@ -704,7 +730,8 @@ class CLSPP:
                                    self.ct_norms_dev.data,
                                    self.ct_reldists_dev.data,
                                    self.ct_stiff_dev.data,
-                                   self.ct_overlap_dev.data).wait()
+                                   self.ct_overlap_dev.data,
+                                   self.avg_neighbour_dir_dev.data).wait()
 
         # set dtype to int32 so we don't overflow the int32 when summing
         #self.n_cts = self.cell_n_cts_dev.get().sum(dtype=numpy.int32)
@@ -777,6 +804,7 @@ class CLSPP:
                                   self.fr_ents_dev.data,
                                   self.to_ents_dev.data,
                                   x.data,
+                                  numpy.float32(self.Wc),
                                   self.Mx_dev.data).wait()
         self.program.calculate_BTBx(self.queue,
                                     (self.n_cells,),
@@ -796,8 +824,7 @@ class CLSPP:
         self.program.calculate_Mx(self.queue,
                                       (self.n_cells,),
                                       None,
-                                      numpy.float32(self.muA),
-                                      numpy.float32(self.gamma),
+                                      numpy.float32(self.gamma_s),
                                       self.cell_dirs_dev.data,
                                       self.cell_rads_dev.data,
                                       x.data,
@@ -806,7 +833,7 @@ class CLSPP:
         #this was altered from dt*reg_param
         #self.vaddkx(Ax, self.gamma, Ax, self.Mx_dev).wait()
         #self.vaddkx(Ax, alpha, self.Mx_dev, Ax).wait()
-        self.vaddkx(Ax, 1/self.gamma, Ax, self.Mx_dev).wait()
+        self.vaddkx(Ax, 1., Ax, self.Mx_dev).wait()
         # 1/math.sqrt(self.n_cells) removed from the reg_param NB
     
         #print(self.Minvx_dev)
@@ -831,6 +858,7 @@ class CLSPP:
                                     self.to_ents_dev.data,
                                     self.ct_reldists_dev.data,
                                     self.rhs_dev.data).wait()
+        #self.vmulk(self.rhs_dev, dt, self.rhs_dev)
 
 
         # res = b-Ax
@@ -910,7 +938,7 @@ class CLSPP:
                              self.cell_dcenters_dev.data,
                              self.pred_cell_centers_dev.data).wait()
 
-    def integrate(self):
+    def integrate(self, dt):
         """Integrates cell centers, dirs, lens for a timestep dt based
         on the current deltap.
 
@@ -919,17 +947,23 @@ class CLSPP:
 
         Calculates new cell_centers, cell_dirs, cell_lens.
         """
+        noise = self.rand.normal(self.queue, sigma=1., shape=(self.n_cells,), dtype=np.float32)
         self.program.integrate(self.queue,
                                (self.n_cells,),
                                None,
                                self.cell_centers_dev.data,
                                self.cell_dirs_dev.data,
-                               self.cell_dcenters_dev.data).wait()
+                               self.cell_dcenters_dev.data,
+                               self.avg_neighbour_dir_dev.data,
+                               noise.data,
+                               numpy.float32(self.fcil),
+                               numpy.float32(self.D),
+                               numpy.float32(dt),
+                               numpy.int32(self.spherical*1)).wait()
 
     def add_impulse(self):
         self.program.add_impulse(self.queue, (self.n_cells,), None,
-                                 numpy.float32(self.muA),
-                                 numpy.float32(self.gamma),
+                                 numpy.float32(self.gamma_s),
                                  self.deltap_dev.data,
                                  self.cell_dirs_dev.data,
                                  self.cell_rads_dev.data,
