@@ -467,21 +467,6 @@ class CLSPP:
 
     def sub_tick_init(self, dt):
         # Compute angle of cell orientation
-        '''
-        self.vang(self.cell_angs_dev, self.cell_dirs_dev)
-        noise = self.rand.normal(self.queue, sigma=0.25, shape=(self.n_cells,), dtype=np.float32)
-        self.vadd_float(self.cell_angs_dev, noise)
-        x = cos(self.cell_angs_dev[:self.n_cells])
-        y = sin(self.cell_angs_dev[:self.n_cells])
-        self.vfill_vec2d(self.cell_dirs_dev[:self.n_cells], x, y)
-        self.vfill_vec2d(self.cell_dcenters_dev[:self.n_cells], x, y)
-        self.vmulk4(self.cell_dcenters_dev, np.float32(dt), self.cell_dcenters_dev)
-        '''
-        #self.vmulk4(self.cell_dcenters_dev, np.float32(dt), self.cell_dirs_dev)
-
-        #self.rand.fill_normal(self.cell_dcenters_dev[0:self.n_cells], sigma=dt*5)
-        #self.vcrop(self.cell_dcenters_dev[0:self.n_cells])
-        
         # redefine gridding based on the range of cell positions
         self.cell_centers[0:self.n_cells] = self.cell_centers_dev[0:self.n_cells].get()
         self.update_grid() # we assume local cell_centers is current
