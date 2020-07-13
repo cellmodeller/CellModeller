@@ -71,7 +71,6 @@ class CellModellerPDFGenerator(Canvas):
         self.setStrokeColor(stroke_color)
         self.setFillColor(fill_color)
         self.setLineWidth(0.001*units.cm)
-        self.setLineWidth(0.001*units.cm)
         self.translate(p[0], p[1])
         self.rotate(math.degrees(math.atan2(d[1], d[0])))
         path = self.capsule_path(l, r)
@@ -181,6 +180,21 @@ class MyPDFGenerator(CellModellerPDFGenerator):
 
 
 class SpherePDFGenerator(MyPDFGenerator):
+    def draw_frame(self, name, world, page, center, box_size=None):
+        self.setup_canvas(name, world, page, center)
+        #draw_chamber(c)
+        if self.signals: 
+            print("Drawing signals")
+            self.draw_signals()
+        if box_size:
+            self.setLineWidth(2)
+            self.setStrokeColor(Color(0,0,0,alpha=1))
+            corner = box_size/2
+            self.rect(-corner-1, -corner-1, box_size+2, box_size+2, fill=0)
+        self.draw_cells()
+        self.showPage()
+        self.save()
+
     def draw_cells(self):
         for id, state in list(self.states.items()):
             p = state.pos
@@ -238,7 +252,7 @@ def main():
 
         # Render pdf
         print(('Rendering PDF output to %s'%outfn))
-        pdf.draw_frame(outfn, world, page, center)
+        pdf.draw_frame(outfn, world, page, center, box_size=160)
 
 if __name__ == "__main__": 
     main()
