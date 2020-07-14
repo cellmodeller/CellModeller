@@ -10,6 +10,7 @@ import inspect
 import imp
 import configparser
 import importlib
+import time
 
 class Simulator:
     """
@@ -349,13 +350,13 @@ visualised.
     ## Proceed to the next simulation step
     # This method is where objects phys, reg, sig and integ are called
     def step(self):
+        start = time.time()
         self.reg.step(self.dt)
         states = dict(self.cellStates)
         for (cid,state) in list(states.items()):
             state.time = self.stepNum * self.dt
             if state.divideFlag:
                 self.divide(state) #neighbours no longer current
-
         self.phys.set_cells()
         while not self.phys.step(self.dt): #neighbours are current here
             pass
@@ -368,6 +369,8 @@ visualised.
             self.writePickle()
 
         self.stepNum += 1
+        end = time.time()
+        #print('sim step took %g'%(end-start))
         return True
 
 

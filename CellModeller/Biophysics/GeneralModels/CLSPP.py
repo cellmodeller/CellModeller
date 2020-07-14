@@ -30,6 +30,7 @@ class CLSPP:
                  max_sqs=192**2,
                  grid_spacing=5.0,
                  gamma_s=1.0,
+                 Fm=1.,
                  Wc=1.,
                  fcil=2.,
                  D=1.,
@@ -63,6 +64,7 @@ class CLSPP:
         self.max_sqs = max_sqs
         self.grid_spacing = grid_spacing
         self.gamma_s = gamma_s
+        self.Fm = Fm
         self.Wc = Wc
         self.fcil = fcil
         self.D = D
@@ -457,10 +459,13 @@ class CLSPP:
         Assumes that:
         cell_centers is up to date when it starts.
         """
+        start = time.time()
         if not self.progress_initialised:
             self.progress_init(dt)
         if self.progress():
             self.progress_finalise()
+            end = time.time()
+            #print('step took %g'%(end-start))
             return True
         else:
             return False
@@ -495,6 +500,9 @@ class CLSPP:
             return False
 
     def sub_tick(self, dt):
+        self.sub_tick_i += 1
+        if self.sub_tick_i>self.max_substeps:
+            return True
         old_n_cts = self.n_cts
         self.predict()
         # find all contacts
@@ -507,10 +515,9 @@ class CLSPP:
         end2 = time.time()
         #print('collect_tos took %g'%(end2-end1))
 
-        self.sub_tick_i += 1
         alpha = 10**(self.sub_tick_i)
         new_cts = self.n_cts - old_n_cts
-        if (new_cts>0 or self.sub_tick_i==0) and self.sub_tick_i<self.max_substeps:
+        if (new_cts>0 or self.sub_tick_i==0):
             start = time.time()
             self.build_matrix() # Calculate entries of the matrix
             end = time.time()
@@ -518,6 +525,8 @@ class CLSPP:
             #print "max cell contacts = %i"%cl_array.max(self.cell_n_cts_dev).get()
             self.CGSSolve(dt, alpha) # invert MTMx to find deltap
             self.add_impulse()
+            end = time.time()
+            #print('sub_tick took %g'%(end-start))
             return False
         else:
             return True
@@ -783,7 +792,6 @@ class CLSPP:
     
 
     def calculate_Ax(self, Ax, x, dt, alpha):
-
         self.program.calculate_Bx(self.queue,
                                   (self.n_cells, self.max_contacts),
                                   None,
@@ -806,10 +814,7 @@ class CLSPP:
                                     self.to_ents_dev.data,
                                     self.Mx_dev.data,
                                     Ax.data).wait()
-        # Tikhonov test
-        #self.vaddkx(Ax, numpy.float32(0.01), Ax, x)
 
-        # Energy mimizing regularization
         self.program.calculate_Mx(self.queue,
                                       (self.n_cells,),
                                       None,
@@ -818,14 +823,9 @@ class CLSPP:
                                       self.cell_rads_dev.data,
                                       x.data,
                                       self.Mx_dev.data).wait()
-
-        #this was altered from dt*reg_param
-        #self.vaddkx(Ax, self.gamma, Ax, self.Mx_dev).wait()
-        #self.vaddkx(Ax, alpha, self.Mx_dev, Ax).wait()
-        self.vaddkx(Ax, 1., Ax, self.Mx_dev).wait()
-        # 1/math.sqrt(self.n_cells) removed from the reg_param NB
+        self.vaddkx(Ax, 1/dt, Ax, self.Mx_dev).wait()
+        #self.vmulk(Ax, numpy.float32(self.gamma_s/dt), x).wait()
     
-        #print(self.Minvx_dev)
 
     def CGSSolve(self, dt, alpha, substep=False):
         # Solve A^TA\deltap=A^Tb (Ax=b)
@@ -848,7 +848,8 @@ class CLSPP:
                                     self.ct_reldists_dev.data,
                                     self.rhs_dev.data).wait()
 
-        self.add_force(self.rhs_dev, numpy.float32(0.1), self.cell_dirs_dev)
+        #self.vmulk(self.rhs_dev, numpy.float32(dt), self.rhs_dev).wait()
+        self.add_force(self.rhs_dev, self.Fm, self.cell_dirs_dev).wait()
 
         # res = b-Ax
         self.calculate_Ax(self.BTBx_dev, self.deltap_dev, dt, alpha)

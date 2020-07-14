@@ -8,8 +8,9 @@ cell_cols = {0:[0,1.0,0], 1:[1.0,0,0]}
 outfile = 'all.csv'
 
 def setup(sim):
+    sim.dt = 0.05
     # Set biophysics, signalling, and regulation models
-    biophys = CLBacterium(sim, jitter_z=False, max_cells=100000, gamma=100.)
+    biophys = CLBacterium(sim, jitter_z=False, max_cells=10000, gamma=100.)
 
     # use this file for reg too
     regul = ModuleRegulator(sim, sim.moduleName)	
@@ -28,7 +29,7 @@ def setup(sim):
     #    print("Running in batch mode: no display will be output")
 
     sim.pickleSteps = 100
-    sim.saveOutput = True
+    #sim.saveOutput = True
 
 def init(cell):
     # Specify mean and distribution of initial cell size

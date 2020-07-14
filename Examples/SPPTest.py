@@ -8,11 +8,12 @@ import math
 #Import Euler integrator for solving ODE system of chemical species inside the cells
 from CellModeller.Integration.CLEulerIntegrator import CLEulerIntegrator
 
-n_cells = 7000
-side = 80
-Wc = 0.5 
-psi = 0.
+n_cells = 1000
+side = 40
+Wc = 0.5
+psi = 0
 
+Fm = 0.5
 gamma_s = 1
 D = 1. 
 fcil = 2 * D * psi
@@ -26,13 +27,14 @@ def setup(sim):
     biophys = CLSPP(sim, 
             max_cells=n_cells, 
             gamma_s=gamma_s, 
+            Fm=Fm,
             Wc=Wc,
             fcil=fcil,
             D=D,
             max_planes=6, 
             grid_spacing=2,
-            cgs_tol=1e-3,
-            max_substeps=2,
+            cgs_tol=1e-4,
+            max_substeps=1,
             spherical=False)
 
     # use this file for reg too
@@ -61,19 +63,19 @@ def setup(sim):
         sim.addCell(cellType=0, dir=tuple(cell_dir), pos=tuple(p))
 
     # Box
-    biophys.addPlane((0,-side,0),(0,1,0), 2.)
-    biophys.addPlane((0,side,0),(0,-1,0), 2.)
-    biophys.addPlane((-side,0,0),(1,0,0), 2.)
-    biophys.addPlane((side,0,0),(-1,0,0), 2.)
+    biophys.addPlane((0,-side,0),(0,1,0), 20.)
+    biophys.addPlane((0,side,0),(0,-1,0), 20.)
+    biophys.addPlane((-side,0,0),(1,0,0), 20.)
+    biophys.addPlane((side,0,0),(-1,0,0), 20.)
 
     # Add some objects to draw the models
     therenderer = Renderers.GLSphereRenderer(sim, draw_axis=False, draw_nbr_dir=False)
     sim.addRenderer(therenderer)
 
-    sim.pickleSteps = 5
+    sim.pickleSteps = 10
 
 def init(cell):
-    cell.color = [1,0,0]
+    cell.color = [1,1,1]
 
 def update(cells):
     pass

@@ -359,7 +359,6 @@ __kernel void find_contacts(const int max_cells,
 
 	float dij = length(centers[i]-centers[j]);
 	const float R = 1.f;
-	//const float Wc = .1f;
 	const float Ws = 1.f;
 	float dist_adh = -(2.f/R) * ( Ws - (Ws + Wc) * (dij - R) / R );
 	float4 pt = 0.5f * (centers[i]+centers[j]);

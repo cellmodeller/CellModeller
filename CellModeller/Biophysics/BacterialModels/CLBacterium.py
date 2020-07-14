@@ -200,6 +200,10 @@ class CLBacterium:
                 reduce_expr="a+b", map_expr="dot(x[i].s0123,y[i].s0123)+dot(x[i].s4567,y[i].s4567)",
                 arguments="__global float8 *x, __global float8 *y")
     
+        # Add a force along the length dimension only
+        self.add_force = ElementwiseKernel(self.context,
+                                            "float8 *pos, const float mag, const float *force",
+                                            "pos[i].s6 = pos[i].s6 + mag*force[i]", "add_force")
 
     def init_data(self):
         """Set up the data OpenCL will store on the device."""
@@ -231,6 +235,7 @@ class CLBacterium:
         self.cell_dlens_dev = cl_array.zeros(self.queue, cell_geom, numpy.float32)
         self.cell_target_dlens_dev = cl_array.zeros(self.queue, cell_geom, numpy.float32)
         self.cell_growth_rates = numpy.zeros(cell_geom, numpy.float32)
+        self.cell_growth_rates_dev = cl_array.zeros(self.queue, cell_geom, numpy.float32)
 
         # cell geometry calculated from l and r
         self.cell_areas_dev = cl_array.zeros(self.queue, cell_geom, numpy.float32)
@@ -449,6 +454,7 @@ class CLBacterium:
         self.cell_dlens_dev[0:self.n_cells].set(self.cell_dlens[0:self.n_cells])
         self.cell_dcenters_dev[0:self.n_cells].set(self.cell_dcenters[0:self.n_cells])
         self.cell_dangs_dev[0:self.n_cells].set(self.cell_dangs[0:self.n_cells])
+        self.cell_growth_rates_dev[0:self.n_cells].set(self.cell_growth_rates[0:self.n_cells])
 
     def set_planes(self):
         """Copy plane pts, norms, and coeffs to the device from local."""
@@ -574,8 +580,6 @@ class CLBacterium:
 
     def sub_tick_init(self, dt):
         # set target dlens (taken from growth rates set by updateCellStates)
-        #self.cell_target_dlens_dev.set(dt*self.cell_growth_rates)
-        #self.cell_dlens_dev.set(dt*self.cell_dlens)
         self.cell_dlens_dev[0:self.n_cells].set(dt*self.cell_growth_rates[0:self.n_cells])
 
         # redefine gridding based on the range of cell positions
@@ -616,7 +620,7 @@ class CLBacterium:
         self.sub_tick_i += 1
         alpha = 10**(self.sub_tick_i)
         new_cts = self.n_cts - old_n_cts
-        if (new_cts>0 or self.sub_tick_i==0) and self.sub_tick_i<self.max_substeps:
+        if (new_cts>0 or self.sub_tick_i==1) and self.sub_tick_i<self.max_substeps:
             self.build_matrix() # Calculate entries of the matrix
             #print "max cell contacts = %i"%cl_array.max(self.cell_n_cts_dev).get()
             self.CGSSolve(dt, alpha) # invert MTMx to find deltap
