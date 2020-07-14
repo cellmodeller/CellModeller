@@ -823,8 +823,8 @@ class CLSPP:
                                       self.cell_rads_dev.data,
                                       x.data,
                                       self.Mx_dev.data).wait()
+        # Correct scaling of viscous drag by 1/dt
         self.vaddkx(Ax, 1/dt, Ax, self.Mx_dev).wait()
-        #self.vmulk(Ax, numpy.float32(self.gamma_s/dt), x).wait()
     
 
     def CGSSolve(self, dt, alpha, substep=False):
