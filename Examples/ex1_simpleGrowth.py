@@ -8,9 +8,9 @@ cell_cols = {0:[0,1.0,0], 1:[1.0,0,0]}
 outfile = 'all.csv'
 
 def setup(sim):
-    sim.dt = 0.05
+    sim.dt = 0.025
     # Set biophysics, signalling, and regulation models
-    biophys = CLBacterium(sim, jitter_z=False, max_cells=10000, gamma=100.)
+    biophys = CLBacterium(sim, jitter_z=False, max_cells=10000, gamma=100, cgs_tol=1e-3)
 
     # use this file for reg too
     regul = ModuleRegulator(sim, sim.moduleName)	
@@ -35,7 +35,7 @@ def init(cell):
     # Specify mean and distribution of initial cell size
     cell.targetVol = 3.5 + random.uniform(0.0,0.5)
     # Specify growth rate of cells
-    cell.growthRate = 1.0
+    cell.growthRate = 1. 
     cell.color = cell_cols[cell.cellType]
 
 def update(cells):

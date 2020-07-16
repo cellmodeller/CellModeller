@@ -284,6 +284,7 @@ __kernel void find_contacts(const int max_cells,
                             const int grid_y_max,
                             const int n_sqs,
                             const int max_contacts,
+                            const float Ws,
                             const float Wc,
                             __global const float4* centers,
                             __global const float4* dirs,
@@ -357,9 +358,9 @@ __kernel void find_contacts(const int max_cells,
         if (j<=i) continue; // we can't collide with ourself, only find low -> hi contacts
 
 
+	// This is the model from Smeets et al. (2016)
 	float dij = length(centers[i]-centers[j]);
 	const float R = 1.f;
-	const float Ws = 1.f;
 	float dist_adh = -(2.f/R) * ( Ws - (Ws + Wc) * (dij - R) / R );
 	float4 pt = 0.5f * (centers[i]+centers[j]);
 	float4 norm = normalize(centers[j]-centers[i]);
@@ -521,6 +522,7 @@ __kernel void calculate_Bx(const int max_contacts,
                            __global const float8* fr_ents,
                            __global const float8* to_ents,
                            __global const float8* deltap,
+			   const float Ws,
 			   const float Wc,
                            __global float* Bx)
 {
@@ -533,7 +535,6 @@ __kernel void calculate_Bx(const int max_contacts,
   float8 to_ents_i = b < 0 ? 0.f : to_ents[i];
   //my machine can't dot float8s...
 
-  const float Ws = 1.f;
   const float R = 1.f;
 
   const float fac = 2.F * (Ws + Wc) / (R*R);
@@ -557,20 +558,14 @@ __kernel void calculate_BTBx(const int max_contacts,
   int i = get_global_id(0);
   int base = i*max_contacts;
   float8 res = 0.f;
-  const float R = 1.f;
-  const float Wc = 0.1f;
-  const float Ws = 1.f;
   for (int k = base; k < base+n_cts[i]; k++) {
     float8 oldres = res;
-
-    float Fcc = Bx[k]; //-(2.f/R) * ( Ws - (Ws + Wc) * (Bx[k] + R) / R );
-    res += fr_ents[k]*Fcc;
+    res += fr_ents[k]*Bx[k];
   }
   for (int k = base; k < base+n_cell_tos[i]; k++) {
     int n = cell_tos[k];
     if (n < 0) continue;
-    float Fcc = Bx[n]; //-(2.f/R) * ( Ws - (Ws + Wc) * (Bx[n] + R) / R );
-    res -= to_ents[n]*Fcc;
+    res -= to_ents[n]*Bx[n];
   }
   BTBx[i] = res;
 }
@@ -640,8 +635,10 @@ __kernel void integrate(__global float4* centers,
                         __global float4* dirs,
                         __global float4* dcenters,
 			__global float4* avg_neighbour_dir,
+			__global float4* signal_gradient,
 			__global float* noise,
 			const float fcil,
+			const float ftax,
 			const float D,
 			const float dt,
 			const int spherical)
@@ -652,6 +649,7 @@ __kernel void integrate(__global float4* centers,
   float4 dcenter_i = dcenters[i];
   float noise_i = noise[i];
   float4 avg_neighbour_dir_i = avg_neighbour_dir[i];
+  float4 signal_gradient_i = signal_gradient[i];
 
   float4 normal = {0.f, 0.f, 1.f, 0.f};
   if (spherical==1) 
@@ -667,6 +665,10 @@ __kernel void integrate(__global float4* centers,
   if (length(avg_neighbour_dir_i)>0.f)
   {
 	angle += fcil * angle_between_vectors(dir_i, -avg_neighbour_dir_i, normal);
+  }
+  if (length(signal_gradient_i)>0.f)
+  {
+	angle += ftax * length(signal_gradient_i) * angle_between_vectors(dir_i, normalize(signal_gradient_i), normal);
   }
   dir_i = rot(normal, dt * angle, dir_i);
   dirs[i] = normalize(dir_i);

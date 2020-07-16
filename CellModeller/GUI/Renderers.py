@@ -11,6 +11,7 @@ class GLPointRenderer:
         def __init__(self, sim, properties=None, scales = None, 
                                 draw_axis=False, 
                                 draw_nbr_dir=False,
+                                draw_gradient=False,
                                 draw_sphere=False, 
                                 sphere_radius=0,
                                 sphere_color=[0,0,0,1]):
@@ -126,6 +127,7 @@ class GLSphereRenderer:
         def __init__(self, sim, properties=None, scales = None, 
                                 draw_axis=False, 
                                 draw_nbr_dir=False,
+                                draw_gradient=False,
                                 draw_sphere=False, 
                                 sphere_radius=0,
                                 sphere_color=[0,0,0,1]):
@@ -142,6 +144,7 @@ class GLSphereRenderer:
                 self.scales = scales
                 self.draw_axis = draw_axis
                 self.draw_nbr_dir = draw_nbr_dir
+                self.draw_gradient = draw_gradient
                 self.draw_sphere = draw_sphere
                 self.sphere_radius = sphere_radius
                 self.sphere_color = sphere_color
@@ -230,6 +233,7 @@ class GLSphereRenderer:
                 p = cell.pos
                 d = cell.dir
                 nd = cell.avg_neighbour_dir
+                grad = cell.gradient
                 cid = cell.id
                 linecol = [0,0,0]
                 if selection==cid:
@@ -251,7 +255,7 @@ class GLSphereRenderer:
                 glMatrixMode(GL_MODELVIEW)
                 glPushMatrix()
                 glTranslatef(p[0],p[1],p[2])                
-                gluSphere(self.quad, r, 8, 8)
+                gluSphere(self.quad, r, 16, 16)
                 glPopMatrix() 
 
                 glDepthFunc(GL_LESS)
@@ -265,7 +269,7 @@ class GLSphereRenderer:
                 glPushMatrix()
                 glTranslatef(p[0],p[1],p[2])
                 glScalef(0.8,0.8,0.8)
-                gluSphere(self.quad, r, 8, 8)
+                gluSphere(self.quad, r, 16, 16)
                 #glScalef(1.25,1.0,1.0)
                 glPopMatrix() 
 
@@ -274,13 +278,20 @@ class GLSphereRenderer:
                 glLineWidth(4)
                 glBegin(GL_LINES)
                 if self.draw_axis:
-                    glColor3f(0,0,0)
+                    glColor3f(1,1,1)
                     glVertex3f(p[0], p[1], p[2])
-                    glVertex3f(p[0] + d[0]*2, p[1] + d[1]*2, p[2] + d[2]*2)
+                    glVertex3f(p[0] + d[0], p[1] + d[1], p[2] + d[2])
                 if self.draw_nbr_dir:
                     glColor3f(0,1,0)
                     glVertex3f(p[0], p[1], p[2])
-                    glVertex3f(p[0] + -nd[0]*2, p[1] + -nd[1]*2, p[2] + -nd[2]*2)
+                    glVertex3f(p[0] + -nd[0], p[1] + -nd[1], p[2] + -nd[2])
+                if self.draw_gradient:
+                    glColor3f(1,0,0)
+                    for g in grad:
+                        norm = numpy.sqrt(g[0]**2 + g[1]**2 + g[3]**2)
+                        glVertex3f(p[0], p[1], p[2])
+                        glVertex3f(p[0] + g[0]/norm, p[1] + g[1]/norm, p[2] + g[2]/norm)
+
                 glEnd()
                 glEnable(GL_DEPTH_TEST)
 

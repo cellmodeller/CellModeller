@@ -3,6 +3,7 @@ import numpy
 from scipy.ndimage import laplace
 from scipy.ndimage.filters import convolve
 from functools import reduce
+from pyopencl.array import vec
 
 
 class GridDiffusion:
@@ -87,6 +88,18 @@ something else - e.g. a bulk flow term.
 
     def addCell(self, cellState):
         pass
+
+    def gradient(self, signalGradient_x, signalGradient_y, signalGradient_z, signalLevels, boundcond='constant'):
+        signalLevelsView = signalLevels.reshape(self.gridDim)
+        signalGradientView_x = signalGradient_x.reshape(self.gridDim)
+        signalGradientView_y = signalGradient_y.reshape(self.gridDim)
+        signalGradientView_z = signalGradient_z.reshape(self.gridDim)
+        for s in range(self.nSignals):
+            gx,gy,gz = numpy.gradient(signalLevelsView[s])
+            signalGradientView_x[s][:,:,:] = gx
+            signalGradientView_y[s][:,:,:] = gy
+            signalGradientView_z[s][:,:,:] = gz
+
 
     def transportRates(self, signalRates, signalLevels, boundcond='constant', mode='normal'):
         # Compute diffusion term, laplacian of grid levels in signalLevels, 

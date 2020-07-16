@@ -72,6 +72,7 @@ __kernel void gridCells(const float gridOrigx,
     
 }
 
+
 __kernel void setCellSignals(const int numSignals,
                                     const int gridTotalSize,
                                     const int gridDimx,
@@ -80,7 +81,11 @@ __kernel void setCellSignals(const int numSignals,
                                    __global const int* indices,
                                    __global const float* weights,
                                    __global const float* grid,
-                                   __global float* levels)
+                                   __global const float* grid_gradient_x,
+                                   __global const float* grid_gradient_y,
+                                   __global const float* grid_gradient_z,
+                                   __global float* levels,
+				   __global float4* gradients)
 {
     int id = get_global_id(0);
     int idxbase = id*8;
@@ -88,6 +93,7 @@ __kernel void setCellSignals(const int numSignals,
 
     for (int s=0; s<numSignals; s++) {
         levels[lvlbase+s] = 0.0;
+        gradients[lvlbase+s] = 0.0;
     }
 
     // Iterate over 8 nearest grid nodes
@@ -102,6 +108,9 @@ __kernel void setCellSignals(const int numSignals,
         for (int s=0; s<numSignals; s++) {
             size_t gsidx = grid_idx + s*gridTotalSize;
             levels[lvlbase+s] += grid[gsidx]*wt;
+            gradients[lvlbase+s].s0 += grid_gradient_x[gsidx]*wt;
+            gradients[lvlbase+s].s1 += grid_gradient_y[gsidx]*wt;
+            gradients[lvlbase+s].s2 += grid_gradient_z[gsidx]*wt;
         }
     }
 }

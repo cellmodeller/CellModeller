@@ -980,7 +980,6 @@ class CLBacterium:
                                     self.ct_reldists_dev.data,
                                     self.rhs_dev.data).wait()
 
-
         # res = b-Ax
         self.calculate_Ax(self.BTBx_dev, self.deltap_dev, dt, alpha)
         self.vsub(self.res_dev[0:self.n_cells], self.rhs_dev[0:self.n_cells], self.BTBx_dev[0:self.n_cells])

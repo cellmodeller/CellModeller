@@ -31,8 +31,10 @@ class CLSPP:
                  grid_spacing=5.0,
                  gamma_s=1.0,
                  Fm=1.,
+                 Ws=1.,
                  Wc=1.,
                  fcil=2.,
+                 ftax=1.,
                  D=1.,
                  dt=None,
                  cgs_tol=5e-3,
@@ -65,8 +67,10 @@ class CLSPP:
         self.grid_spacing = grid_spacing
         self.gamma_s = gamma_s
         self.Fm = Fm
+        self.Ws = Ws
         self.Wc = Wc
         self.fcil = fcil
+        self.ftax = ftax
         self.D = D
         self.dt = dt
         self.cgs_tol = cgs_tol
@@ -240,7 +244,9 @@ class CLSPP:
         self.cell_dcenters_dev = cl_array.zeros(self.queue, cell_geom, vec.float4)
         self.avg_neighbour_dir  = numpy.zeros(cell_geom, vec.float4)
         self.avg_neighbour_dir_dev = cl_array.zeros(self.queue, cell_geom, vec.float4)
-
+        self.cell_areas_dev = cl_array.zeros(self.queue, cell_geom, numpy.float32) + 4 * numpy.pi 
+        self.cell_vols_dev = cl_array.zeros(self.queue, cell_geom, numpy.float32) + 4 * numpy.pi / 3
+        self.cell_old_vols_dev = self.cell_vols_dev
         # gridding
         self.sq_inds = numpy.zeros((self.max_sqs,), numpy.int32)
         self.sq_inds_dev = cl_array.zeros(self.queue, (self.max_sqs,), numpy.int32)
@@ -713,6 +719,7 @@ class CLSPP:
                                    numpy.int32(self.grid_y_max),
                                    numpy.int32(self.n_sqs),
                                    numpy.int32(self.max_contacts),
+                                   numpy.float32(self.Ws),
                                    numpy.float32(self.Wc),
                                    centers.data,
                                    dirs.data,
@@ -801,6 +808,7 @@ class CLSPP:
                                   self.fr_ents_dev.data,
                                   self.to_ents_dev.data,
                                   x.data,
+                                  numpy.float32(self.Ws),
                                   numpy.float32(self.Wc),
                                   self.Mx_dev.data).wait()
         self.program.calculate_BTBx(self.queue,
@@ -848,8 +856,8 @@ class CLSPP:
                                     self.ct_reldists_dev.data,
                                     self.rhs_dev.data).wait()
 
-        #self.vmulk(self.rhs_dev, numpy.float32(dt), self.rhs_dev).wait()
         self.add_force(self.rhs_dev, self.Fm, self.cell_dirs_dev).wait()
+        #self.add_force(self.rhs_dev, -0.001, self.cell_centers_dev).wait()
 
         # res = b-Ax
         self.calculate_Ax(self.BTBx_dev, self.deltap_dev, dt, alpha)
@@ -945,8 +953,10 @@ class CLSPP:
                                self.cell_dirs_dev.data,
                                self.cell_dcenters_dev.data,
                                self.avg_neighbour_dir_dev.data,
+                               self.simulator.integ.cellSigGradients_dev.data,
                                noise.data,
                                numpy.float32(self.fcil),
+                               numpy.float32(self.ftax),
                                numpy.float32(self.D),
                                numpy.float32(dt),
                                numpy.int32(self.spherical*1)).wait()

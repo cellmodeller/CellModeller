@@ -57,7 +57,7 @@ def unique_stable(ar, return_index=False, return_inverse=False):
 
 
 class CLEulerSigIntegrator:
-    def __init__(self, sim, nSignals, nSpecies, maxCells, sig, regul=None, boundcond='constant'):
+    def __init__(self, sim, nSignals, nSpecies, maxCells, sig, deg_rate=0, regul=None, boundcond='constant'):
         self.sim = sim
         self.dt = self.sim.dt
         self.regul = regul
@@ -67,6 +67,8 @@ class CLEulerSigIntegrator:
         self.nSpecies = nSpecies
         self.nSignals = nSignals
         self.maxCells = maxCells
+
+        self.deg_rate = deg_rate
 
         # The signalling model, must be a grid based thing
         self.signalling = sig
@@ -108,6 +110,7 @@ class CLEulerSigIntegrator:
         for id,c in list(cs.items()):
             c.species = self.specLevel[c.idx,:]
             c.signals = self.cellSigLevels[c.idx,:]
+            c.gradient = self.cellSigGradients[c.idx,:]
             self.celltype[c.idx] = numpy.int32(c.cellType)
 
 
@@ -124,6 +127,7 @@ class CLEulerSigIntegrator:
         self.nCells += 1
         cellState.species = self.specLevel[idx,:]
         cellState.signals = self.cellSigLevels[idx,:]
+        cellState.gradient = self.cellSigGradients[idx,:]
         self.celltype[idx] = numpy.int32(cellState.cellType)
 
     def divide(self, pState, d1State, d2State):
@@ -170,7 +174,15 @@ class CLEulerSigIntegrator:
         self.cellSigRates_dev = cl_array.zeros(self.queue, (self.maxCells,8,self.nSignals),dtype=numpy.float32)
         self.cellSigLevels = numpy.zeros((self.maxCells,self.nSignals),dtype=numpy.float32)
         self.cellSigLevels_dev = cl_array.zeros(self.queue, (self.maxCells,self.nSignals),dtype=numpy.float32)
-        self.signalLevel_dev = cl_array.zeros(self.queue, self.gridDim,dtype=numpy.float32)
+        self.cellSigGradients = numpy.zeros((self.maxCells,self.nSignals),dtype=vec.float4)
+        self.cellSigGradients_dev = cl_array.zeros(self.queue, (self.maxCells,self.nSignals),dtype=vec.float4)
+        self.signalLevel_dev = cl_array.zeros(self.queue, self.gridDim, dtype=numpy.float32)
+        self.signalGradient_x_dev = cl_array.zeros(self.queue, self.gridDim, dtype=numpy.float32)
+        self.signalGradient_y_dev = cl_array.zeros(self.queue, self.gridDim, dtype=numpy.float32)
+        self.signalGradient_z_dev = cl_array.zeros(self.queue, self.gridDim, dtype=numpy.float32)
+        self.signalGradient_x = numpy.zeros(self.gridDim, dtype=numpy.float32) 
+        self.signalGradient_y = numpy.zeros(self.gridDim, dtype=numpy.float32)
+        self.signalGradient_z = numpy.zeros(self.gridDim, dtype=numpy.float32)
         self.specLevel_dev = cl_array.zeros(self.queue, (self.maxCells,self.nSpecies), dtype=numpy.float32)
         self.specRate_dev = cl_array.zeros(self.queue, (self.maxCells,self.nSpecies), dtype=numpy.float32)
 
@@ -184,7 +196,7 @@ class CLEulerSigIntegrator:
         sigRateKernel = self.regul.sigRateCL()
         #kernel_src = open('CellModeller/Integration/CLCrankNicIntegrator.cl', 'r').read()
         from pkg_resources import resource_string
-        kernel_src = resource_string(__name__, 'CLCrankNicIntegrator.cl').decode()
+        kernel_src = resource_string(__name__, 'CLEulerSigIntegrator.cl').decode()
         # substitute user defined kernel code, and number of signals
         kernel_src = kernel_src % {'sigKernel': sigRateKernel,
                                    'specKernel': specRateKernel,
@@ -220,7 +232,12 @@ class CLEulerSigIntegrator:
                 self.gridIdxs_dev.data,
                 self.triWts_dev.data,
                 self.signalLevel_dev.data,
-                self.cellSigLevels_dev.data).wait()
+                self.signalGradient_x_dev.data,
+                self.signalGradient_y_dev.data,
+                self.signalGradient_z_dev.data,
+                self.cellSigLevels_dev.data,
+                self.cellSigGradients_dev.data
+                ).wait()
 
         self.celltype_dev.set(self.celltype)
         # compute species rates
@@ -291,15 +308,21 @@ class CLEulerSigIntegrator:
         # growth dilution of species
         self.diluteSpecies()
 
-        # Do u += h(T(u_t)/2 + hf(u_t)) where T=transport operator, f(u_t) is 
-        # our regulation function dydt
+        # Laplacian
         self.signalling.transportRates(self.signalRate, self.signalLevel, self.boundcond)
+        # Degradation
+        self.signalRate -= self.signalLevel * self.deg_rate
+        # Gradient
+        self.signalling.gradient(self.signalGradient_x, self.signalGradient_y, self.signalGradient_z, self.signalLevel, self.boundcond)
         self.dydt()
         self.rates[0:self.dataLen] *= self.dt
         self.levels[0:self.dataLen] += self.rates[0:self.dataLen]
 
         # put local cell signal levels in array
         self.signalLevel_dev.set(self.signalLevel)
+        self.signalGradient_x_dev.set(self.signalGradient_x)
+        self.signalGradient_y_dev.set(self.signalGradient_y)
+        self.signalGradient_z_dev.set(self.signalGradient_z)
         self.program.setCellSignals(self.queue, (self.nCells,), None,
                 numpy.int32(self.nSignals),
                 numpy.int32(self.gridTotalSize),
@@ -309,8 +332,13 @@ class CLEulerSigIntegrator:
                 self.gridIdxs_dev.data,
                 self.triWts_dev.data,
                 self.signalLevel_dev.data,
-                self.cellSigLevels_dev.data).wait()
+                self.signalGradient_x_dev.data,
+                self.signalGradient_y_dev.data,
+                self.signalGradient_z_dev.data,
+                self.cellSigLevels_dev.data,
+                self.cellSigGradients_dev.data).wait()
         self.cellSigLevels[:] = self.cellSigLevels_dev.get()
+        self.cellSigGradients[:] = self.cellSigGradients_dev.get()
 
 # Put the final signal levels into the cell states
 #        states = self.cellStates
@@ -341,8 +369,10 @@ class CLEulerSigIntegrator:
         self.signalLevel_dev.set(self.signalLevel)
         self.specLevel_dev.set(self.specLevel)
         self.cellSigLevels_dev.set(self.cellSigLevels)
+        self.cellSigGradients_dev.set(self.cellSigGradients)
         cs = self.cellStates
         for id,c in list(cs.items()): #make sure everything is correct here
+            c.gradient = self.cellSigGradients[c.idx,:]
             c.species = self.specLevel[c.idx,:]
             c.signals = self.cellSigLevels[c.idx,:]
             self.celltype[c.idx] = numpy.int32(c.cellType)
