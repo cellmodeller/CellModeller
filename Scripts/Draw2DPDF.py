@@ -6,9 +6,13 @@ import string
 from reportlab.pdfgen.canvas import Canvas
 from reportlab.lib import units
 from reportlab.lib.colors import Color
+from reportlab.graphics.renderPM import drawToFile
 
 import numpy
 import pickle
+
+import numpy as np
+from skimage.io import imsave
 
 mxsig0 = 0
 
@@ -29,7 +33,7 @@ class CellModellerPDFGenerator(Canvas):
         self.parents = data.get('lineage')
         self.data = data
         self.bg_color = bg_color
-        Canvas.__init__(self, name)
+        Canvas.__init__(self, name, bottomup=1)
 
     # ----
     # Inherit this class and override the following method to change
@@ -71,7 +75,7 @@ class CellModellerPDFGenerator(Canvas):
         self.setStrokeColor(stroke_color)
         self.setFillColor(fill_color)
         self.setLineWidth(0.001*units.cm)
-        self.translate(p[0], p[1])
+        self.translate(p[0], 85-p[1])
         self.rotate(math.degrees(math.atan2(d[1], d[0])))
         path = self.capsule_path(l, r)
         self.drawPath(path, fill=1)
@@ -93,7 +97,7 @@ class CellModellerPDFGenerator(Canvas):
         self.line(-100, -16, 100, -16)
         self.line(-100, 16, 100, 16)
 
-    def draw_signals(self, index=0, scale=0.0192, z=0):
+    def draw_signals(self, index=0, scale=0.0192, z=6):
         '''
         Function for drawing signal grids, currently limited to 1 signal a plane at a fixed z-axis level through the
         grid
@@ -110,6 +114,15 @@ class CellModellerPDFGenerator(Canvas):
                                 self.signal_levels
         levels = levels.reshape(dim)
         mx = levels[index,:,:,z].max()
+
+        img = levels[index,:,:,z] / mx
+        img_rgb = np.zeros(img.shape+(3,))
+        img_rgb[:,:,0] = img.transpose()[::-1,:]
+        imsave('tmp.png', img_rgb)
+        w, h = l[0]*dim[1], l[1]*dim[2]
+        self.drawInlineImage('tmp.png', -w/2, -h/2, w, h)
+
+        '''
         l = list(map(float,l))
         for i in range(dim[1]):
             x = l[0]*i + orig[0]
@@ -118,8 +131,9 @@ class CellModellerPDFGenerator(Canvas):
                 lvls = levels[index,i,j,z]/mx
                 mxsig0 = max(lvls, mxsig0)
                 self.setFillColorRGB(lvls, 0, 0)
-                self.rect(x-l[0]/2.0, y-l[1]/2.0, l[0], l[1], stroke=0, fill=1)
-
+                self.setStrokeColorRGB(lvls, 0, 0)
+                self.rect(x-l[0]/2.0, y-l[1]/2.0, l[0]+1, l[1]+1, stroke=0, fill=1)
+        '''
     def draw_frame(self, name, world, page, center):
         self.setup_canvas(name, world, page, center)
         #draw_chamber(c)
@@ -253,6 +267,8 @@ def main():
         # Render pdf
         print(('Rendering PDF output to %s'%outfn))
         pdf.draw_frame(outfn, world, page, center, box_size=160)
+        #drawToFile(pdf, outfn + '.png', 'PNG')
+
 
 if __name__ == "__main__": 
     main()
