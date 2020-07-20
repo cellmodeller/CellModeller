@@ -649,8 +649,14 @@ __kernel void integrate(__global float4* centers,
   float4 dcenter_i = dcenters[i];
   float noise_i = noise[i];
   float4 avg_neighbour_dir_i = avg_neighbour_dir[i];
-  float4 signal_gradient_i = signal_gradient[i];
-
+  float4 signal_gradient_i;
+  if (signal_gradient)
+  {
+  	signal_gradient_i = signal_gradient[i];
+  } else
+  {
+  	signal_gradient_i = 0.f;
+  }
   float4 normal = {0.f, 0.f, 1.f, 0.f};
   if (spherical==1) 
   {
