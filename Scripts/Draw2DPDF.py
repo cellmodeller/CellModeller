@@ -13,6 +13,7 @@ import pickle
 
 import numpy as np
 from skimage.io import imsave
+from skimage.transform import rescale
 
 mxsig0 = 0
 
@@ -114,13 +115,20 @@ class CellModellerPDFGenerator(Canvas):
                                 self.signal_levels
         levels = levels.reshape(dim)
         mx = levels[index,:,:,z].max()
-
+        if mx==0:
+            mx = 1
         img = levels[index,:,:,z] / mx
+        #img = img.astype(np.uint8)
+        img = rescale(img, 8, anti_aliasing=True)
+        img = img.transpose()[::-1,:]
         img_rgb = np.zeros(img.shape+(3,))
-        img_rgb[:,:,0] = img.transpose()[::-1,:]
+        img_rgb[:,:,0] = 1
+        img_rgb[:,:,1] = 1-img
+        img_rgb[:,:,2] = 1-img
         imsave('tmp.png', img_rgb)
         w, h = l[0]*dim[1], l[1]*dim[2]
         self.drawInlineImage('tmp.png', -w/2, -h/2, w, h)
+        os.remove('tmp.png')
 
         '''
         l = list(map(float,l))
@@ -188,12 +196,20 @@ class MyPDFGenerator(CellModellerPDFGenerator):
         # Generate Color objects from cellState, fill=stroke
         (r,g,b) = state.color
         # Return value is tuple of colors, (fill, stroke)
-        fcol = Color(r,g,b,alpha=.5)
-        scol = Color(r*0.5,g*0.5,b*0.5,alpha=.5)
+        fcol = Color(r,g,b,alpha=0.5)
+        scol = Color(r*0.5,g*0.5,b*0.5,alpha=1)
         return [fcol,scol]
 
 
 class SpherePDFGenerator(MyPDFGenerator):
+    def calc_cell_colors(self, state):
+        # Generate Color objects from cellState, fill=stroke
+        (r,g,b) = state.color
+        # Return value is tuple of colors, (fill, stroke)
+        fcol = Color(0,1,0,alpha=0.5)
+        scol = Color(0,0,0,alpha=0.5)
+        return [fcol,scol]
+
     def draw_frame(self, name, world, page, center, box_size=None):
         self.setup_canvas(name, world, page, center)
         #draw_chamber(c)
@@ -258,7 +274,7 @@ def main():
         '''(w,h) = pdf.computeBox()
         sqrt2 = math.sqrt(2)
         world = (w/sqrt2,h/sqrt2)'''
-        world = (85,85)
+        world = (185,185)
 
         # Page setup
         page = (20,20)
@@ -266,7 +282,7 @@ def main():
 
         # Render pdf
         print(('Rendering PDF output to %s'%outfn))
-        pdf.draw_frame(outfn, world, page, center, box_size=160)
+        pdf.draw_frame(outfn, world, page, center, box_size=None)
         #drawToFile(pdf, outfn + '.png', 'PNG')
 
 
