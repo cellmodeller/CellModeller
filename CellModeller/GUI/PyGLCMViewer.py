@@ -295,7 +295,7 @@ class PyGLCMViewer(PyGLWidget):
 
     def paintGL(self):
         PyGLWidget.paintGL(self)
-        glClearColor(0.5,0.5,0.5,0.0)
+        glClearColor(1,1,1,0)
         glClear(GL_COLOR_BUFFER_BIT)
         glMatrixMode(GL_MODELVIEW)
         glPushMatrix()
@@ -305,7 +305,7 @@ class PyGLCMViewer(PyGLWidget):
         # Draw a grid in xy plane
         glEnable(GL_DEPTH_TEST)
         glDisable(GL_LIGHTING)
-        glColor3f(1.0, 1.0, 1.0)
+        glColor3f(0.5, 0.5, 0.5)
         glEnable(GL_LINE_SMOOTH)
         glLineWidth(1.0)
         glBegin(GL_LINES)
