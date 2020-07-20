@@ -233,7 +233,6 @@ class GLSphereRenderer:
                 p = cell.pos
                 d = cell.dir
                 nd = cell.avg_neighbour_dir
-                grad = cell.gradient
                 cid = cell.id
                 linecol = [0,0,0]
                 if selection==cid:
@@ -260,7 +259,7 @@ class GLSphereRenderer:
 
                 glDepthFunc(GL_LESS)
                 glDisable(GL_CULL_FACE)
-                glPolygonMode(GL_FRONT, GL_FILL)
+                glPolygonMode(GL_FRONT_AND_BACK, GL_FILL)
                 glDisable(GL_LINE_SMOOTH)
                 glDisable(GL_BLEND)
 
@@ -286,6 +285,7 @@ class GLSphereRenderer:
                     glVertex3f(p[0], p[1], p[2])
                     glVertex3f(p[0] + -nd[0], p[1] + -nd[1], p[2] + -nd[2])
                 if self.draw_gradient:
+                    grad = cell.gradient
                     glColor3f(1,0,0)
                     for g in grad:
                         norm = numpy.sqrt(g[0]**2 + g[1]**2 + g[3]**2)
@@ -363,9 +363,14 @@ class GLGridRenderer:
             scale = 1
         self.imageData = (self.imageData - mn)*scale
         #print "Signal grid range = %f to %f"%(mn,mx) 
-        for s in range(self.sig.nSignals):
-            self.byteImageData[0:self.dim[0],0:self.dim[1],s] = self.imageData[s,:,:].astype(numpy.uint8)
-
+        #for s in range(self.sig.nSignals):
+        #    self.byteImageData[0:self.dim[0],0:self.dim[1],s] = self.imageData[s,:,:].astype(numpy.uint8)
+        R = 0 if self.sig.nSignals<1 else self.imageData[0,:,:] 
+        G = 0 if self.sig.nSignals<2 else self.imageData[1,:,:] 
+        B = 0 if self.sig.nSignals<3 else self.imageData[2,:,:] 
+        self.byteImageData[0:self.dim[0], 0:self.dim[1], 0] = (255 - G - B)
+        self.byteImageData[0:self.dim[0], 0:self.dim[1], 1] = (255 - R - B)
+        self.byteImageData[0:self.dim[0], 0:self.dim[1], 2] = (255 - R - G)
       
         glEnable(GL_TEXTURE_2D)
         glDisable(GL_LIGHTING)
