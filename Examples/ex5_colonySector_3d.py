@@ -32,7 +32,7 @@ def init(cell):
     cell.n_b = 3
 
 def update(cells):
-    for (id, cell) in cells.iteritems():
+    for (id, cell) in cells.items():
         cell.color = [0.1, cell.n_a/3.0, cell.n_b/3.0]
         if cell.volume > cell.targetVol:
             cell.divideFlag = True

@@ -122,6 +122,45 @@ void print_matrix(float4* m) {
   */
 }
 
+void cyl_inertia_tensor(float muA, float l, float4 axis, float4 res[]) {
+  // first find the inv inertia tensor for a capsule along the x axis
+  float diag = (muA*l*l*l) / 12.f;
+
+  // now find the matrix that transforms from the x-axis to the axis
+  float4 x_axis = {1.f, 0.f, 0.f, 0.f};
+  float4 y_axis = {0.f, 1.f, 0.f, 0.f};
+  float4 z_axis = {0.f, 0.f, 1.f, 0.f};
+  float rot_ang = acos(dot(x_axis, axis));
+
+  float4 y_prime = y_axis;
+  float4 z_prime = z_axis;
+
+  if (rot_ang > EPSILON) {
+    y_prime = rot(z_prime, rot_ang, y_axis);
+    z_prime = normalize(cross(x_axis, axis));
+  }
+
+  float4 M[4];
+  M[0] = axis;
+  M[1] = y_prime;
+  M[2] = z_prime;
+  M[3] = 0.f;
+
+  float4 MT[4];
+  transpose(M, MT);
+
+  float4 I[4];
+  I[0].s0 = 0.f;
+  I[1].s1 = diag;
+  I[2].s2 = diag;
+  I[3].s3 = 0.f;
+
+  // M^T(I)M
+  float4 IM[4];
+  matmulmat(I, M, IM);
+  matmulmat(MT, IM, res);
+}
+
 void cyl_inv_inertia_tensor(float muA, float l, float4 axis, float4 res[]) {
   // first find the inv inertia tensor for a capsule along the x axis
   float diag = 12.f/(muA*l*l*l);
@@ -296,6 +335,94 @@ void closest_points_on_segments(const float4 r_a,  // center of first segment
 float pt_to_plane_dist(float4 v, float4 n, float4 p)
 {
   return dot((p-v), n);
+}
+
+// intest distance from a point p to a sphere at point v
+// with radius r
+float pt_to_sphere_dist(float4 v, float rad, float4 p)
+{
+  return length(p - v) - rad;
+}
+
+__kernel void find_sphere_contacts(const int max_cells,
+                                  const int max_contacts,
+                                  const int n_spheres,
+                                  __global const float4* sphere_pts,
+                                  __global const float* sphere_coeffs,
+                                  __global const float* sphere_rads,
+                                  __global const float* sphere_norms,
+                                  __global const float4* centers,
+                                  __global const float4* dirs,
+                                  __global const float* lens,
+                                  __global const float* rads,
+                                  __global int* n_cts,
+                                  __global int* frs,
+                                  __global int* tos,
+                                  __global float* dists,
+                                  __global float4* pts,
+                                  __global float4* norms,
+                                  __global float* reldists,
+                                  __global float* stiff)
+{
+  int i = get_global_id(0);
+
+  // collision count
+  int k = n_cts[i]; //keep existing contacts
+
+  float4 end1 = centers[i] - 0.5f*lens[i]*dirs[i]; // 'left' end of the cell
+  float4 end2 = centers[i] + 0.5f*lens[i]*dirs[i]; // 'right' end of the cell
+
+  for (int n = 0; n < n_spheres; n++) { // loop through all spheres
+    int to1 = -2*n - 1; // 'to' if left end has contact with sphere n
+    int to2 = to1 - 1;  // 'to' if right end has contact with sphere n
+
+    float dist1 = sphere_norms[n] * pt_to_sphere_dist(sphere_pts[n], sphere_rads[n], end1)-rads[i];
+    float dist2 = sphere_norms[n] * pt_to_sphere_dist(sphere_pts[n], sphere_rads[n], end2)-rads[i];
+
+    // check for old contacts with this sphere
+    int cti1 = -1;
+    int cti2 = -1;
+    for (int m = i*max_contacts; m < i*max_contacts+n_cts[i]; m++) {
+      if (tos[m] == to1) cti1 = m;
+      else if (tos[m] == to2) cti2 = m;
+    }
+
+    bool two_pts = ((cti1 >= 0) || (dist1<0.f) ) && ( (cti2 >= 0) || (dist2<0.f) );
+    float stiffness = two_pts*ISQRT2 + (!two_pts)*1.0;
+
+    // if we're in contact, or we were in contact, recompute
+    if ((cti1 >= 0) || (dist1<0.f) ){
+      // need to make a new contact
+      if (cti1 < 0) {
+        cti1 = i*max_contacts+k;
+        k++;
+      }
+
+      frs[cti1] = i;
+      tos[cti1] = to1;
+      dists[cti1] = dist1;
+      pts[cti1] = end1; // FIXME: not really the right point
+      norms[cti1] = sphere_norms[n] *  normalize(-end1 + sphere_pts[n]);
+      reldists[cti1] = stiffness*sphere_coeffs[n]*dist1;
+      stiff[cti1] = stiffness*sphere_coeffs[n];
+    }
+
+    if ( (cti2 >= 0) || (dist2<0.f) ){
+      if (cti2 < 0) {
+        cti2 = i*max_contacts+k;
+        k++;
+      }
+
+      frs[cti2] = i;
+      tos[cti2] = to2;
+      dists[cti2] = dist2;
+      pts[cti2] = end2;
+      norms[cti2] = sphere_norms[n] * normalize(-end2 + sphere_pts[n]);
+      reldists[cti2] = stiffness*sphere_coeffs[n]*dist2;
+      stiff[cti2] = stiffness*sphere_coeffs[n];
+    }
+  }
+  n_cts[i] = k;
 }
 
 
@@ -636,8 +763,6 @@ __kernel void collect_tos(const int max_cells,
 
 
 __kernel void build_matrix(const int max_contacts,
-                           const float muA,
-                           const float gamma,
                            __global const float4* centers,
                            __global const float4* dirs,
                            __global const float* lens,
@@ -662,21 +787,20 @@ __kernel void build_matrix(const int max_contacts,
   float4 r_a = pts[i]-centers[a];
   float8 fr_ent = 0.f;
 
-  float4 Ia[4];
-  cyl_inv_inertia_tensor(muA, lens[a]+2.f*rads[a], dirs[a], Ia);
   float4 nxr_a = 0.f;
   nxr_a = cross(norms[i], r_a);
 
-  fr_ent.s012 = norms[i].s012/(muA*(lens[a]+2.f*rads[a]));
-  fr_ent.s3 = -dot(nxr_a, Ia[0]);
-  fr_ent.s4 = -dot(nxr_a, Ia[1]);
-  fr_ent.s5 = -dot(nxr_a, Ia[2]);
-  fr_ent.s6 = (1.f/gamma) * dot(dirs[a], r_a) * dot(dirs[a], norms[i])/(lens[a]+2.f*rads[a]);
+  fr_ent.s012 = norms[i].s012;
+  fr_ent.s345 = -nxr_a.s012; 
+  //fr_ent.s3 = -dot(nxr_a, Ia[0]);
+  //fr_ent.s4 = -dot(nxr_a, Ia[1]);
+  //fr_ent.s5 = -dot(nxr_a, Ia[2]);
+  fr_ent.s6 = dot(dirs[a], r_a) * dot(dirs[a], norms[i])/(lens[a]+2.f*rads[a]);
   fr_ents[i] = fr_ent * stiff[i];
 
   int b = tos[i];
 
-  // plane contacts have no to_ent, and have negative indices
+  // plane and sphere contacts have no to_ent, and have negative indices
   if (b < 0) {
     to_ents[i] = 0.f;
     return;
@@ -685,26 +809,25 @@ __kernel void build_matrix(const int max_contacts,
   float4 r_b = pts[i]-centers[b];
   float8 to_ent = 0.f;
 
-  float4 Ib[4];
-  cyl_inv_inertia_tensor(muA, lens[b]+2.f*rads[b], dirs[b], Ib);
   float4 nxr_b = 0.f;
   nxr_b = cross(norms[i], r_b);
 
-  to_ent.s012 = norms[i].s012/(muA*(lens[b]+2.f*rads[b]));
-  to_ent.s3 = -dot(nxr_b, Ib[0]);
-  to_ent.s4 = -dot(nxr_b, Ib[1]);
-  to_ent.s5 = -dot(nxr_b, Ib[2]);
-  to_ent.s6 = (1.f/gamma) * dot(dirs[b], r_b) * dot(dirs[b], norms[i])/(lens[b]+2.f*rads[b]);
+  to_ent.s012 = norms[i].s012;
+  to_ent.s345 = -nxr_b.s012; 
+  //to_ent.s3 = -dot(nxr_b, Ib[0]);
+  //to_ent.s4 = -dot(nxr_b, Ib[1]);
+  //to_ent.s5 = -dot(nxr_b, Ib[2]);
+  to_ent.s6 = dot(dirs[b], r_b) * dot(dirs[b], norms[i])/(lens[b]+2.f*rads[b]);
   to_ents[i] = to_ent * stiff[i];
 }
 
-__kernel void calculate_Mx(const int max_contacts,
+__kernel void calculate_Bx(const int max_contacts,
                            __global const int* frs,
                            __global const int* tos,
                            __global const float8* fr_ents,
                            __global const float8* to_ents,
                            __global const float8* deltap,
-                           __global float* Mx)
+                           __global float* Bx)
 {
   int id = get_global_id(0);
   int ct = get_global_id(1);
@@ -716,33 +839,67 @@ __kernel void calculate_Mx(const int max_contacts,
   //my machine can't dot float8s...
   float res0123 = dot(fr_ents[i].s0123, deltap[a].s0123) - dot(to_ents_i.s0123, deltap[b].s0123);
   float res4567 = dot(fr_ents[i].s4567, deltap[a].s4567) - dot(to_ents_i.s4567, deltap[b].s4567);
-  Mx[i] = res0123 + res4567;
+  Bx[i] = res0123 + res4567;
 }
 
 
-__kernel void calculate_MTMx(const int max_contacts,
+__kernel void calculate_BTBx(const int max_contacts,
                              __global const int* n_cts,
                              __global const int* n_cell_tos,
                              __global const int* cell_tos,
                              __global const float8* fr_ents,
                              __global const float8* to_ents,
-                             __global const float* Mx,
-                             __global float8* MTMx)
+                             __global const float* Bx,
+                             __global float8* BTBx)
 {
   int i = get_global_id(0);
   int base = i*max_contacts;
   float8 res = 0.f;
   for (int k = base; k < base+n_cts[i]; k++) {
     float8 oldres = res;
-    res += fr_ents[k]*Mx[k];
+    res += fr_ents[k]*Bx[k];
   }
   for (int k = base; k < base+n_cell_tos[i]; k++) {
     int n = cell_tos[k];
     if (n < 0) continue;
-    res -= to_ents[n]*Mx[n];
+    res -= to_ents[n]*Bx[n];
   }
-  MTMx[i] = res;
+  BTBx[i] = res;
 }
+
+__kernel void calculate_Mx(const float muA,
+			       const float gamma,
+			       __global const float4* dirs,
+			       __global const float* lens,
+			       __global const float* rads,
+			       __global const float8* x,
+			       __global float8* Mx)
+{
+  int i = get_global_id(0);
+  float l = lens[i] + 2.f * rads[i];
+
+  float8 xi = x[i];
+  float8 v = 0.f;
+  v.s012 = xi.s012 * muA * l;
+
+  float4 I[4];
+  cyl_inertia_tensor(muA, l, dirs[i], I);
+  float4 L = 0.f;
+  L.s012 = xi.s345;
+  float4 w = matmul(I, L);
+  v.s345 = w.s012;
+
+  //float4 w = 0.f;
+  //w.s012 = xi.s345;
+  //float4 a = dirs[i];
+  //float4 vv = (w - a*dot(a,w)) * muA * l*l*l / 12.f;
+  //v.s345 = vv.s012;
+  
+  v.s6 = xi.s6 * gamma;
+
+  Mx[i] = v;
+}
+
 
 __kernel void calculate_Minv_x(const float muA,
 			       const float gamma,
@@ -856,14 +1013,17 @@ __kernel void add_impulse(const float muA,
 
   float4 dplin = 0.f;
   dplin.s012 = deltap_i.s012;
-  dcenters[i] += dplin/(muA*(lens[i]+2.f*rads[i]));
+  dcenters[i] += dplin;
 
   // FIXME: should probably store these so we don't recompute them
-  float4 Iinv[4];
-  cyl_inv_inertia_tensor(muA, len_i+2.f*rad_i, dir_i, Iinv);
-  float4 dL = 0.f;
-  dL.s012 = deltap_i.s345;
-  float4 dpang = matmul(Iinv, dL);
+  //float4 Iinv[4];
+  //cyl_inv_inertia_tensor(muA, len_i+2.f*rad_i, dir_i, Iinv);
+  //float4 dL = 0.f;
+  //dL.s012 = deltap_i.s345;
+  //float4 dpang = matmul(Iinv, dL);
+
+  float4 dpang = 0.f;
+  dpang.s012 = deltap_i.s345;
   float dpangmag = length(dpang);
   if (dpangmag>ANG_LIMIT)
   {
@@ -872,8 +1032,8 @@ __kernel void add_impulse(const float muA,
   dangs[i] += dpang;
   
   float dplen = deltap_i.s6;
-  //dlens[i] += max(0.f, target_dlens[i] + dplen/gamma);
-  dlens[i] = max(0.f, dlens[i]+dplen/gamma);
+  //dlens[i] += max(0.f, target_dlens[i] + dplen);
+  dlens[i] = max(0.f, dlens[i]+dplen);
 }
 
 

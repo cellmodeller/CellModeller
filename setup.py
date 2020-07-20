@@ -22,10 +22,8 @@ except:
 
 
 setup(name='CellModeller',
-    install_requires=['numpy==1.9.2', 'scipy', 'pyopengl', 'pyopencl==2014.1', 'reportlab', 'matplotlib'],
-    setup_requires=['numpy==1.9.2', 'scipy', 'pyopengl', 'pyopencl==2014.1', 'reportlab', 'matplotlib'],
-    #setup_requires=['python=2'],
-    #setup_requires=['numpy', 'pyopengl', 'mako', 'pyopencl'],
+    install_requires=['numpy', 'scipy', 'pyopengl', 'mako', 'pyqt5', 'pyopencl', 'reportlab', 'matplotlib'],
+    setup_requires=['numpy', 'scipy', 'pyopengl', 'mako', 'pyqt5', 'pyopencl', 'reportlab', 'matplotlib'],
     packages=['CellModeller',
                 'CellModeller.Biophysics',
                 'CellModeller.Biophysics.BacterialModels',
@@ -35,5 +33,6 @@ setup(name='CellModeller',
                 'CellModeller.Signalling',
                 'CellModeller.GUI'],
      package_data={'':['*.cl','*.ui']},
+     python_requires='>=3',
      version=str(version_git)
 )

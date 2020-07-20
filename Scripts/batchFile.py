@@ -10,7 +10,7 @@ from CellModeller.Simulator import Simulator
 
 sys.path.append('./')
 
-print os.getcwd()
+print((os.getcwd()))
 
 import CellModeller.AdaptiveSimulator
 
@@ -39,14 +39,14 @@ except:
 try:
     os.mkdir(pickleDir)
 except OSError:
-    print pickleDir, 'exists'
+    print((pickleDir, 'exists'))
 
 pickleSetDir = os.path.join(pickleDir, mod_name)
 
 try:
     os.mkdir(pickleSetDir)
 except:
-    print pickleSetDir, 'exists'
+    print((pickleSetDir, 'exists'))
 
 folderName = time.strftime('%Y%m%d-%H%M%S', time.localtime())
 pickleFileRoot = os.path.join(pickleSetDir, folderName)
@@ -56,9 +56,9 @@ cell_buffer = 256
 
 
 def simulate(mod_name, steps=50):
-    print 'simulate'
+    print('simulate')
     sim = Simulator(mod_name, 0.25, None, pickleSteps=50, pickleFileRoot=pickleFileRoot)
-    print 'start'
+    print('start')
 
     sim.phys.set_cells()
     sim.phys.calc_cell_geom()

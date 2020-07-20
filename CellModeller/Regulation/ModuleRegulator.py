@@ -40,7 +40,7 @@ class ModuleRegulator:
         return self.module.speciesRates(cstate, speciesLevels, signalLevels)
 
     def initSpeciesLevels(self, levels):
-        csv = self.cellStates.values()
+        csv = list(self.cellStates.values())
         nCells = len(csv)
         for i in range(nCells):
             levels[i,:] = csv[i].species
@@ -49,8 +49,8 @@ class ModuleRegulator:
         try:
             self.module.update(self.cellStates)
         except Exception as e:
-            print "Problem with regulation module " + self.modName
-            print e
+            print("Problem with regulation module " + self.modName)
+            print(e)
 
     def divide(self, pState, d1State, d2State):
         # Call the module's optional divide function

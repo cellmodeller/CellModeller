@@ -99,7 +99,7 @@ def sigRateCL(): #Add
 
 def update(cells):
     #Iterate through each cell and flag cells that reach target size for division
-    for (id, cell) in cells.iteritems():
+    for (id, cell) in cells.items():
         cell.color = [0.1+cell.species[1]/20.0, 0.1+cell.species[2]/20.0, 0.1]
         if cell.volume > cell.targetVol:
             cell.divideFlag = True

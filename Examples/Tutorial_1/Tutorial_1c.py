@@ -37,7 +37,7 @@ def init(cell):
 
 def update(cells):
     #Iterate through each cell and flag cells that reach target size for division
-    for (id, cell) in cells.iteritems():
+    for (id, cell) in cells.items():
         if cell.volume > cell.targetVol:
             cell.divideFlag = True
 

@@ -75,6 +75,7 @@
    </attribute>
    <addaction name="actionLoad"/>
    <addaction name="actionLoadPickle"/>
+   <addaction name="actionLoadGeometry"/>
    <addaction name="actionReset"/>
    <addaction name="actionRun"/>
    <addaction name="separator"/>
@@ -114,6 +115,17 @@
    </property>
    <property name="shortcut">
     <string>Ctrl+O</string>
+   </property>
+  </action>
+  <action name="actionLoadGeometry">
+   <property name="text">
+    <string>Load Geometry</string>
+   </property>
+   <property name="toolTip">
+    <string>Load geometry from pickle file</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+l</string>
    </property>
   </action>
   <action name="actionLoadPickle">
@@ -213,6 +225,22 @@
    <signal>triggered()</signal>
    <receiver>PyGLCMViewer</receiver>
    <slot>reset()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>589</x>
+     <y>357</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>actionLoadGeometry</sender>
+   <signal>triggered()</signal>
+   <receiver>PyGLCMViewer</receiver>
+   <slot>loadGeometry()</slot>
    <hints>
     <hint type="sourcelabel">
      <x>-1</x>

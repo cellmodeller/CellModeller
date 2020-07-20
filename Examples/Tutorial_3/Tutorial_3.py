@@ -98,7 +98,7 @@ def update(cells):
     #Iterate through each cell and flag cells that reach target size for division
     v_max = 0.9
     Km = 0.1 #This can be though of as the degree of mutualism - turns mutualism off when set to 0.
-    for (id, cell) in cells.iteritems():
+    for (id, cell) in cells.items():
         cell.color = [1,1,1] #[0.1+cell.species[0]/3.0, 0.1+cell.species[1]/3.0, 0.1]
         if cell.cellType==0:
             cell.growthRate = 0.1 + v_max * cell.species[1] / (Km + cell.species[1])

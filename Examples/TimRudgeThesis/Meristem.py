@@ -33,7 +33,7 @@ def init(cell):
 
 def max_x_coord(cells):
     mx = -1000
-    for i,cell in cells.items():
+    for i,cell in list(cells.items()):
         mx = max(mx, cell.pos[0])
     return mx
 
@@ -43,7 +43,7 @@ def update(cells):
     global growth_rad
     rightmost = -1
     edge = max_x_coord(cells)
-    for (i,cell) in cells.items():
+    for (i,cell) in list(cells.items()):
         dist = edge - cell.pos[0]
         if dist < growth_rad:
             cell.growthRate = 0.5 #(growth_rad-dist)/growth_rad * 0.5

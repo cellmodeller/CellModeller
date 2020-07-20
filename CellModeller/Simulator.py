@@ -1,14 +1,14 @@
-from CellState import CellState
+from .CellState import CellState
 import copy
 import pyopencl as cl
 import sys
 import os
-import cPickle
+import pickle
 import csv
 import numpy
 import inspect
 import imp
-import ConfigParser
+import configparser
 import importlib
 
 class Simulator:
@@ -69,16 +69,16 @@ visualised.
         else:
             self.cfg_file = 'CellModeller/CMconfig.cfg'
         if not self.init_cl(platnum=clPlatformNum, devnum=clDeviceNum):
-            print "Couldn't initialise OpenCL context"
+            print("Couldn't initialise OpenCL context")
             return
 
         # Two ways to specify a module (model):
         self.moduleName = moduleName # Import via standard python
         self.moduleStr = moduleStr # Import stored python code string (from a pickle usually)
         if self.moduleStr:
-            print "Importing model %s from string"%(self.moduleName)
+            print("Importing model %s from string"%(self.moduleName))
             self.module = imp.new_module(moduleName)
-            exec moduleStr in self.module.__dict__
+            exec(moduleStr, self.module.__dict__)
         else:
             # In case the moduleName is a path to a python file:
             # Get path and file name
@@ -89,12 +89,12 @@ visualised.
                     sys.path.append(path)
             # Remove .py extension if present
             self.moduleName = str(name).split('.')[0]
-            print "Importing model %s"%(self.moduleName)
+            print("Importing model %s"%(self.moduleName))
             if self.moduleName in sys.modules:
                 self.module = sys.modules[self.moduleName]
-                reload(self.module)
+                importlib.reload(self.module)
             else:
-                self.module = __import__(self.moduleName, globals(), locals(), [], -1)
+                self.module = __import__(self.moduleName, globals(), locals(), [], 0)
             
 
         # TJR: What is this invar thing? I have never seen this used...
@@ -107,12 +107,6 @@ visualised.
         self.dataOutputInitialised=False
         self.outputDirName = outputDirName
         self.setSaveOutput(saveOutput)
-        '''
-        self.saveOutput = saveOutput
-        if self.saveOutput:
-            self.outputSteps = outputSteps
-            self.init_data_output(outputFileDir)
-        '''
         
         # Call the user-defined setup function on ourself
         self.module.setup(self)
@@ -202,10 +196,10 @@ visualised.
         # Check that specified platform exists
         platforms = cl.get_platforms()
         if len(platforms)<=platnum:
-            print "Specified OpenCL platform number (%d) does not exist."
-            print "Options are:"
+            print("Specified OpenCL platform number (%d) does not exist.")
+            print("Options are:")
             for p in range(len(platforms)):
-                print "%d: %s"%(p, str(platforms[p])) 
+                print("%d: %s"%(p, str(platforms[p]))) 
             return False
         else:
             platform = platforms[platnum]
@@ -213,10 +207,10 @@ visualised.
         # Check that specified device exists on that platform
         devices = platforms[platnum].get_devices()
         if len(devices)<=devnum:
-            print "Specified OpenCL device number (%d) does not exist on platform %s."%(devnum,platform)
-            print "Options are:"
+            print("Specified OpenCL device number (%d) does not exist on platform %s."%(devnum,platform))
+            print("Options are:")
             for d in range(len(devices)):
-                print "%d: %s"%(d, str(devices[d])) 
+                print("%d: %s"%(d, str(devices[d]))) 
             return False
         else:
             device = devices[devnum]
@@ -225,9 +219,9 @@ visualised.
         self.CLContext = cl.Context(properties=[(cl.context_properties.PLATFORM, platform)],
                                           devices=[device])
         self.CLQueue = cl.CommandQueue(self.CLContext)
-        print "Set up OpenCL context:"
-        print "  Platform: %s"%(str(platform.name))
-        print "  Device: %s"%(str(device.name))
+        print("Set up OpenCL context:")
+        print("  Platform: %s"%(str(platform.name)))
+        print("  Device: %s"%(str(device.name)))
         return True
         
     ## Get the OpenCL context and queue for running kernels 
@@ -243,7 +237,7 @@ visualised.
         idx_map = {}
         id_map = {}
         idmax = 0
-        for id,state in cellStates.iteritems():
+        for id,state in cellStates.items():
             idx_map[state.id] = state.idx
             id_map[state.idx] = state.id
             if id>idmax:
@@ -273,7 +267,7 @@ visualised.
 
         if not self.moduleStr: 
             #This will take up any changes made in the model file
-            reload(self.module)
+            importlib.reload(self.module)
         else:
             # TJR: Module loaded from pickle, cannot reset?
             pass
@@ -349,7 +343,7 @@ visualised.
     # Eventually prob better to have a generic editCell() that deals with this stuff
     #
     def moveCell(self, cid, delta_pos):
-        if self.cellStates.has_key(cid):
+        if cid in self.cellStates:
             self.phys.moveCell(self.cellStates[cid], delta_pos)
 
     ## Proceed to the next simulation step
@@ -357,7 +351,8 @@ visualised.
     def step(self):
         self.reg.step(self.dt)
         states = dict(self.cellStates)
-        for (cid,state) in states.items():
+        for (cid,state) in list(states.items()):
+            state.time = self.stepNum * self.dt
             if state.divideFlag:
                 self.divide(state) #neighbours no longer current
 
@@ -399,27 +394,27 @@ visualised.
         data['moduleStr'] = self.moduleOutput
         data['moduleName'] = self.moduleName
         if self.integ:
-            print("Writing new pickle format")
+        #    print("Writing new pickle format")
             data['specData'] = self.integ.levels
-            data['sigGrid'] = self.integ.signalLevel
+        if self.sig:
             data['sigGridOrig'] = self.sig.gridOrig
             data['sigGridDim'] = self.sig.gridDim
             data['sigGridSize'] = self.sig.gridSize
-        if self.sig:
+        if self.sig and self.integ:
+            data['sigGrid'] = self.integ.signalLevel
             data['sigData'] = self.integ.cellSigLevels
             data['sigGrid'] = self.integ.signalLevel
-        cPickle.dump(data, outfile, protocol=-1)
+        pickle.dump(data, outfile, protocol=-1)
         #output csv file with cell pos,dir,len - sig?
 
     # Populate simulation from saved data pickle
-    def loadFromPickle(self, data):
+    def loadGeometryFromPickle(self, data):
         self.setCellStates(data['cellStates'])
         self.lineage = data['lineage']
-        self.stepNum = data['stepNum']
         idx_map = {}
         id_map = {}
         idmax = 0
-        for id,state in data['cellStates'].iteritems():
+        for id,state in data['cellStates'].items():
             idx_map[state.id] = state.idx
             id_map[state.idx] = state.id
             if id>idmax:
@@ -429,9 +424,31 @@ visualised.
         self._next_id = idmax+1
         self._next_idx = len(data['cellStates'])
         if self.integ:
-            if data.has_key('sigData'):
+            self.integ.setCellStates(self.cellStates)
+        if self.sig:
+            self.integ.setCellStates(self.cellStates)
+
+    # Populate simulation from saved data pickle
+    def loadFromPickle(self, data):
+        self.setCellStates(data['cellStates'])
+        self.lineage = data['lineage']
+        self.stepNum = data['stepNum']
+        idx_map = {}
+        id_map = {}
+        idmax = 0
+        for id,state in data['cellStates'].items():
+            idx_map[state.id] = state.idx
+            id_map[state.idx] = state.id
+            if id>idmax:
+                idmax=id
+        self.idToIdx = idx_map
+        self.idxToId = id_map
+        self._next_id = idmax+1
+        self._next_idx = len(data['cellStates'])
+        if self.integ:
+            if 'sigData' in data:
                 self.integ.setLevels(data['specData'],data['sigData'])
-            elif data.has_key('specData'):
+            elif 'specData' in data:
                 self.integ.setLevels(data['specData'])
 
 

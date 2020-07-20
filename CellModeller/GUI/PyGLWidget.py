@@ -32,7 +32,7 @@
 #
 #===============================================================================
 
-from PyQt4 import QtCore, QtGui, QtOpenGL
+from PyQt5 import QtCore, QtGui, QtOpenGL
 import math
 import numpy
 import numpy.linalg as linalg
@@ -67,14 +67,15 @@ class PyGLWidget(QtOpenGL.QGLWidget):
         self.last_point_ok_ = False
         self.last_point_3D_ = [1.0, 0.0, 0.0]
         self.isInRotation_  = False
-        self.pickSize = 3
+        self.pickSize = 18
+        self.pix_ratio = 1.
 
         # connections
         #self.signalGLMatrixChanged.connect(self.printModelViewMatrix)
 
     @QtCore.pyqtSlot()
     def printModelViewMatrix(self):
-        print self.modelview_matrix_
+        print(self.modelview_matrix_)
 
     def initializeGL(self):
         # OpenGL state
@@ -110,8 +111,9 @@ class PyGLWidget(QtOpenGL.QGLWidget):
         self.makeCurrent()
         glMatrixMode( GL_PROJECTION )
         glLoadIdentity()
-        viewport =glGetIntegerv(GL_VIEWPORT)
-        gluPickMatrix(x, viewport[3]-y, self.pickSize, self.pickSize, viewport);
+        viewport = glGetIntegerv(GL_VIEWPORT)
+        #gluPickMatrix(x, viewport[3]-y, self.pickSize, self.pickSize, viewport);
+        gluPickMatrix(x*self.pix_ratio, viewport[3]-y*self.pix_ratio, self.pickSize, self.pickSize, viewport);
         gluPerspective( self.fovy_, float(self.width()) / float(self.height()), self.near_, self.far_ )
     
     def set_center(self, _cog):
@@ -219,7 +221,7 @@ class PyGLWidget(QtOpenGL.QGLWidget):
 
     def wheelEvent(self, _event):
         # Use the mouse wheel to zoom in/out
-        d = - float(_event.delta()) / 200.0 * self.radius_
+        d = - float(_event.angleDelta().y()) / 200.0 * self.radius_
         self.translate([0.0, 0.0, d])
         self.updateGL()
         _event.accept()
@@ -238,13 +240,16 @@ class PyGLWidget(QtOpenGL.QGLWidget):
         buf = glRenderMode(GL_RENDER)
         selectedName = -1
         closest_z = 1.0
+        print('buf ', buf)
         for hit_record in buf:
             min_depth, max_depth, names = hit_record
+            print('Names ', names)
             if min_depth < closest_z:
                 closest_z = min_depth
                 for name in names:
                     if name:
                         selectedName = name
+                        print('Selected name ', selectedName)
         glMatrixMode( GL_PROJECTION )
         glPopMatrix()
         return selectedName
@@ -282,7 +287,7 @@ class PyGLWidget(QtOpenGL.QGLWidget):
         # move in z direction
         if (((_event.buttons() & QtCore.Qt.LeftButton) and (_event.buttons() & QtCore.Qt.MidButton))
             or (_event.buttons() & QtCore.Qt.LeftButton and _event.modifiers() & QtCore.Qt.ControlModifier)):
-            print "translating in Z"
+            print("translating in Z")
             value_y = self.radius_ * dy * 2.0 / h
             self.translate([0.0, 0.0, value_y])
         # move in x,y direction

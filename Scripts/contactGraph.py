@@ -2,7 +2,7 @@ import sys
 import os
 import math
 import numpy as np
-import cPickle
+import pickle
 import CellModeller
 import subprocess
 import string
@@ -56,8 +56,8 @@ class CellModellerPDFGenerator(Canvas):
         self.saveState()
         self.setLineWidth(0.003*units.cm)
         self.setStrokeColor((0.0,0.0,0.0))
-        positions = networkx.get_node_attributes(G,'pos').values()
-        colors = networkx.get_node_attributes(G,'color').values()
+        positions = list(networkx.get_node_attributes(G,'pos').values())
+        colors = list(networkx.get_node_attributes(G,'color').values())
         for u,v,di in self.network.edges_iter(data=True):
             self.drawEdge(positions[u],positions[v])
         for n in self.network.nodes_iter():
@@ -104,13 +104,13 @@ bg_color = Color(1.0,1.0,1.0,alpha=1.0)
 
 G = networkx.Graph()
 fname = sys.argv[1]
-data = cPickle.load(open(fname,'rb'))
+data = pickle.load(open(fname,'rb'))
 cs = data['cellStates']
 it = iter(cs)
 n = len(cs)
 oname = fname.replace('.pickle','_graph.pdf')
 
-print "num_cells = "+str(n)
+print(("num_cells = "+str(n)))
 
 cell_type={}
 pos_dict={}
@@ -120,13 +120,13 @@ for it in cs:
 
 get_current_contacts(G, data)
 
-print "num_contacts = " + str(networkx.number_of_edges(G))
-degrees = G.degree().values()
-print "mean degree = " + str(np.mean(degrees))
+print(("num_contacts = " + str(networkx.number_of_edges(G))))
+degrees = list(G.degree().values())
+print(("mean degree = " + str(np.mean(degrees))))
 
-if networkx.get_edge_attributes(G,'color').items():
-    edges,ecolor = zip(*networkx.get_edge_attributes(G,'color').items())
-ncolor = networkx.get_node_attributes(G,'color').values()
+if list(networkx.get_edge_attributes(G,'color').items()):
+    edges,ecolor = list(zip(*list(networkx.get_edge_attributes(G,'color').items())))
+ncolor = list(networkx.get_node_attributes(G,'color').values())
 
 pdf = CellModellerPDFGenerator(oname, G, bg_color)
 world = (120,120)

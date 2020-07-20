@@ -36,7 +36,7 @@ class CLEulerIntegrator:
 
         # set the species for existing states to views of the levels array
         cs = self.cellStates
-        for id,c in cs.items():
+        for id,c in list(cs.items()):
             c.species = self.specLevel[c.idx,:]
 
 
@@ -95,8 +95,7 @@ class CLEulerIntegrator:
         # Get user defined kernel source
         specRateKernel = self.regul.specRateCL()
         from pkg_resources import resource_string
-        kernel_src = resource_string(__name__, 'CLEulerIntegrator.cl')
-        #kernel_src = open('CellModeller/Integration/CLEulerIntegrator.cl', 'r').read()
+        kernel_src = resource_string(__name__, 'CLEulerIntegrator.cl').decode()
         # substitute user defined kernel code, and number of signals
         kernel_src = kernel_src%(specRateKernel)
         self.program = cl.Program(self.context, kernel_src).build(cache_dir=False)
@@ -119,7 +118,7 @@ class CLEulerIntegrator:
 
     def step(self, dt):
         if dt!=self.dt:
-            print "I can only integrate at fixed dt!"
+            print("I can only integrate at fixed dt!")
             return
 
         self.nCells = len(self.cellStates)
@@ -128,15 +127,15 @@ class CLEulerIntegrator:
             s = self.specLevel[self.nCells-1]
         except IndexError:
             # Could resize here, then would have to rebuild views
-            print "Number of cells exceeded " \
+            print("Number of cells exceeded " \
                     + self.__class__.__name__ \
-                    + "::maxCells (" + self.maxCells + ")"
+                    + "::maxCells (" + self.maxCells + ")")
 
         self.dataLen = self.nCells*self.nSpecies
 
         self.cellStates = self.sim.cellStates
         cs = self.cellStates
-        for id,c in cs.items():
+        for id,c in list(cs.items()):
             self.effgrow[c.idx] = numpy.float32(c.effGrowth)
         self.effgrow_dev.set(self.effgrow)
 
@@ -160,7 +159,7 @@ class CLEulerIntegrator:
         self.makeViews()
         self.specLevel_dev.set(self.specLevel)
         cs = self.cellStates
-        for id,c in cs.items():
+        for id,c in list(cs.items()):
             c.species = self.specLevel[c.idx,:]
             self.celltype[c.idx] = numpy.int32(c.cellType)
         self.celltype_dev.set(self.celltype)

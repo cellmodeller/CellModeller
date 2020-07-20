@@ -3,7 +3,7 @@ import os
 import math
 import numpy as np
 sys.path.append('.')
-import cPickle
+import pickle
 import CellModeller
 #import matplotlib.pyplot as plt
 
@@ -15,12 +15,12 @@ def rad_pos(cellstate):
     return np.sqrt(cellstate.pos[0]*cellstate.pos[0]+cellstate.pos[1]*cellstate.pos[1])
 
 def lengthHist(pickle, bins, file=False):
-    print('opening '+ pickle)
-    data = cPickle.load(open(pickle,'r'))
+    print(('opening '+ pickle))
+    data = pickle.load(open(pickle,'r'))
     cs = data['cellStates']
     it = iter(cs)
     n = len(cs)
-    print 'Number of cells = '+str(n)
+    print(('Number of cells = '+str(n)))
     lens = []
     r = []
     for it in cs:
@@ -44,7 +44,7 @@ def dirLengthHist(dir,bins,file=False):
             number = f[5:-7]
             if file:
                 fout = open('LengthData'+number+'.csv')
-            print 'step number = ', number
+            print(('step number = ', number))
             n, lens = lengthHist(dir + f,bins,file)
             if file:
                 fout.close()

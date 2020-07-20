@@ -2,6 +2,7 @@ from math import floor
 import numpy
 from scipy.ndimage import laplace
 from scipy.ndimage.filters import convolve
+from functools import reduce
 
 
 class GridDiffusion:
@@ -39,8 +40,10 @@ something else - e.g. a bulk flow term.
         self.dV = reduce(lambda x, y: x * y, self.gridSize)
 
         self.regul = regul 
-        self.cellStates = sim.cellStates
+        self.setCellStates(sim.cellStates)
 
+    def setCellStates(self, cs):
+        self.cellStates = cs
 
     def setBiophysics(self, biophysics):
         self.biophys = biophysics
@@ -49,8 +52,8 @@ something else - e.g. a bulk flow term.
         self.regul = regul
     
     def flattenIdx(self, idx):
-        print "idx = " + str(idx)
-        print "flat idx = " + str(idx[2] + idx[1]*self.gridDim[3] + idx[0]*self.gridDim[2]*self.gridDim[3])
+        print("idx = " + str(idx))
+        print("flat idx = " + str(idx[2] + idx[1]*self.gridDim[3] + idx[0]*self.gridDim[2]*self.gridDim[3]))
         return idx[2] + idx[1]*self.gridDim[3] + idx[0]*self.gridDim[2]*self.gridDim[3]
 
     def idxFromPos(self, p):
@@ -76,7 +79,7 @@ something else - e.g. a bulk flow term.
         w[1,0,1] = dx*(1-dy)*dz if x>=-1 and x<self.gridDim[1]-1 and y>=0 and y<self.gridDim[2] and z>=-1 and z<self.gridDim[3]-1 else 0.0
         w[0,1,1] = (1-dx)*dy*dz if x>=0 and x<self.gridDim[1] and y>=-1 and y<self.gridDim[2]-1 and z>=-1 and z<self.gridDim[3]-1 else 0.0
         w[1,1,1] = dx*dy*dz if x>=-1 and x<self.gridDim[1]-1 and y>=-1 and y<self.gridDim[2]-1 and z>=-1 and z<self.gridDim[3]-1 else 0.0
-        print "w = "+str(w.reshape(8))
+        print("w = "+str(w.reshape(8)))
         return w 
 
     def dataLen(self):
@@ -139,7 +142,7 @@ something else - e.g. a bulk flow term.
         # Gets weighted average signal level at nearest neighbour grid points to cell position
         signalLevelsView = signalLevels.reshape(self.gridDim)
         pidx = self.idxFromPos(cellState.pos)
-        print "flatidx = %i"%(self.flattenIdx(pidx))
+        print("flatidx = %i"%(self.flattenIdx(pidx)))
         w = self.trilinearWeights(cellState.pos)
         sigs = numpy.zeros((self.nSignals))
         for i in range(2):

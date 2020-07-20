@@ -91,9 +91,9 @@ def sigRateCL():
 
 def update(cells):
     if len(cells) > max_cells-16:
-        print 'reached cell limit'
+        print('reached cell limit')
         exit()
-    for (i,cell) in cells.iteritems():
+    for (i,cell) in cells.items():
         cell.color = [0.1, 0.1+cell.species[3]/10.0, 0.1+cell.species[4]*20.0]
         if cell.volume > getattr(cell, 'target_volume', 3.0):
             cell.divideFlag = True

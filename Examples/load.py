@@ -19,7 +19,6 @@ def setup(sim):
                             max_contacts=32, \
                             max_sqs=128**2, \
                             jitter_z=False, \
-                            reg_param=2, \
                             gamma=10)
 
     biophys.addPlane((0,0,-0.5), (0,0,1), 0.2)
@@ -34,13 +33,13 @@ def setup(sim):
 
     # Or pop up a dialog to choose a pickle
     if dataFileName=='':
-        print "Please edit the model file to specify a pickle file." 
-        print "  -- No data was loaded and there are no cells in this simulation!"
+        print("Please edit the model file to specify a pickle file.") 
+        print("  -- No data was loaded and there are no cells in this simulation!")
     else:
         # Import the data and load into Simulator
-        print "Loading data from pickle file: %s"%(dataFileName)
-        import cPickle
-        data = cPickle.load(open(dataFileName,'r'))
+        print("Loading data from pickle file: %s"%(dataFileName))
+        import pickle
+        data = pickle.load(open(dataFileName,'r'))
         sim.loadFromPickle(data)
 
     if sim.is_gui:
@@ -54,7 +53,7 @@ def init(cell):
     cell.growthRate = 0.5
 
 def update(cells):
-    for (id, cell) in cells.iteritems():
+    for (id, cell) in cells.items():
         cell.color = [1,0,0]
         if cell.volume > cell.targetVol:
             cell.divideFlag = True

@@ -57,7 +57,7 @@ def numSpecies():
     return 0
 
 def update(cells):
-    for (id, cell) in cells.iteritems():
+    for (id, cell) in cells.items():
         if cell.volume > cell.targetVol:
             cell.divideFlag = True
 

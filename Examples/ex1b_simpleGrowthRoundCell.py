@@ -8,7 +8,7 @@ max_cells = 2**15
 
 def setup(sim):
     # Set biophysics, signalling, and regulation models
-    biophys = CLBacterium(sim, jitter_z=False)
+    biophys = CLBacterium(sim, jitter_z=True)
 
     # use this file for reg too
     regul = ModuleRegulator(sim, sim.moduleName)	
@@ -34,7 +34,7 @@ def init(cell):
 
 def update(cells):
     #Iterate through each cell and flag cells that reach target size for division
-    for (id, cell) in cells.iteritems():
+    for (id, cell) in cells.items():
         cell.color = [cell.cellType*0.6+0.1, 1.0-cell.cellType*0.6, 0.3]
         if cell.volume > cell.targetVol:
             cell.divideFlag = True

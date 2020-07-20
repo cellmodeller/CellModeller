@@ -10,7 +10,7 @@ delta_sig = 0.45
 
 def setup(sim):
     # Set biophysics module
-    biophys = CLBacterium(sim, jitter_z=False, max_cells=50000,gamma=10.0,reg_param=0.1, cgs_tol=1E-5,compNeighbours=True)
+    biophys = CLBacterium(sim, jitter_z=False, max_cells=50000,gamma=10.0, cgs_tol=1E-5,compNeighbours=True)
 
     # Set up regulation module
     regul = ModuleRegulator(sim, sim.moduleName)	
@@ -40,7 +40,7 @@ def init(cell):
 
 def update(cells):
     #Iterate through each cell and flag cells that reach target size for division
-    for (id, cell) in cells.iteritems():
+    for (id, cell) in cells.items():
         if cell.volume > cell.targetVol:
             cell.divideFlag = True
         
