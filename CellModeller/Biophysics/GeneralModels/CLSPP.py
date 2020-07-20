@@ -244,6 +244,7 @@ class CLSPP:
         self.cell_dcenters_dev = cl_array.zeros(self.queue, cell_geom, vec.float4)
         self.avg_neighbour_dir  = numpy.zeros(cell_geom, vec.float4)
         self.avg_neighbour_dir_dev = cl_array.zeros(self.queue, cell_geom, vec.float4)
+
         self.cell_areas_dev = cl_array.zeros(self.queue, cell_geom, numpy.float32) + 4 * numpy.pi 
         self.cell_vols_dev = cl_array.zeros(self.queue, cell_geom, numpy.float32) + 4 * numpy.pi / 3
         self.cell_old_vols_dev = self.cell_vols_dev
@@ -340,9 +341,11 @@ class CLSPP:
         """Copy cell centers, dirs, lens, and rads from the device."""
         self.cell_centers[0:self.n_cells] = self.cell_centers_dev[0:self.n_cells].get()
         self.cell_dirs[0:self.n_cells] = self.cell_dirs_dev[0:self.n_cells].get()
+        self.cell_tos[0:self.n_cells,:] = self.cell_tos_dev[0:self.n_cells,:].get()
         self.avg_neighbour_dir[0:self.n_cells] = self.avg_neighbour_dir_dev[0:self.n_cells].get()
         self.cell_rads[0:self.n_cells] = self.cell_rads_dev[0:self.n_cells].get()
         self.cell_dcenters[0:self.n_cells] = self.cell_dcenters_dev[0:self.n_cells].get()
+        self.ct_tos[0:self.n_cts] = self.ct_tos_dev[0:self.n_cts].get()
 
     def set_cells(self):
         """Copy cell centers, dirs, lens, and rads to the device from local."""
@@ -418,11 +421,11 @@ class CLSPP:
         # pull cells from the device and update simulator
         if self.simulator:
             self.get_cells()
-            for state in list(self.simulator.cellStates.values()):
+            for id,state in self.simulator.cellStates.items():
                 self.updateCellState(state)
 
     def progress_init(self, dt):
-        self.set_cells()
+        #self.set_cells()
         # NOTE: by default self.dt=None, and time step == simulator time step (dt) 
         if self.dt:
             self.n_ticks = int(math.ceil(dt/self.dt)) 
@@ -451,11 +454,6 @@ class CLSPP:
         # pull cells from the device and update simulator
         if self.simulator:
             self.get_cells()
-            # TJR: added incremental construction of this dict to same places as idToIdx - not fully tested
-            #idxToId = {idx: id for id, idx in self.simulator.idToIdx.iteritems()}
-            # TJR: add flag for this cos a bit time consuming
-            if self.computeNeighbours:
-                self.updateCellNeighbours(self.simulator.idxToId)
             for state in list(self.simulator.cellStates.values()):
                 self.updateCellState(state)
 
@@ -523,7 +521,7 @@ class CLSPP:
 
         alpha = 10**(self.sub_tick_i)
         new_cts = self.n_cts - old_n_cts
-        if (new_cts>0 or self.sub_tick_i==0):
+        if (new_cts>0 or self.sub_tick_i==1):
             start = time.time()
             self.build_matrix() # Calculate entries of the matrix
             end = time.time()
@@ -553,19 +551,6 @@ class CLSPP:
         pa = numpy.array(state.pos)
         da = numpy.array(state.dir)
 
-    def updateCellNeighbours(self, idx2Id):
-        ct_tos = self.ct_tos_dev[0:self.n_cells,:].get()
-        cell_to_cts = self.cell_n_cts_dev[0:self.n_cells].get()
-        cell_cts = numpy.zeros(self.n_cells, numpy.int32)
-        for i in range(self.n_cells):
-            for j in range(cell_to_cts[i]):
-                if ct_tos[i,j]>0:#not a plane contact
-                    self.neighbours[i, cell_cts[i]] = idx2Id[ct_tos[i,j]]
-                    cell_cts[i] += 1
-                    self.neighbours[ct_tos[i,j], cell_cts[ct_tos[i,j]]] = idx2Id[i]
-                    cell_cts[ct_tos[i,j]] += 1
-        self.cell_cts = cell_cts
-
     def updateCellState(self, state):
         cid = state.id
         i = state.idx
@@ -576,11 +561,10 @@ class CLSPP:
         state.radius = self.cell_rads[i]
         state.avg_neighbour_dir = [self.avg_neighbour_dir[i][j] for j in range(3)]
 
-        state.neighbours = [] #clear contacts
         if self.computeNeighbours: #populate cellstate.neighbours
-            for n in range(self.cell_cts[i]):
-                if self.neighbours[i,n] not in state.neighbours:
-                    state.neighbours.append(self.neighbours[i,n]) #ids of all cells in physical contact
+            tos = self.ct_tos[state.idx,:]
+            idx2Id = self.simulator.idxToId
+            state.neighbours = [idx2Id[to] for to in tos if to>0]
         state.cts = len(state.neighbours)
 
     def update_grid(self):
@@ -946,6 +930,10 @@ class CLSPP:
         Calculates new cell_centers, cell_dirs, cell_lens.
         """
         noise = self.rand.normal(self.queue, sigma=1., shape=(self.n_cells,), dtype=np.float32)
+        if self.simulator.integ:
+            signal_gradient = self.simulator.integ.cellSigGradients_dev.data
+        else:
+            signal_gradient = None
         self.program.integrate(self.queue,
                                (self.n_cells,),
                                None,
@@ -953,7 +941,7 @@ class CLSPP:
                                self.cell_dirs_dev.data,
                                self.cell_dcenters_dev.data,
                                self.avg_neighbour_dir_dev.data,
-                               self.simulator.integ.cellSigGradients_dev.data,
+                               signal_gradient,
                                noise.data,
                                numpy.float32(self.fcil),
                                numpy.float32(self.ftax),
