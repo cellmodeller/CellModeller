@@ -360,10 +360,10 @@ visualised.
         self.phys.set_cells()
         while not self.phys.step(self.dt): #neighbours are current here
             pass
-        if self.sig:
-            self.sig.step(self.dt)
         if self.integ:
             self.integ.step(self.dt)
+        if self.sig:
+            self.sig.step(self.dt)
 
         if self.saveOutput and self.stepNum%self.pickleSteps==0:
             self.writePickle()
