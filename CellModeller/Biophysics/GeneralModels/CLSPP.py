@@ -245,8 +245,10 @@ class CLSPP:
         self.avg_neighbour_dir  = numpy.zeros(cell_geom, vec.float4)
         self.avg_neighbour_dir_dev = cl_array.zeros(self.queue, cell_geom, vec.float4)
 
-        self.cell_areas_dev = cl_array.zeros(self.queue, cell_geom, numpy.float32) + 4 * numpy.pi 
+        self.cell_areas_dev = cl_array.zeros(self.queue, cell_geom, numpy.float32) 
+        self.cell_areas_dev[:] = 4 * numpy.pi 
         self.cell_vols_dev = cl_array.zeros(self.queue, cell_geom, numpy.float32) + 4 * numpy.pi / 3
+        self.cell_vols_dev[:] = 4 * numpy.pi / 3 
         self.cell_old_vols_dev = self.cell_vols_dev
         # gridding
         self.sq_inds = numpy.zeros((self.max_sqs,), numpy.int32)
@@ -934,6 +936,10 @@ class CLSPP:
             signal_gradient = self.simulator.integ.cellSigGradients_dev.data
         else:
             signal_gradient = None
+        if self.simulator.sig:
+            nSignals = self.simulator.sig.nSignals
+        else:
+            nSignals = 0
         self.program.integrate(self.queue,
                                (self.n_cells,),
                                None,
@@ -947,7 +953,8 @@ class CLSPP:
                                numpy.float32(self.ftax),
                                numpy.float32(self.D),
                                numpy.float32(dt),
-                               numpy.int32(self.spherical*1)).wait()
+                               numpy.int32(self.spherical*1),
+                               numpy.int32(nSignals)).wait()
 
     def add_impulse(self):
         self.program.add_impulse(self.queue, (self.n_cells,), None,

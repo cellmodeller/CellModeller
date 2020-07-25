@@ -7,12 +7,28 @@ class FEMDiffusion:
     """
     Diffusion solver using Fenics finite element method.
     """
-    def __init__(self, sim, mesh_file, nSignals, dt, regul=None):
+    def __init__(self, sim, mesh_file, pvd_file, nSignals, diffusion_rate, dt, regul=None):
         self.nSignals = nSignals
+
+        if pvd_file:
+            self.file = File(pvd_file)
+        else:
+            self.file = None
 
         self.mesh = Mesh(mesh_file)
         self.dV = 1.
+        self.dt = dt
+        self.diffusion_rate = diffusion_rate
 
+        # Build FEM system
+        self.build_system()
+        # Initial value of solution
+        self.u = Function(self.V)
+
+        self.regul = regul 
+        self.setCellStates(sim.cellStates)
+
+    def build_system(self):
         # Set up FEM problem and function space
         self.V = FunctionSpace(self.mesh, "CG", 1)
         self.V_vec = VectorFunctionSpace(self.mesh, "CG", 1)
@@ -20,16 +36,24 @@ class FEMDiffusion:
         v = TestFunction(self.V)
         u0 = Constant(0)
         f = Constant(0)
-        self.dt = dt
-        a = u*v*dx + dt*inner(grad(u), grad(v))*dx 
-        L = u0*v*dx + dt*f*v*dx
+        self.t = 0
+        a = u * v * dx + self.dt * self.diffusion_rate * inner(grad(u), grad(v)) * dx 
+        L = u0*v*dx + self.dt*f*v*dx
         self.bc = DirichletBC(self.V, Constant(0), DomainBoundary())
         self.A, self.b = assemble_system(a, L, self.bc)
-        self.u = Function(self.V)
 
+    def saveData(self, data):
+        sig_data = {
+                'u': self.u,
+                'mesh': self.mesh
+                }
+        data.update(sig_data)
+        return data
 
-        self.regul = regul 
-        self.setCellStates(sim.cellStates)
+    def loadData(self, data):
+        self.mesh = data['mesh']
+        self.build_system()
+        self.u = data['u']
 
     def setCellStates(self, cs):
         self.cellStates = cs
@@ -54,8 +78,12 @@ class FEMDiffusion:
 
     def add_point_source(self, pos, rate):
         x, y, z = pos
-        delta = PointSource(self.V, Point(x, y, z), 1.)
+        delta = PointSource(self.V, Point(x, y, z), rate)
         delta.apply(self.b)
+
+    def add_point_sources(self, sources):
+        source = PointSource(self.V, sources)
+        source.apply(self.b)
 
     def signals(self, cellSigLevels_dev):
         sigs = [[self.u(c.pos[0], c.pos[1], c.pos[2])] for id,c in self.cellStates.items()]
@@ -71,3 +99,6 @@ class FEMDiffusion:
         # Reset point sources
         self.b.zero()
         self.bc.apply(self.b)
+        self.t += dt
+        if self.file:
+            self.file << (self.u, self.t)

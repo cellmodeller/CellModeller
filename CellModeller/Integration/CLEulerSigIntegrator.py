@@ -102,6 +102,40 @@ class CLEulerSigIntegrator:
         self.setCellStates(sim.cellStates)
         
 
+    def saveData(self, data):
+        integ_data = {
+                'specData': self.levels,
+                'sigGrid': self.signalLevel,
+                'sigData': self.cellSigLevels,
+                }
+        data.update(integ_data)
+        return data
+
+    def loadData(self, data):
+        self.levels = data['specData']
+        self.signalLevel = data['sigGrid']
+        self.cellSigLevels = data['sigData']
+        self.setCellStates(self.sim.cellStates)
+
+    '''
+    def setLevels(self, SSLevel, cellSigData):
+        self.cellStates = self.sim.cellStates
+        self.levels = SSLevel
+        self.makeViews()
+        self.cellSigLevels = cellSigData
+        self.signalLevel_dev.set(self.signalLevel)
+        self.specLevel_dev.set(self.specLevel)
+        self.cellSigLevels_dev.set(self.cellSigLevels)
+        self.cellSigGradients_dev.set(self.cellSigGradients)
+        cs = self.cellStates
+        for id,c in list(cs.items()): #make sure everything is correct here
+            c.gradient = self.cellSigGradients[c.idx,:]
+            c.species = self.specLevel[c.idx,:]
+            c.signals = self.cellSigLevels[c.idx,:]
+            self.celltype[c.idx] = numpy.int32(c.cellType)
+        self.celltype_dev.set(self.celltype)
+    '''
+
     def setCellStates(self, cs):
         # set the species for existing states to views of the levels array
         self.cellStates = cs
@@ -339,12 +373,6 @@ class CLEulerSigIntegrator:
                 self.cellSigGradients_dev.data).wait()
         self.cellSigLevels[:] = self.cellSigLevels_dev.get()
         self.cellSigGradients[:] = self.cellSigGradients_dev.get()
-
-# Put the final signal levels into the cell states
-#        states = self.cellStates
-#        for (id,c) in states.items():
-#            if self.signalling:
-#                c.signals = self.signalling.signals(c, self.signalLevel)
 
         # Update cellType array
         for (id,c) in list(self.cellStates.items()):

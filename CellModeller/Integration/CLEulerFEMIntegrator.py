@@ -7,6 +7,7 @@ import pyopencl as cl
 import pyopencl.array as cl_array
 from pyopencl.array import vec
 import math
+from fenics import *
 
 class CLEulerFEMIntegrator:
     def __init__(self, sim, nSignals, nSpecies, maxCells, sig, deg_rate=0, regul=None):
@@ -24,8 +25,23 @@ class CLEulerFEMIntegrator:
         self.initArrays()
 
         self.signalling = sig
+        self.levels = sig.u
         self.setCellStates(sim.cellStates)
-        
+
+    def saveData(self, data):
+        integ_data = {
+                'specData': self.specLevel,
+                'sigData': self.cellSigLevels,
+                }
+        data.update(integ_data)
+        return data 
+
+    def loadData(self, data):
+        self.specLevel = data['specLevel']
+        self.cellSigLevels = data['sigData']
+        self.specLevel_dev.set(self.specLevel)
+        self.cellSigLevels_dev.set(self.cellSigLevels)
+        self.setCellStates(self.sim.cellStates)
 
     def setCellStates(self, cs):
         # set the species for existing states to views of the levels array
@@ -149,9 +165,16 @@ class CLEulerFEMIntegrator:
                                  self.cellSigLevels_dev.data,
                                  self.cellSigRates_dev.data).wait()
 
+        # Get the data back from device
+        self.specLevel[:] = self.specLevel_dev.get()
+        self.cellSigLevels[:] = self.cellSigLevels_dev.get()
+        self.cellSigRates[:] = self.cellSigRates_dev.get()
+        self.cellSigGradients[:] = self.cellSigGradients_dev.get()
+
         # Add point source for each cell 
         for id,c in self.cellStates.items():
             self.signalling.add_point_source(c.pos, self.cellSigRates[c.idx])
+        #self.signalling.add_point_source([40,0,0], 100.)
 
     def step(self, dt):
         if dt!=self.dt:
@@ -173,9 +196,6 @@ class CLEulerFEMIntegrator:
 
         self.dydt()
 
-        self.specLevel[:] = self.specLevel_dev.get()
-        self.cellSigLevels[:] = self.cellSigLevels_dev.get()
-        self.cellSigGradients[:] = self.cellSigGradients_dev.get()
 
 # Put the final signal levels into the cell states
 #        states = self.cellStates

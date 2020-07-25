@@ -44,7 +44,7 @@ __kernel void signalRates(const int numSignals,
                           __global const int* celltype,
                           __global const float* cellSpecLevels,
                           __global const float* cellSignalLevels,
-			  __global const float* cellSignalRates)
+			  __global float* cellSignalRates)
 {
     int id = get_global_id(0);
     int sigbase = id*numSignals;
@@ -53,8 +53,9 @@ __kernel void signalRates(const int numSignals,
 
     __global const float* species = cellSpecLevels+specbase;
     __global const float* signals = cellSignalLevels+sigbase;
+    __global float* rates = cellSignalRates + sigbase;
 
-    userSignalRates(gridVolume, areas[id], volumes[id], cellType, cellSignalRates, species, signals);
+    userSignalRates(gridVolume, areas[id], volumes[id], cellType, rates, species, signals);
 }
 
 
@@ -81,5 +82,6 @@ __kernel void combine_grad_components(__global const float* grad_x,
 	grad[i].s0 = grad_x[i];
 	grad[i].s1 = grad_y[i];
 	grad[i].s2 = grad_z[i];
+	grad[i].s3 = 0.f;
 }
 

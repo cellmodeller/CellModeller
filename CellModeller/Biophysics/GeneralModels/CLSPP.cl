@@ -641,7 +641,8 @@ __kernel void integrate(__global float4* centers,
 			const float ftax,
 			const float D,
 			const float dt,
-			const int spherical)
+			const int spherical,
+			const int numSignals)
 {
   int i = get_global_id(0);
   float4 center_i = centers[i];
@@ -652,7 +653,8 @@ __kernel void integrate(__global float4* centers,
   float4 signal_gradient_i;
   if (signal_gradient)
   {
-  	signal_gradient_i = signal_gradient[i];
+	int sigbase = i*numSignals;
+  	signal_gradient_i = signal_gradient[sigbase];
   } else
   {
   	signal_gradient_i = 0.f;
@@ -663,7 +665,10 @@ __kernel void integrate(__global float4* centers,
 	// Find new coordinate system tangent to sphere surface
 	normal = normalize(center_i);
 	float4 new_y_axis = cross(dir_i, normal);
+	// Rotate polarity vector onto tangent plane
 	dir_i = normalize(cross(normal, new_y_axis));
+	// Project gradient onto tangent plane
+	signal_gradient_i = signal_gradient_i - dot(signal_gradient_i, normal)*normal;
   } 
 
   // Rotate by change in angle around z-axis

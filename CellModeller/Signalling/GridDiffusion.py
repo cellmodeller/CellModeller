@@ -43,6 +43,18 @@ something else - e.g. a bulk flow term.
         self.regul = regul 
         self.setCellStates(sim.cellStates)
 
+    def saveData(self, data):
+        sig_data = {
+                'sigGridOrig': self.gridOrig,
+                'sigGridDim': self.gridDim,
+                'sigGridSize': self.gridSize,
+                }
+        data.update(sig_data)
+        return data
+
+    def loadData(self, data):
+        pass
+
     def setCellStates(self, cs):
         self.cellStates = cs
 

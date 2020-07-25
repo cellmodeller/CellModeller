@@ -288,10 +288,8 @@ class GLSphereRenderer:
                     grad = cell.gradient
                     glColor3f(1,0,0)
                     for g in grad:
-                        print('Gradient ', g)
                         norm = numpy.sqrt(g[0]**2 + g[1]**2 + g[2]**2)
                         cell.norm_grad = [g[0]/norm, g[1]/norm, g[2]/norm]
-                        print('Norm ', norm)
                         if norm>0:
                             glVertex3f(p[0], p[1], p[2])
                             glVertex3f(p[0] + g[0]/norm, p[1] + g[1]/norm, p[2] + g[2]/norm)
