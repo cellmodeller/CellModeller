@@ -244,6 +244,7 @@ class GLSphereRenderer:
                 glEnable(GL_BLEND)
                 glBlendFunc(GL_SRC_ALPHA ,GL_ONE_MINUS_SRC_ALPHA)
                 glEnable(GL_LINE_SMOOTH)
+
                 glLineWidth(1.0)
                 # draw wireframe for back facing polygons and cull front-facing ones
                 glPolygonMode(GL_BACK, GL_FILL)

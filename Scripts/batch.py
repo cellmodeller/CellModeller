@@ -13,7 +13,7 @@ def simulate(modfilename, platform, device, steps=50):
     (path,name) = os.path.split(modfilename)
     modname = str(name).split('.')[0]
     sys.path.append(path)
-    sim = Simulator(modname, 0.025, clPlatformNum=platform, clDeviceNum=device, saveOutput=False)
+    sim = Simulator(modname, 0.025, clPlatformNum=platform, clDeviceNum=device, saveOutput=True)
     while len(sim.cellStates) < max_cells-cell_buffer:
         sim.step()
 
