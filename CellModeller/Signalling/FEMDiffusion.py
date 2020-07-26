@@ -8,6 +8,7 @@ class FEMDiffusion:
     Diffusion solver using Fenics finite element method.
     """
     def __init__(self, sim, mesh_file, pvd_file, nSignals, diffusion_rate, dt, regul=None):
+        self.isGrid = False
         self.nSignals = nSignals
 
         if pvd_file:
