@@ -25,7 +25,7 @@ class CLEulerFEMIntegrator:
         self.initArrays()
 
         self.signalling = sig
-        self.levels = sig.u
+        self.levels = None
         self.setCellStates(sim.cellStates)
 
     def saveData(self, data):
