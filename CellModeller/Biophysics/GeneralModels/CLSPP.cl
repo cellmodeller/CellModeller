@@ -659,6 +659,8 @@ __kernel void integrate(__global float4* centers,
   {
   	signal_gradient_i = 0.f;
   }
+  const float4 org_center = {40.f,40.f, 40.f, 0.f};
+  float4 org_center_dir = normalize(org_center - center_i);
   float4 normal = {0.f, 0.f, 1.f, 0.f};
   if (spherical==1) 
   {
@@ -669,6 +671,7 @@ __kernel void integrate(__global float4* centers,
 	dir_i = normalize(cross(normal, new_y_axis));
 	// Project gradient onto tangent plane
 	signal_gradient_i = signal_gradient_i - dot(signal_gradient_i, normal)*normal;
+	org_center_dir = org_center_dir - dot(org_center_dir, normal)*normal;
   } 
 
   // Rotate by change in angle around z-axis
@@ -680,6 +683,10 @@ __kernel void integrate(__global float4* centers,
   if (length(signal_gradient_i)>0.f)
   {
 	angle += ftax * length(signal_gradient_i) * angle_between_vectors(dir_i, normalize(signal_gradient_i), normal);
+  }
+  if (length(org_center_dir)>0.f)
+  {
+	angle += .1f * angle_between_vectors(dir_i, org_center_dir, normal);
   }
   dir_i = rot(normal, dt * angle, dir_i);
   dirs[i] = normalize(dir_i);

@@ -112,6 +112,9 @@ visualised.
         # Call the user-defined setup function on ourself
         self.module.setup(self)
 
+    def __del__(self):
+        self.CLQueue.finish()
+
     def setSaveOutput(self, save):
         self.saveOutput = save
         if save and (not self.dataOutputInitialised):

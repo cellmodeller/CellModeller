@@ -105,6 +105,69 @@ class CLSPP:
         # Random number generator
         self.rand = PhiloxGenerator(self.context)
 
+    def __del__(self):
+        self.cell_centers_dev.data.release()
+        self.cell_angs_dev.data.release()
+        self.cell_dirs_dev.data.release()
+        self.pred_cell_centers_dev.data.release()
+        self.pred_cell_dirs_dev.data.release()
+        self.cell_rads_dev.data.release()
+        self.cell_sqs_dev.data.release()
+        self.cell_n_cts_dev.data.release()
+        self.cell_dcenters_dev.data.release()
+        self.avg_neighbour_dir_dev.data.release()
+
+        self.cell_areas_dev.data.release()
+        self.cell_vols_dev.data.release()
+        # gridding
+        self.sq_inds_dev.data.release()
+        self.sorted_ids_dev.data.release()
+
+        # constraint planes
+        self.plane_pts_dev.data.release()
+        self.plane_norms_dev.data.release()
+        self.plane_coeffs_dev.data.release()
+
+        # constraint spheres
+        self.sphere_pts_dev.data.release()
+        self.sphere_rads_dev.data.release()
+        self.sphere_coeffs_dev.data.release()
+        self.sphere_norms_dev.data.release()
+
+        # contact data
+        self.ct_frs_dev.data.release()
+        self.ct_tos_dev.data.release()
+        self.ct_dists_dev.data.release()
+        self.ct_pts_dev.data.release()
+        self.ct_norms_dev.data.release()
+        self.ct_stiff_dev.data.release()
+        self.ct_overlap_dev.data.release()
+
+        # where the contacts pointing to this cell are collected
+        self.cell_tos_dev.data.release()
+        self.n_cell_tos_dev.data.release()
+
+
+        # the constructed 'matrix'
+        self.ct_inds_dev.data.release()
+        self.ct_reldists_dev.data.release()
+
+        self.fr_ents_dev.data.release()
+        self.to_ents_dev.data.release()
+        
+
+        # vectors and intermediates
+        self.deltap_dev.data.release()
+        self.Mx_dev.data.release()
+        self.BTBx_dev.data.release()
+        self.Minvx_dev.data.release()
+
+        # CGS intermediates
+        self.p_dev.data.release()
+        self.Ap_dev.data.release()
+        self.res_dev.data.release()
+        self.rhs_dev.data.release()
+
     # Biophysical Model interface
     def reset(self):
         self.n_cells=0
