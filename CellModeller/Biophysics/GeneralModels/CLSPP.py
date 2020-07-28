@@ -463,8 +463,8 @@ class CLSPP:
                         if ii!=self.n_cells-1 or jj!=6:
                             opstring = opstring + '\t'
                 opstring = opstring + '\n'
-        print("MTM")
-        print(opstring)
+        if self.printing: print("MTM")
+        if self.printing: print(opstring)
         open('CellModeller/Biophysics/BacterialModels/matrix.mat', 'w').write(opstring)
 
 
@@ -496,7 +496,7 @@ class CLSPP:
             self.n_ticks = int(math.ceil(dt/self.dt)) 
         else:
             self.n_ticks = 1 
-        # print("n_ticks = %d"%(self.n_ticks))
+        #if self.printing: print("n_ticks = %d"%(self.n_ticks))
         self.actual_dt = dt / float(self.n_ticks)
         self.progress_initialised = True
 
@@ -514,7 +514,7 @@ class CLSPP:
         self.seconds_elapsed = numpy.float32(time.time() - self.time_begin)
         self.minutes_elapsed = (numpy.float32(self.seconds_elapsed) / 60.0)  
         self.hours_elapsed = (numpy.float32(self.minutes_elapsed) / 60.0)  
-        if self.frame_no % 10 == 0:
+        if self.frame_no % 1 == 0:
             print('% 8i    % 8i cells    % 8i contacts    %f hour(s) or %f minute(s) or %f second(s)' % (self.frame_no, self.n_cells, self.n_cts, self.hours_elapsed, self.minutes_elapsed, self.seconds_elapsed))
         # pull cells from the device and update simulator
         start = time.time()
@@ -523,7 +523,7 @@ class CLSPP:
             for state in list(self.simulator.cellStates.values()):
                 self.updateCellState(state)
         end = time.time()
-        print('Updating cell states took ', end-start)
+        if self.printing: print('Updating cell states took ', end-start)
 
     def step(self, dt):
         """Step forward dt units of time.
@@ -537,7 +537,7 @@ class CLSPP:
         if self.progress():
             self.progress_finalise()
             end = time.time()
-            print('step took %g'%(end-start))
+            if self.printing: print('step took %g'%(end-start))
             return True
         else:
             return False
@@ -564,7 +564,7 @@ class CLSPP:
         self.sub_tick_initialised=True
 
         end = time.time()
-        print('sub_tick_init took %g', end-start)
+        if self.printing: print('sub_tick_init took %g', end-start)
 
     def tick(self, dt):
         if not self.sub_tick_initialised:
@@ -585,11 +585,11 @@ class CLSPP:
         start = time.time()
         self.find_contacts()
         end1 = time.time()
-        print('find_contacts took %g'%(end1-start))
+        if self.printing: print('find_contacts took %g'%(end1-start))
         # place 'backward' contacts in cells
         self.collect_tos()
         end2 = time.time()
-        print('collect_tos took %g'%(end2-end1))
+        if self.printing: print('collect_tos took %g'%(end2-end1))
 
         alpha = 10**(self.sub_tick_i)
         new_cts = self.n_cts - old_n_cts
@@ -597,12 +597,12 @@ class CLSPP:
             start = time.time()
             self.build_matrix() # Calculate entries of the matrix
             end = time.time()
-            print('build_matrix took %g'%(end-start))
+            if self.printing: print('build_matrix took %g'%(end-start))
             #print "max cell contacts = %i"%cl_array.max(self.cell_n_cts_dev).get()
             self.CGSSolve(dt, alpha) # invert MTMx to find deltap
             self.add_impulse()
             end = time.time()
-            print('CGS solver %g'%(end-start))
+            if self.printing: print('CGS solver %g'%(end-start))
             return False
         else:
             return True
@@ -701,7 +701,7 @@ class CLSPP:
         self.sq_inds.put(numpy.arange(self.n_sqs), numpy.searchsorted(sorted_sqs, numpy.arange(self.n_sqs), side='left'))
         self.sq_inds_dev.set(self.sq_inds)
         end = time.time()
-        #print('sort_cells took %g'%(end-start))
+        #if self.printing: print('sort_cells took %g'%(end-start))
 
 
     def find_contacts(self, predict=True):
@@ -927,7 +927,7 @@ class CLSPP:
         rsfirst = rsold
         if math.sqrt(rsold/self.n_cells) < self.cgs_tol:
             if self.printing and self.frame_no%10==0:
-                print('% 5i'%self.frame_no + '% 6i cells  % 6i cts  % 6i iterations  residual = %f' % (self.n_cells,
+                if self.printing: print('% 5i'%self.frame_no + '% 6i cells  % 6i cts  % 6i iterations  residual = %f' % (self.n_cells,
             self.n_cts, 0, math.sqrt(rsold/self.n_cells)))
             return (0.0, rsold)
 
@@ -971,7 +971,7 @@ class CLSPP:
             #print '        ',iter,rsold
 
         if self.printing and self.frame_no%10==0:
-            print('% 5i'%self.frame_no + '% 6i cells  % 6i cts  % 6i iterations  residual = %f' % (self.n_cells, self.n_cts, iter+1, math.sqrt(rsnew/self.n_cells)))
+            if self.printing: print('% 5i'%self.frame_no + '% 6i cells  % 6i cts  % 6i iterations  residual = %f' % (self.n_cells, self.n_cts, iter+1, math.sqrt(rsnew/self.n_cells)))
         return (iter+1, math.sqrt(rsnew/self.n_cells))
 
 
@@ -1053,7 +1053,7 @@ class CLSPP:
             self.sorted_ids_dev.set(self.sorted_ids) # push changes to the device
             self.sq_inds_dev.set(self.sq_inds)
         t2 = time.clock()
-        print("Grid stuff timing for 1000 calls, time per call (s) = %f"%((t2-t1)*0.001))
+        if self.printing: print("Grid stuff timing for 1000 calls, time per call (s) = %f"%((t2-t1)*0.001))
         open("grid_prof","a").write( "%i, %i, %f\n"%(self.n_cells,self.n_cts,(t2-t1)*0.001) )
 
 
@@ -1079,7 +1079,7 @@ class CLSPP:
             self.compact_cts()
             self.ct_inds_dev.set(self.ct_inds)
         t2 = time.clock()
-        print("Find contacts timing for 1000 calls, time per call (s) = %f"%((t2-t1)*0.001))
+        if self.printing: print("Find contacts timing for 1000 calls, time per call (s) = %f"%((t2-t1)*0.001))
         open("findcts_prof","a").write( "%i, %i, %f\n"%(self.n_cells,self.n_cts,(t2-t1)*0.001) )
 
     def profileCGS(self):
@@ -1091,9 +1091,9 @@ class CLSPP:
         for i in range(1000):
             self.build_matrix(dt) # Calculate entries of the matrix
             (iters, res) = self.CGSSolve()
-            print("cgs prof: iters=%i, res=%f"%(iters,res))
+            if self.printing: print("cgs prof: iters=%i, res=%f"%(iters,res))
         t2 = time.clock()
-        print("CGS timing for 1000 calls, time per call (s) = %f"%((t2-t1)*0.001))
+        if self.printing: print("CGS timing for 1000 calls, time per call (s) = %f"%((t2-t1)*0.001))
         open("cgs_prof","a").write( "%i, %i, %i, %f\n"%(self.n_cells,self.n_cts,iters,(t2-t1)*0.001) )
 
 

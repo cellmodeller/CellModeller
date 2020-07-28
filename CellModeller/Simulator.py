@@ -373,7 +373,7 @@ visualised.
 
         self.stepNum += 1
         end = time.time()
-        #print('sim step took %g'%(end-start))
+        print('sim step took %g'%(end-start))
         return True
 
 
