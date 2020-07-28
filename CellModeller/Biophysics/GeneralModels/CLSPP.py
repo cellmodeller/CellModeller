@@ -228,40 +228,16 @@ class CLSPP:
 
         self.program = cl.Program(self.context, kernel_src).build(cache_dir=False)
         # Some kernels that seem like they should be built into pyopencl...
-        self.vclearf = ElementwiseKernel(self.context, "float8 *v", "v[i]=0.0", "vecclearf")
+        self.vclearf = ElementwiseKernel(self.context, "float4 *v", "v[i]=0.0", "vecclearf")
         self.vcleari = ElementwiseKernel(self.context, "int *v", "v[i]=0", "veccleari")
-        self.vadd = ElementwiseKernel(self.context, "float8 *res, const float8 *in1, const float8 *in2",
-                                      "res[i] = in1[i] + in2[i]", "vecadd")
-        self.vsub = ElementwiseKernel(self.context, "float8 *res, const float8 *in1, const float8 *in2",
+        self.vsub = ElementwiseKernel(self.context, "float4 *res, const float4 *in1, const float4 *in2",
                                           "res[i] = in1[i] - in2[i]", "vecsub")
         self.vaddkx = ElementwiseKernel(self.context,
-                                            "float8 *res, const float k, const float8 *in1, const float8 *in2",
+                                            "float4 *res, const float k, const float4 *in1, const float4 *in2",
                                             "res[i] = in1[i] + k*in2[i]", "vecaddkx")
         self.vsubkx = ElementwiseKernel(self.context,
-                                            "float8 *res, const float k, const float8 *in1, const float8 *in2",
+                                            "float4 *res, const float k, const float4 *in1, const float4 *in2",
                                             "res[i] = in1[i] - k*in2[i]", "vecsubkx")
-        self.vmulk = ElementwiseKernel(self.context,
-                                            "float8 *res, const float k, const float8 *in1",
-                                            "res[i] = k*in1[i]", "vecmulk")
-        self.vmulk4 = ElementwiseKernel(self.context,
-                                            "float4 *res, const float k, const float4 *in1",
-                                            "res[i] = k*in1[i]", "vecmulk4")
-        self.vnorm = ElementwiseKernel(self.context,
-                                            "float8 *res, const float8 *in1",
-                                            "res[i] = dot(in1[i], in1[i]", "vecnorm")
-        self.vcrop = ElementwiseKernel(self.context,
-                                            "float4 *res",
-                                            "res[i].s3 = 0.f", "veccrop")
-
-        self.vang = ElementwiseKernel(self.context,
-                                            "float *res, const float4* in",
-                                            "res[i] = atan2(in[i].s1, in[i].s0)", "vecang")
-
-        self.vadd_float = ElementwiseKernel(self.context, "float *res, const float *in",
-                                      "res[i] = res[i] + in[i]", "vecaddfloat")
-
-        self.vfill_vec2d = ElementwiseKernel(self.context, "float4 *res, const float *in1, const float* in2",
-                                      "res[i].s0 = in1[i]; res[i].s1 = in2[i]", "vecaddfloat")
 
         # cell geometry kernels
         self.calc_cell_area = ElementwiseKernel(self.context, "float* res, float* r, float* l",
@@ -270,17 +246,22 @@ class CLSPP:
                                           "res[i] = 3.1415927f*r[i]*r[i]*(2.f*r[i]+l[i])", "cell_vol_kern")
 
         # A dot product as sum of float4 dot products -
-        # i.e. like flattening vectors of float8s into big float vectors
+        # i.e. like flattening vectors of float4s into big float vectors
         # then computing dot
-        # NB. Some openCLs seem not to implement dot(float8,float8) so split
+        # NB. Some openCLs seem not to implement dot(float4,float4) so split
         # into float4's
-        self.vdot = ReductionKernel(self.context, numpy.float32, neutral="0",
-                reduce_expr="a+b", map_expr="dot(x[i].s0123,y[i].s0123)+dot(x[i].s4567,y[i].s4567)",
-                arguments="__global float8 *x, __global float8 *y")
+        #self.vdot = ReductionKernel(self.context, numpy.float32, neutral="0",
+        #        reduce_expr="a+b", map_expr="dot(x[i].s0123,y[i].s0123)+dot(x[i].s4567,y[i].s4567)",
+        #        arguments="__global float4 *x, __global float4 *y")
     
+        # For float4
+        self.vdot = ReductionKernel(self.context, numpy.float32, neutral="0",
+                reduce_expr="a+b", map_expr="dot(x[i],y[i])",
+                arguments="__global float4 *x, __global float4 *y")
+
         # Add a force to position part of generalised position vector
         self.add_force = ElementwiseKernel(self.context,
-                                            "float8 *pos, const float mag, const float4 *dir",
+                                            "float4 *pos, const float mag, const float4 *dir",
                                             "pos[i].s0123 = pos[i].s0123 + mag*dir[i]", "add_force")
 
     def init_data(self):
@@ -312,7 +293,8 @@ class CLSPP:
         self.cell_areas_dev[:] = 4 * numpy.pi 
         self.cell_vols_dev = cl_array.zeros(self.queue, cell_geom, numpy.float32) + 4 * numpy.pi / 3
         self.cell_vols_dev[:] = 4 * numpy.pi / 3 
-        self.cell_old_vols_dev = self.cell_vols_dev
+        self.cell_old_vols_dev = self.cell_vols_dev # No growth
+
         # gridding
         self.sq_inds = numpy.zeros((self.max_sqs,), numpy.int32)
         self.sq_inds_dev = cl_array.zeros(self.queue, (self.max_sqs,), numpy.int32)
@@ -370,26 +352,26 @@ class CLSPP:
         self.ct_reldists = numpy.zeros(mat_geom, numpy.float32)
         self.ct_reldists_dev = cl_array.zeros(self.queue, mat_geom, numpy.float32)
 
-        self.fr_ents = numpy.zeros(mat_geom, vec.float8)
-        self.fr_ents_dev = cl_array.zeros(self.queue, mat_geom, vec.float8)
-        self.to_ents = numpy.zeros(mat_geom, vec.float8)
-        self.to_ents_dev = cl_array.zeros(self.queue, mat_geom, vec.float8)
+        self.fr_ents = numpy.zeros(mat_geom, vec.float4)
+        self.fr_ents_dev = cl_array.zeros(self.queue, mat_geom, vec.float4)
+        self.to_ents = numpy.zeros(mat_geom, vec.float4)
+        self.to_ents_dev = cl_array.zeros(self.queue, mat_geom, vec.float4)
         
 
         # vectors and intermediates
-        self.deltap = numpy.zeros(cell_geom, vec.float8)
-        self.deltap_dev = cl_array.zeros(self.queue, cell_geom, vec.float8)
+        self.deltap = numpy.zeros(cell_geom, vec.float4)
+        self.deltap_dev = cl_array.zeros(self.queue, cell_geom, vec.float4)
         self.Mx = numpy.zeros(mat_geom, numpy.float32)
         self.Mx_dev = cl_array.zeros(self.queue, mat_geom, numpy.float32)
-        self.BTBx = numpy.zeros(cell_geom, vec.float8)
-        self.BTBx_dev = cl_array.zeros(self.queue, cell_geom, vec.float8)
-        self.Minvx_dev = cl_array.zeros(self.queue, cell_geom, vec.float8)
+        self.BTBx = numpy.zeros(cell_geom, vec.float4)
+        self.BTBx_dev = cl_array.zeros(self.queue, cell_geom, vec.float4)
+        self.Minvx_dev = cl_array.zeros(self.queue, cell_geom, vec.float4)
 
         # CGS intermediates
-        self.p_dev = cl_array.zeros(self.queue, cell_geom, vec.float8)
-        self.Ap_dev = cl_array.zeros(self.queue, cell_geom, vec.float8)
-        self.res_dev = cl_array.zeros(self.queue, cell_geom, vec.float8)
-        self.rhs_dev = cl_array.zeros(self.queue, cell_geom, vec.float8)
+        self.p_dev = cl_array.zeros(self.queue, cell_geom, vec.float4)
+        self.Ap_dev = cl_array.zeros(self.queue, cell_geom, vec.float4)
+        self.res_dev = cl_array.zeros(self.queue, cell_geom, vec.float4)
+        self.rhs_dev = cl_array.zeros(self.queue, cell_geom, vec.float4)
     
 
     def load_from_cellstates(self, cell_states):
@@ -445,11 +427,11 @@ class CLSPP:
         self.cell_n_cts[0:self.n_cells] = self.cell_n_cts_dev[0:self.n_cells].get()
 
     def matrixTest(self):
-        x_dev = cl_array.zeros(self.queue, (self.n_cells,), vec.float8)
-        Ax_dev = cl_array.zeros(self.queue, (self.n_cells,), vec.float8)
+        x_dev = cl_array.zeros(self.queue, (self.n_cells,), vec.float4)
+        Ax_dev = cl_array.zeros(self.queue, (self.n_cells,), vec.float4)
         opstring = ''
         for i in range(self.n_cells):
-            x = numpy.zeros((self.n_cells,), vec.float8)
+            x = numpy.zeros((self.n_cells,), vec.float4)
             for j in range(7):
                 if j>0:
                     x[i][j-1]=0.0
@@ -514,7 +496,7 @@ class CLSPP:
         self.seconds_elapsed = numpy.float32(time.time() - self.time_begin)
         self.minutes_elapsed = (numpy.float32(self.seconds_elapsed) / 60.0)  
         self.hours_elapsed = (numpy.float32(self.minutes_elapsed) / 60.0)  
-        if self.frame_no % 1 == 0:
+        if self.frame_no % 10 == 0:
             print('% 8i    % 8i cells    % 8i contacts    %f hour(s) or %f minute(s) or %f second(s)' % (self.frame_no, self.n_cells, self.n_cts, self.hours_elapsed, self.minutes_elapsed, self.seconds_elapsed))
         # pull cells from the device and update simulator
         start = time.time()
@@ -970,8 +952,8 @@ class CLSPP:
             rsold = rsnew
             #print '        ',iter,rsold
 
-        if self.printing and self.frame_no%10==0:
-            if self.printing: print('% 5i'%self.frame_no + '% 6i cells  % 6i cts  % 6i iterations  residual = %f' % (self.n_cells, self.n_cts, iter+1, math.sqrt(rsnew/self.n_cells)))
+        if self.frame_no%10==0:
+            print('% 5i'%self.frame_no + '% 6i cells  % 6i cts  % 6i iterations  residual = %f' % (self.n_cells, self.n_cts, iter+1, math.sqrt(rsnew/self.n_cells)))
         return (iter+1, math.sqrt(rsnew/self.n_cells))
 
 

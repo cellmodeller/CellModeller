@@ -487,8 +487,8 @@ __kernel void build_matrix(const int max_contacts,
                            __global const int* tos,
                            __global const float4* pts,
                            __global const float4* norms,
-                           __global float8* fr_ents,
-                           __global float8* to_ents,
+                           __global float4* fr_ents,
+                           __global float4* to_ents,
                            __global float* stiff)
 {
   int id = get_global_id(0);
@@ -498,7 +498,7 @@ __kernel void build_matrix(const int max_contacts,
 
   int i = id*max_contacts + ct;
 
-  float8 fr_ent = 0.f;
+  float4 fr_ent = 0.f;
 
   fr_ent.s012 = norms[i].s012;
   fr_ents[i] = fr_ent * stiff[i];
@@ -511,7 +511,7 @@ __kernel void build_matrix(const int max_contacts,
     return;
   }
 
-  float8 to_ent = 0.f;
+  float4 to_ent = 0.f;
   to_ent.s012 = norms[i].s012;
   to_ents[i] = to_ent * stiff[i];
 }
@@ -519,9 +519,9 @@ __kernel void build_matrix(const int max_contacts,
 __kernel void calculate_Bx(const int max_contacts,
                            __global const int* frs,
                            __global const int* tos,
-                           __global const float8* fr_ents,
-                           __global const float8* to_ents,
-                           __global const float8* deltap,
+                           __global const float4* fr_ents,
+                           __global const float4* to_ents,
+                           __global const float4* deltap,
 			   const float Ws,
 			   const float Wc,
                            __global float* Bx)
@@ -532,17 +532,14 @@ __kernel void calculate_Bx(const int max_contacts,
   int a = frs[i];
   int b = tos[i];
   if (a == 0 && b == 0) return; // not a contact
-  float8 to_ents_i = b < 0 ? 0.f : to_ents[i];
-  //my machine can't dot float8s...
+  float4 to_ents_i = b < 0 ? 0.f : to_ents[i];
 
   const float R = 1.f;
 
   const float fac = 2.F * (Ws + Wc) / (R*R);
-  float res0123 = dot(fr_ents[i].s0123, deltap[a].s0123) - dot(to_ents_i.s0123, deltap[b].s0123);
-  res0123 *= fac;
-  float res4567 = dot(fr_ents[i].s4567, deltap[a].s4567) - dot(to_ents_i.s4567, deltap[b].s4567);
-  res4567 *= fac;
-  Bx[i] = res0123 + res4567;
+  float res = dot(fr_ents[i], deltap[a]) - dot(to_ents_i, deltap[b]);
+  res *= fac;
+  Bx[i] = res;
 }
 
 
@@ -550,16 +547,16 @@ __kernel void calculate_BTBx(const int max_contacts,
                              __global const int* n_cts,
                              __global const int* n_cell_tos,
                              __global const int* cell_tos,
-                             __global const float8* fr_ents,
-                             __global const float8* to_ents,
+                             __global const float4* fr_ents,
+                             __global const float4* to_ents,
                              __global const float* Bx,
-                             __global float8* BTBx)
+                             __global float4* BTBx)
 {
   int i = get_global_id(0);
   int base = i*max_contacts;
-  float8 res = 0.f;
+  float4 res = 0.f;
   for (int k = base; k < base+n_cts[i]; k++) {
-    float8 oldres = res;
+    float4 oldres = res;
     res += fr_ents[k]*Bx[k];
   }
   for (int k = base; k < base+n_cell_tos[i]; k++) {
@@ -573,13 +570,13 @@ __kernel void calculate_BTBx(const int max_contacts,
 __kernel void calculate_Mx(const float gamma_s,
 			       __global const float4* dirs,
 			       __global const float* rads,
-			       __global const float8* x,
-			       __global float8* Mx)
+			       __global const float4* x,
+			       __global float4* Mx)
 {
   int i = get_global_id(0);
 
-  float8 xi = x[i];
-  float8 v = 0.f;
+  float4 xi = x[i];
+  float4 v = 0.f;
   v.s012 = xi.s012 * gamma_s;
 
   Mx[i] = v;
@@ -602,7 +599,7 @@ __kernel void predict(__global const float4* centers,
 }
 
 __kernel void add_impulse(const float gamma_s,
-                          __global const float8* deltap,
+                          __global const float4* deltap,
                           __global const float4* dirs,
                           __global const float* rads,
                           __global float4* dcenters)
@@ -611,7 +608,7 @@ __kernel void add_impulse(const float gamma_s,
 
   float4 dir_i = dirs[i];
   float rad_i = rads[i];
-  float8 deltap_i = deltap[i];
+  float4 deltap_i = deltap[i];
 
   float4 dplin = 0.f;
   dplin.s012 = deltap_i.s012;
@@ -686,7 +683,7 @@ __kernel void integrate(__global float4* centers,
   }
   if (length(org_center_dir)>0.f)
   {
-	angle += .1f * angle_between_vectors(dir_i, org_center_dir, normal);
+	//angle += .1f * angle_between_vectors(dir_i, org_center_dir, normal);
   }
   dir_i = rot(normal, dt * angle, dir_i);
   dirs[i] = normalize(dir_i);
