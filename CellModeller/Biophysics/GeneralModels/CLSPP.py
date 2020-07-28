@@ -517,10 +517,13 @@ class CLSPP:
         if self.frame_no % 10 == 0:
             print('% 8i    % 8i cells    % 8i contacts    %f hour(s) or %f minute(s) or %f second(s)' % (self.frame_no, self.n_cells, self.n_cts, self.hours_elapsed, self.minutes_elapsed, self.seconds_elapsed))
         # pull cells from the device and update simulator
+        start = time.time()
         if self.simulator:
             self.get_cells()
             for state in list(self.simulator.cellStates.values()):
                 self.updateCellState(state)
+        end = time.time()
+        print('Updating cell states took ', end-start)
 
     def step(self, dt):
         """Step forward dt units of time.
@@ -534,12 +537,13 @@ class CLSPP:
         if self.progress():
             self.progress_finalise()
             end = time.time()
-            #print('step took %g'%(end-start))
+            print('step took %g'%(end-start))
             return True
         else:
             return False
 
     def sub_tick_init(self, dt):
+        start = time.time()
         # Compute angle of cell orientation
         # redefine gridding based on the range of cell positions
         self.cell_centers[0:self.n_cells] = self.cell_centers_dev[0:self.n_cells].get()
@@ -558,6 +562,9 @@ class CLSPP:
         self.vcleari(self.cell_n_cts_dev) # clear the accumulated contact count
         self.sub_tick_i=0
         self.sub_tick_initialised=True
+
+        end = time.time()
+        print('sub_tick_init took %g', end-start)
 
     def tick(self, dt):
         if not self.sub_tick_initialised:
@@ -578,11 +585,11 @@ class CLSPP:
         start = time.time()
         self.find_contacts()
         end1 = time.time()
-        #print('find_contacts took %g'%(end1-start))
+        print('find_contacts took %g'%(end1-start))
         # place 'backward' contacts in cells
         self.collect_tos()
         end2 = time.time()
-        #print('collect_tos took %g'%(end2-end1))
+        print('collect_tos took %g'%(end2-end1))
 
         alpha = 10**(self.sub_tick_i)
         new_cts = self.n_cts - old_n_cts
@@ -590,12 +597,12 @@ class CLSPP:
             start = time.time()
             self.build_matrix() # Calculate entries of the matrix
             end = time.time()
-            #print('build_matrix took %g'%(end-start))
+            print('build_matrix took %g'%(end-start))
             #print "max cell contacts = %i"%cl_array.max(self.cell_n_cts_dev).get()
             self.CGSSolve(dt, alpha) # invert MTMx to find deltap
             self.add_impulse()
             end = time.time()
-            #print('sub_tick took %g'%(end-start))
+            print('CGS solver %g'%(end-start))
             return False
         else:
             return True
