@@ -983,7 +983,7 @@ class CLSPP:
 
         Calculates new cell_centers, cell_dirs, cell_lens.
         """
-        noise = self.rand.normal(self.queue, sigma=1., shape=(self.n_cells,), dtype=np.float32)
+        noise = self.rand.normal(self.queue, sigma=np.sqrt(dt), shape=(self.n_cells,), dtype=np.float32)
         if self.simulator.integ:
             signal_gradient = self.simulator.integ.cellSigGradients_dev.data
         else:

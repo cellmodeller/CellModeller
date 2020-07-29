@@ -672,7 +672,7 @@ __kernel void integrate(__global float4* centers,
   } 
 
   // Rotate by change in angle around z-axis
-  float angle = D*noise_i;
+  float angle = sqrt(2 * D) * noise_i;
   if (length(avg_neighbour_dir_i)>0.f)
   {
 	angle += fcil * angle_between_vectors(dir_i, -avg_neighbour_dir_i, normal);
