@@ -636,9 +636,11 @@ __kernel void integrate(__global float4* centers,
 			__global float* noise,
 			const float fcil,
 			const float ftax,
+			const float forg,
 			const float D,
 			const float dt,
 			const int spherical,
+			const float sphere_radius,
 			const int numSignals)
 {
   int i = get_global_id(0);
@@ -656,7 +658,7 @@ __kernel void integrate(__global float4* centers,
   {
   	signal_gradient_i = 0.f;
   }
-  const float4 org_center = {40.f,40.f, 40.f, 0.f};
+  const float4 org_center = {sphere_radius, 0.f, 0.f, 0.f};
   float4 org_center_dir = normalize(org_center - center_i);
   float4 normal = {0.f, 0.f, 1.f, 0.f};
   if (spherical==1) 
@@ -683,7 +685,7 @@ __kernel void integrate(__global float4* centers,
   }
   if (length(org_center_dir)>0.f)
   {
-	//angle += .1f * angle_between_vectors(dir_i, org_center_dir, normal);
+	angle += forg * angle_between_vectors(dir_i, org_center_dir, normal);
   }
   dir_i = rot(normal, dt * angle, dir_i);
   dirs[i] = normalize(dir_i);

@@ -35,6 +35,7 @@ class CLSPP:
                  Wc=1.,
                  fcil=2.,
                  ftax=1.,
+                 forg=1.,
                  D=1.,
                  dt=None,
                  cgs_tol=5e-3,
@@ -42,10 +43,12 @@ class CLSPP:
                  alternate_divisions=False,
                  printing=True,
                  compNeighbours=False,
-                 spherical=True):
+                 spherical=True,
+                 sphere_radius=50):
 
         # Is the simulaiton on a sphere?
         self.spherical = spherical
+        self.sphere_radius = sphere_radius
 
         # Should we compute neighbours? (bit slow)
         self.computeNeighbours = compNeighbours
@@ -71,6 +74,7 @@ class CLSPP:
         self.Wc = Wc
         self.fcil = fcil
         self.ftax = ftax
+        self.forg = forg
         self.D = D
         self.dt = dt
         self.cgs_tol = cgs_tol
@@ -1003,9 +1007,11 @@ class CLSPP:
                                noise.data,
                                numpy.float32(self.fcil),
                                numpy.float32(self.ftax),
+                               numpy.float32(self.forg),
                                numpy.float32(self.D),
                                numpy.float32(dt),
                                numpy.int32(self.spherical*1),
+                               numpy.float32(self.sphere_radius),
                                numpy.int32(nSignals)).wait()
 
     def add_impulse(self):
