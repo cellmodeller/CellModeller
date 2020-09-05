@@ -536,9 +536,13 @@ __kernel void calculate_Bx(const int max_contacts,
 
   const float R = 1.f;
 
-  const float fac = 2.F * (Ws + Wc) / (R*R);
   float res = dot(fr_ents[i], deltap[a]) - dot(to_ents_i, deltap[b]);
-  res *= fac;
+  const float fac = 2.F * (Ws + Wc) / (R*R);
+  if (b>=0)
+  {
+    // Not a plane or sphere contact
+    res *= fac;
+  }
   Bx[i] = res;
 }
 
@@ -620,9 +624,11 @@ float angle_between_vectors(float4 vec1, float4 vec2, float4 normal)
 {
     // Get the unsigned angle as arccos(dot product)
     float ang = acos( clamp( dot(vec1, vec2), -1.f, 1.f ) );
+
     // Find the sign of the angle from cross-product with normal
     float4 cross_vec = cross(vec1, vec2);
     float ang_sign = sign(dot(cross_vec, normal));
+
     return ang * ang_sign;
 }
 
@@ -666,11 +672,14 @@ __kernel void integrate(__global float4* centers,
 	// Find new coordinate system tangent to sphere surface
 	normal = normalize(center_i);
 	float4 new_y_axis = cross(dir_i, normal);
+	
 	// Rotate polarity vector onto tangent plane
 	dir_i = normalize(cross(normal, new_y_axis));
-	// Project gradient onto tangent plane
+	
+	// Project taxis directions onto tangent plane
 	signal_gradient_i = signal_gradient_i - dot(signal_gradient_i, normal)*normal;
 	org_center_dir = org_center_dir - dot(org_center_dir, normal)*normal;
+	org_center_dir = normalize(org_center_dir);
   } 
 
   // Rotate by change in angle around z-axis

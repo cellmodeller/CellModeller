@@ -184,7 +184,7 @@ class CLSPP:
         self.init_kernels()
 
 
-    def addCell(self, cellState, pos=(0,0,0), dir=(1,0,0), rad=1.,**kwargs):
+    def addCell(self, cellState, pos=(0,0,0), dir=(1,0,0), rad=1., **kwargs):
         i = cellState.idx
         self.n_cells += 1
         cid = cellState.id

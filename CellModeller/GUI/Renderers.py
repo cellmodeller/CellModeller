@@ -274,17 +274,17 @@ class GLSphereRenderer:
                 glPopMatrix() 
 
                 # Draw cell direction and average neighbour pos direction vector
-                glDisable(GL_DEPTH_TEST)
+                #glDisable(GL_DEPTH_TEST)
                 glLineWidth(4)
                 glBegin(GL_LINES)
                 if self.draw_axis:
                     glColor3f(1,1,1)
                     glVertex3f(p[0], p[1], p[2])
-                    glVertex3f(p[0] + d[0], p[1] + d[1], p[2] + d[2])
+                    glVertex3f(p[0] + 2*d[0], p[1] + 2*d[1], p[2] + 2*d[2])
                 if self.draw_nbr_dir:
                     glColor3f(0,1,0)
                     glVertex3f(p[0], p[1], p[2])
-                    glVertex3f(p[0] + -nd[0], p[1] + -nd[1], p[2] + -nd[2])
+                    glVertex3f(p[0] + -2*nd[0], p[1] + -2*nd[1], p[2] + -2*nd[2])
                 if self.draw_gradient:
                     grad = cell.gradient
                     glColor3f(1,0,0)
@@ -293,10 +293,10 @@ class GLSphereRenderer:
                         cell.norm_grad = [g[0]/norm, g[1]/norm, g[2]/norm]
                         if norm>0:
                             glVertex3f(p[0], p[1], p[2])
-                            glVertex3f(p[0] + g[0]/norm, p[1] + g[1]/norm, p[2] + g[2]/norm)
+                            glVertex3f(p[0] + 2*g[0]/norm, p[1] + 2*g[1]/norm, p[2] + 2*g[2]/norm)
 
                 glEnd()
-                glEnable(GL_DEPTH_TEST)
+                #glEnable(GL_DEPTH_TEST)
 
 
         def render_cells(self, selection=None):
