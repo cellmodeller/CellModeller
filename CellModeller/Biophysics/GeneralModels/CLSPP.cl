@@ -538,7 +538,11 @@ __kernel void calculate_Bx(const int max_contacts,
 
   float res = dot(fr_ents[i], deltap[a]) - dot(to_ents_i, deltap[b]);
   const float fac = 2.F * (Ws + Wc) / (R*R);
-  res *= fac;
+  if (b>=0)
+  {
+    // Not a plane or sphere contact
+    res *= fac;
+  }
   Bx[i] = res;
 }
 
