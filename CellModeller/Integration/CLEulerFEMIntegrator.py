@@ -139,7 +139,8 @@ class CLEulerFEMIntegrator:
                                         self.gx_dev.data,
                                         self.gy_dev.data,
                                         self.gz_dev.data,
-         				self.cellSigGradients_dev.data).wait()
+         				self.cellSigGradients_dev.data,
+                                        numpy.int32(self.nSignals)).wait()
         self.celltype_dev.set(self.celltype)
         # compute species rates
         self.program.speciesRates(self.queue, (self.nCells,), None,
@@ -173,7 +174,7 @@ class CLEulerFEMIntegrator:
 
         # Add point source for each cell 
         for id,c in self.cellStates.items():
-            self.signalling.add_point_source(c.pos, self.cellSigRates[c.idx])
+            self.signalling.add_point_source(c.pos, self.cellSigRates[c.idx,0], 0)
         #self.signalling.add_point_source([40,0,0], 100.)
 
     def step(self, dt):

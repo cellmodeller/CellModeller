@@ -321,11 +321,11 @@ class CLEulerSigIntegrator:
         signalRate = self.signalRate.reshape((self.nSignals,self.gridDim[1]*self.gridDim[2]*self.gridDim[3]))
         signalRate[:,idxs] += cellSigRates.transpose() # add into diffusion grid
 
-        sigrate = signalRate.reshape(self.gridDim)
-        x = int(self.gridDim[1]/2)
-        y = int(self.gridDim[2]/2)
-        z = int(self.gridDim[3]/2)
-        sigrate[:,x,y,z] += 100.
+        #sigrate = signalRate.reshape(self.gridDim)
+        #x = int(self.gridDim[1]/2)
+        #y = int(self.gridDim[2]/2)
+        #z = int(self.gridDim[3]/2)
+        #sigrate[:,x,y,z] += 100.
 
 
     def step(self, dt):

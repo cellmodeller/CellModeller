@@ -1005,6 +1005,7 @@ class CLSPP:
                                self.avg_neighbour_dir_dev.data,
                                signal_gradient,
                                noise.data,
+                               self.simulator.integ.cellSigLevels_dev.data,
                                numpy.float32(self.fcil),
                                numpy.float32(self.ftax),
                                numpy.float32(self.forg),

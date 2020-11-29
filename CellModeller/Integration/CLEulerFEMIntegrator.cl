@@ -76,12 +76,15 @@ __kernel void diluteSpecs(const int numSpecies,
 __kernel void combine_grad_components(__global const float* grad_x,
 					__global const float* grad_y,
 					__global const float* grad_z,
-					__global float4* grad)
+					__global float4* grad,
+					const int nsignals)
 {
-	int i = get_global_id(0);
-	grad[i].s0 = grad_x[i];
-	grad[i].s1 = grad_y[i];
-	grad[i].s2 = grad_z[i];
-	grad[i].s3 = 0.f;
+	int i = get_global_id(0) * nsignals;
+	for (int sig=0; sig<nsignals; sig++) {
+		grad[i+sig].s0 = grad_x[i+sig];
+		grad[i+sig].s1 = grad_y[i+sig];
+		grad[i+sig].s2 = grad_z[i+sig];
+		grad[i+sig].s3 = 0.f;
+	}
 }
 

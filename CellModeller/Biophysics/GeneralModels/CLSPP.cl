@@ -640,6 +640,7 @@ __kernel void integrate(__global float4* centers,
 			__global float4* avg_neighbour_dir,
 			__global float4* signal_gradient,
 			__global float* noise,
+		   	__global const float* cellSignalLevels,
 			const float fcil,
 			const float ftax,
 			const float forg,
@@ -690,7 +691,12 @@ __kernel void integrate(__global float4* centers,
   }
   if (length(signal_gradient_i)>0.f)
   {
-	angle += ftax * length(signal_gradient_i) * angle_between_vectors(dir_i, normalize(signal_gradient_i), normal);
+    	int sigbase = i*numSignals;
+    	__global const float* signals = cellSignalLevels+sigbase;
+	float A = signals[0];
+	float I = signals[1];
+  	float lh = A/(1.f+A) * 1.f/(1.f+I);
+	angle += lh * ftax * length(signal_gradient_i) * angle_between_vectors(dir_i, normalize(signal_gradient_i), normal);
   }
   if (length(org_center_dir)>0.f)
   {

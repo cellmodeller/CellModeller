@@ -24,24 +24,37 @@ class FEMDiffusion:
         # Build FEM system
         self.build_system()
         # Initial value of solution
-        self.u = Function(self.V)
+        self.u = []
+        for sig in range(self.nSignals):
+            self.u.append(Function(self.V[sig]))
 
         self.regul = regul 
         self.setCellStates(sim.cellStates)
 
     def build_system(self):
-        # Set up FEM problem and function space
-        self.V = FunctionSpace(self.mesh, "CG", 1)
-        self.V_vec = VectorFunctionSpace(self.mesh, "CG", 1)
-        u = TrialFunction(self.V)
-        v = TestFunction(self.V)
-        u0 = Constant(0)
-        f = Constant(0)
+        self.V = []
+        self.V_vec = []
+        self.bc = []
+        self.A = []
+        self.b = []
         self.t = 0
-        a = u * v * dx + self.dt * self.diffusion_rate * inner(grad(u), grad(v)) * dx 
-        L = u0*v*dx + self.dt*f*v*dx
-        self.bc = DirichletBC(self.V, Constant(0), DomainBoundary())
-        self.A, self.b = assemble_system(a, L, self.bc)
+        for s in range(self.nSignals):
+            # Set up FEM problem and function space
+            V = FunctionSpace(self.mesh, "CG", 1)
+            V_vec = VectorFunctionSpace(self.mesh, "CG", 1)
+            self.V.append(V)
+            self.V_vec.append(V_vec)
+            u = TrialFunction(V)
+            v = TestFunction(V)
+            u0 = Constant(0)
+            f = Constant(0)
+            a = u * v * dx + self.dt * self.diffusion_rate[s] * inner(grad(u), grad(v)) * dx 
+            L = u0*v*dx + self.dt*f*v*dx
+            bc = DirichletBC(V, Constant(0), DomainBoundary())
+            self.bc.append(bc)
+            A, b = assemble_system(a, L, bc)
+            self.A.append(A)
+            self.b.append(b)
 
     def saveData(self, data):
         sig_data = {
@@ -69,25 +82,32 @@ class FEMDiffusion:
         pass
 
     def gradient(self, gx_dev, gy_dev, gz_dev):
-        g = project(grad(self.u),self.V_vec)
-        gradx = [g(c.pos[0], c.pos[1], c.pos[2])[0] for id,c in self.cellStates.items()]
-        grady = [g(c.pos[0], c.pos[1], c.pos[2])[1] for id,c in self.cellStates.items()]
-        gradz = [g(c.pos[0], c.pos[1], c.pos[2])[2] for id,c in self.cellStates.items()]
-        gx_dev.set(np.array(gradx, dtype=np.float32))
-        gy_dev.set(np.array(grady, dtype=np.float32))
-        gz_dev.set(np.array(gradz, dtype=np.float32))
+        gx = []
+        gy = []
+        gz = []
+        for signal in range(self.nSignals):
+            g = project(grad(self.u[signal]),self.V_vec[signal])
+            gradx = [g(c.pos[0], c.pos[1], c.pos[2])[0] for id,c in self.cellStates.items()]
+            grady = [g(c.pos[0], c.pos[1], c.pos[2])[1] for id,c in self.cellStates.items()]
+            gradz = [g(c.pos[0], c.pos[1], c.pos[2])[2] for id,c in self.cellStates.items()]
+            gx.append(gradx)
+            gy.append(grady)
+            gz.append(gradz)
+        gx_dev.set(np.array(gx, dtype=np.float32))
+        gy_dev.set(np.array(gy, dtype=np.float32))
+        gz_dev.set(np.array(gz, dtype=np.float32))
 
-    def add_point_source(self, pos, rate):
+    def add_point_source(self, pos, rate, signal):
         x, y, z = pos
-        delta = PointSource(self.V, Point(x, y, z), rate)
-        delta.apply(self.b)
+        delta = PointSource(self.V[signal], Point(x, y, z), rate)
+        delta.apply(self.b[signal])
 
-    def add_point_sources(self, sources):
-        source = PointSource(self.V, sources)
-        source.apply(self.b)
+    def add_point_sources(self, sources, signal):
+        source = PointSource(self.V[signal], sources)
+        source.apply(self.b[signal])
 
     def signals(self, cellSigLevels_dev):
-        sigs = [[self.u(c.pos[0], c.pos[1], c.pos[2])] for id,c in self.cellStates.items()]
+        sigs = [[u(c.pos[0], c.pos[1], c.pos[2]) for u in self.u] for id,c in self.cellStates.items()]
         sigs = np.array(sigs, dtype=np.float32)
         cellSigLevels_dev.set(sigs)
 
@@ -95,11 +115,12 @@ class FEMDiffusion:
         pass
 
     def step(self, dt):
-        # Solve FEM system
-        solve(self.A, self.u.vector(), self.b)
-        # Reset point sources
-        self.b.zero()
-        self.bc.apply(self.b)
         self.t += dt
-        if self.file:
-            self.file << (self.u, self.t)
+        for sig in range(self.nSignals):
+            # Solve FEM system
+            solve(self.A[sig], self.u[sig].vector(), self.b[sig])
+            # Reset point sources
+            self.b[sig].zero()
+            self.bc[sig].apply(self.b[sig])
+            if self.file:
+                self.file << (self.u[sig], self.t)
