@@ -132,6 +132,8 @@ void cyl_inertia_tensor(float muA, float l, float4 axis, float4 res[]) {
   float4 z_axis = {0.f, 0.f, 1.f, 0.f};
   float rot_ang = acos(dot(x_axis, axis));
 
+  float4 empty = {0.f, 0.f, 0.f, 0.f};
+
   float4 y_prime = y_axis;
   float4 z_prime = z_axis;
 
@@ -144,12 +146,16 @@ void cyl_inertia_tensor(float muA, float l, float4 axis, float4 res[]) {
   M[0] = axis;
   M[1] = y_prime;
   M[2] = z_prime;
-  M[3] = 0.f;
+  M[3] = empty;
 
   float4 MT[4];
   transpose(M, MT);
 
   float4 I[4];
+  I[0] = empty;
+  I[1] = empty;
+  I[2] = empty;
+  I[3] = empty;
   I[0].s0 = 0.f;
   I[1].s1 = diag;
   I[2].s2 = diag;
