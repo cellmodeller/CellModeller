@@ -12,13 +12,14 @@ from pyopencl.clmath import cos, sin
 import random
 import time
 from pyopencl.clrandom import PhiloxGenerator
+import numdifftools as nd
 
 
 ct_map = {}
 
 class CLSPP:
     """A rigid body model of bacterial growth implemented using
-    OpenCL.
+    OpenCL.egrate
     """
 
     def __init__(self, simulator,
@@ -36,6 +37,9 @@ class CLSPP:
                  fcil=0,
                  ftax=0,
                  forg=0,
+                 chi=1.,
+                 c_o=0,
+                 c_m=1.,
                  D=1.,
                  dt=None,
                  cgs_tol=5e-3,
@@ -75,9 +79,13 @@ class CLSPP:
         self.fcil = fcil
         self.ftax = ftax
         self.forg = forg
+        self.chi = chi
+        self.c_o = c_o
+        self.c_m = c_m
         self.D = D
         self.dt = dt
         self.cgs_tol = cgs_tol
+        
 
         self.max_substeps = max_substeps
 
@@ -264,10 +272,9 @@ class CLSPP:
                 arguments="__global float4 *x, __global float4 *y")
 
         # Add a force to position part of generalised position vector
-        self.add_force = ElementwiseKernel(self.context,
-                                            "float4 *pos, const float mag, const float4 *dir",
-                                            "pos[i].s0123 = pos[i].s0123 + mag*dir[i]", "add_force")
-
+        
+        
+    
     def init_data(self):
         """Set up the data OpenCL will store on the device."""
         # cell data
@@ -376,6 +383,28 @@ class CLSPP:
         self.Ap_dev = cl_array.zeros(self.queue, cell_geom, vec.float4)
         self.res_dev = cl_array.zeros(self.queue, cell_geom, vec.float4)
         self.rhs_dev = cl_array.zeros(self.queue, cell_geom, vec.float4)
+        
+    
+    
+    
+    def chemotaxis(self, pos):
+        chemotaxis = self.c_o + (self.c_m - self.c_o) * math.exp(math.sqrt((pos[0] - self.forg[0]
+           )**2 +(pos[1] - self.forg[1])**2 + (pos[2] - self.forg[2])**2) / self.chi)
+        return chemotaxis
+
+    def gradient(self, positions):
+        gradients = []
+        print(positions)
+        i = 0
+        while i < len(positions):
+            gradient = nd.Gradient(self.chemotaxis)(positions[i])
+            gradient_mag = math.sqrt((gradient[0])**2 +(gradient[1])**2 + (gradient[2])**2)
+            gradients.append(gradient_mag)
+            i += 1
+        
+        return gradients
+            
+        
     
 
     def load_from_cellstates(self, cell_states):
@@ -876,7 +905,8 @@ class CLSPP:
         # Correct scaling of viscous drag by 1/dt
         self.vaddkx(Ax, 1/dt, Ax, self.Mx_dev).wait()
     
-
+    
+        
     def CGSSolve(self, dt, alpha, substep=False):
         # Solve A^TA\deltap=A^Tb (Ax=b)
 
@@ -897,9 +927,21 @@ class CLSPP:
                                     self.to_ents_dev.data,
                                     self.ct_reldists_dev.data,
                                     self.rhs_dev.data).wait()
-
-        self.add_force(self.rhs_dev, self.Fm, self.cell_dirs_dev).wait()
-        #self.add_force(self.rhs_dev, -0.001, self.cell_centers_dev).wait()
+        
+        self.program.add_force(self.queue,
+                               (self.n_cells,),
+                               None,
+                               self.rhs_dev.data,
+                               self.cell_centers_dev.data,
+                               self.cell_dirs_dev.data,
+                               numpy.float32(self.Fm),
+                               numpy.float32(self.c_o),
+                               numpy.float32(self.c_m),
+                               numpy.float32(self.chi),
+                               numpy.float32(self.forg)
+                               ).wait()
+        
+        
 
         # res = b-Ax
         self.calculate_Ax(self.BTBx_dev, self.deltap_dev, dt, alpha)
@@ -988,6 +1030,7 @@ class CLSPP:
         Calculates new cell_centers, cell_dirs, cell_lens.
         """
         noise = self.rand.normal(self.queue, sigma=np.sqrt(dt), shape=(self.n_cells,), dtype=np.float32)
+        
         if self.simulator.integ:
             signal_gradient = self.simulator.integ.cellSigGradients_dev.data
         else:

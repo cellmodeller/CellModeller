@@ -640,7 +640,7 @@ __kernel void integrate(__global float4* centers,
 			__global float4* avg_neighbour_dir,
 			__global float4* signal_gradient,
 			__global float* noise,
-			const float fcil,
+      const float fcil,
 			const float ftax,
 			const float forg,
 			const float D,
@@ -703,5 +703,45 @@ __kernel void integrate(__global float4* centers,
 
   // fully damped
   dcenters[i] = 0.f;
+}
+
+__kernel void add_force(__global float4* rhs,
+__global float4* pos,
+__global float4* dir,
+const float fm,
+const float c_o,
+const float c_m,
+const float chi,
+const float4 porg)
+{
+  int i = get_global_id(0);
+  float4 pos_i = pos[i];
+  float4 dir_i = dir[i];
+  float dist = length(pos[i] - porg);
+  float expo = exp(- dist / chi);
+  float x = (c_m - c_o) * expo * (pos[i].s0 - porg.s0) / (chi * dist);
+  float y = (c_m - c_o) * expo * (pos[i].s01 - porg.s01) / (chi * dist);
+  float z = (c_m - c_o) * expo * (pos[i].s012 - porg.s012) / (chi * dist);
+  float4 gradient_c = [x, y, x, 0];
+  float force = fm + po;
+  rhs[i].s0123 = rhs[i].s0123 + force * dir_i;
+}
+
+__kernel void add_force(__global float4* rhs,
+__global float4* pos,
+__global float4* dir,
+const float fm,
+const float c_o,
+const float c_m,
+const float chi,
+const float4 porg)
+{
+  int i = get_global_id(0);
+  float4 pos_i = pos[i];
+  float4 dir_i = dir[i];
+  float dist = length(pos[i] - porg);
+  float expo = exp(- dist / chi);
+  float force = fm + (c_m - c_o) * expo;
+  rhs[i].s0123 = rhs[i].s0123 + force * dir_i;
 }
 
