@@ -638,12 +638,14 @@ __kernel void integrate(__global float4* centers,
                         __global float4* dirs,
                         __global float4* dcenters,
 			__global float4* avg_neighbour_dir,
-			__global float4* signal_gradient,
 			__global float* noise,
       const float fcil,
 			const float ftax,
 			const float forg,
 			const float D,
+      const float c_m,
+      const float c_o,
+      const float chi,
 			const float dt,
 			const int spherical,
 			const float sphere_radius,
@@ -655,18 +657,20 @@ __kernel void integrate(__global float4* centers,
   float4 dcenter_i = dcenters[i];
   float noise_i = noise[i];
   float4 avg_neighbour_dir_i = avg_neighbour_dir[i];
-  float4 signal_gradient_i;
-  if (signal_gradient)
-  {
-	int sigbase = i*numSignals;
-  	signal_gradient_i = signal_gradient[sigbase];
-  } else
-  {
-  	signal_gradient_i = 0.f;
-  }
   const float4 org_center = {sphere_radius, 0.f, 0.f, 0.f};
   float4 org_center_dir = normalize(org_center - center_i);
   float4 normal = {0.f, 0.f, 1.f, 0.f};
+  float dist = length(centers[i] - org_center);
+  float expo = exp(- dist / chi);
+  float x = (c_m - c_o) * expo * (centers[i].s0 - org_center.s0) / (chi * dist);
+  float y = (c_m - c_o) * expo * (centers[i].s1 - org_center.s1) / (chi * dist);
+  float z = (c_m - c_o) * expo * (centers[i].s2 - org_center.s2) / (chi * dist);
+  float4 gradient;
+  gradient.s0 = x;
+  gradient.s1 = y;
+  gradient.s2 = z;
+  gradient.s3 = 0.f;
+  normalize(gradient);
   if (spherical==1) 
   {
 	// Find new coordinate system tangent to sphere surface
@@ -677,7 +681,7 @@ __kernel void integrate(__global float4* centers,
 	dir_i = normalize(cross(normal, new_y_axis));
 	
 	// Project taxis directions onto tangent plane
-	signal_gradient_i = signal_gradient_i - dot(signal_gradient_i, normal)*normal;
+	gradient = gradient - dot(gradient, normal)*normal;
 	org_center_dir = org_center_dir - dot(org_center_dir, normal)*normal;
 	org_center_dir = normalize(org_center_dir);
   } 
@@ -688,9 +692,9 @@ __kernel void integrate(__global float4* centers,
   {
 	angle += fcil * angle_between_vectors(dir_i, -avg_neighbour_dir_i, normal);
   }
-  if (length(signal_gradient_i)>0.f)
+  if (length(gradient)>0.f)
   {
-	angle += ftax * length(signal_gradient_i) * angle_between_vectors(dir_i, normalize(signal_gradient_i), normal);
+	angle += ftax * length(gradient) * angle_between_vectors(dir_i, normalize(gradient), normal);
   }
   if (length(org_center_dir)>0.f)
   {
@@ -720,28 +724,34 @@ const float4 porg)
   float dist = length(pos[i] - porg);
   float expo = exp(- dist / chi);
   float x = (c_m - c_o) * expo * (pos[i].s0 - porg.s0) / (chi * dist);
-  float y = (c_m - c_o) * expo * (pos[i].s01 - porg.s01) / (chi * dist);
-  float z = (c_m - c_o) * expo * (pos[i].s012 - porg.s012) / (chi * dist);
-  float4 gradient_c = [x, y, x, 0];
-  float force = fm + po;
+  float y = (c_m - c_o) * expo * (pos[i].s1 - porg.s1) / (chi * dist);
+  float z = (c_m - c_o) * expo * (pos[i].s2 - porg.s2) / (chi * dist);
+  float4 gradient;
+  gradient.s0 = x;
+  gradient.s1 = y;
+  gradient.s2 = z;
+  gradient.s3 = 0.f;
+  normalize(gradient);
+  float force = fm + dot(dir_i, gradient);
+  //float force = fm;
   rhs[i].s0123 = rhs[i].s0123 + force * dir_i;
 }
 
-__kernel void add_force(__global float4* rhs,
-__global float4* pos,
-__global float4* dir,
-const float fm,
-const float c_o,
-const float c_m,
-const float chi,
-const float4 porg)
-{
-  int i = get_global_id(0);
-  float4 pos_i = pos[i];
-  float4 dir_i = dir[i];
-  float dist = length(pos[i] - porg);
-  float expo = exp(- dist / chi);
-  float force = fm + (c_m - c_o) * expo;
-  rhs[i].s0123 = rhs[i].s0123 + force * dir_i;
-}
+//__kernel void add_force(__global float4* rhs,
+//__global float4* pos,
+//__global float4* dir,
+//const float fm,
+//const float c_o,
+//const float c_m,
+//const float chi,
+//const float4 porg)
+//{
+  //int i = get_global_id(0);
+  //float4 pos_i = pos[i];
+  //float4 dir_i = dir[i];
+  //float dist = length(pos[i] - porg);
+  //float expo = exp(- dist / chi);
+  //float force = fm + (c_m - c_o) * expo;
+  //rhs[i].s0123 = rhs[i].s0123 + force * dir_i;
+//}
 

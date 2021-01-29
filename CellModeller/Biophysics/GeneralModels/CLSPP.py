@@ -37,6 +37,7 @@ class CLSPP:
                  fcil=0,
                  ftax=0,
                  forg=0,
+                 porg=0,
                  chi=1.,
                  c_o=0,
                  c_m=1.,
@@ -79,6 +80,7 @@ class CLSPP:
         self.fcil = fcil
         self.ftax = ftax
         self.forg = forg
+        self.porg = porg
         self.chi = chi
         self.c_o = c_o
         self.c_m = c_m
@@ -271,7 +273,7 @@ class CLSPP:
                 reduce_expr="a+b", map_expr="dot(x[i],y[i])",
                 arguments="__global float4 *x, __global float4 *y")
 
-        # Add a force to position part of generalised position vector
+        
         
         
     
@@ -928,6 +930,7 @@ class CLSPP:
                                     self.ct_reldists_dev.data,
                                     self.rhs_dev.data).wait()
         
+        
         self.program.add_force(self.queue,
                                (self.n_cells,),
                                None,
@@ -938,8 +941,8 @@ class CLSPP:
                                numpy.float32(self.c_o),
                                numpy.float32(self.c_m),
                                numpy.float32(self.chi),
-                               numpy.float32(self.forg)
-                               ).wait()
+                               numpy.float32(self.porg)
+                              ).wait()
         
         
 
@@ -1031,10 +1034,7 @@ class CLSPP:
         """
         noise = self.rand.normal(self.queue, sigma=np.sqrt(dt), shape=(self.n_cells,), dtype=np.float32)
         
-        if self.simulator.integ:
-            signal_gradient = self.simulator.integ.cellSigGradients_dev.data
-        else:
-            signal_gradient = None
+        
         if self.simulator.sig:
             nSignals = self.simulator.sig.nSignals
         else:
@@ -1046,12 +1046,14 @@ class CLSPP:
                                self.cell_dirs_dev.data,
                                self.cell_dcenters_dev.data,
                                self.avg_neighbour_dir_dev.data,
-                               signal_gradient,
                                noise.data,
                                numpy.float32(self.fcil),
                                numpy.float32(self.ftax),
                                numpy.float32(self.forg),
                                numpy.float32(self.D),
+                               numpy.float32(self.c_m),
+                               numpy.float32(self.c_o),
+                               numpy.float32(self.chi),
                                numpy.float32(dt),
                                numpy.int32(self.spherical*1),
                                numpy.float32(self.sphere_radius),
