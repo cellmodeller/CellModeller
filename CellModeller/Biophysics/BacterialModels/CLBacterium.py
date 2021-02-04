@@ -148,6 +148,11 @@ class CLBacterium:
     def hasNeighbours(self):
         return False
 
+    def kill(self, state):
+        self.n_cells -= 1
+        self.cell_old_vols[state.idx] = 0
+        self.cell_old_vols_dev[state.idx] = 0
+
     def divide(self, parentState, daughter1State, daughter2State, *args, **kwargs):
         self.divide_cell(parentState.idx, daughter1State.idx, daughter2State.idx)
         # Initialise cellState data
@@ -235,6 +240,8 @@ class CLBacterium:
         # cell geometry calculated from l and r
         self.cell_areas_dev = cl_array.zeros(self.queue, cell_geom, numpy.float32)
         self.cell_vols_dev = cl_array.zeros(self.queue, cell_geom, numpy.float32)
+        self.cell_vols = numpy.zeros(cell_geom, numpy.float32)
+        self.cell_old_vols = numpy.zeros(cell_geom, numpy.float32)
         self.cell_old_vols_dev = cl_array.zeros(self.queue, cell_geom, numpy.float32)
 
         # gridding
@@ -432,23 +439,29 @@ class CLBacterium:
 
     def get_cells(self):
         """Copy cell centers, dirs, lens, and rads from the device."""
-        self.cell_centers[0:self.n_cells] = self.cell_centers_dev[0:self.n_cells].get()
-        self.cell_dirs[0:self.n_cells] = self.cell_dirs_dev[0:self.n_cells].get()
-        self.cell_lens[0:self.n_cells] = self.cell_lens_dev[0:self.n_cells].get()
-        self.cell_rads[0:self.n_cells] = self.cell_rads_dev[0:self.n_cells].get()
-        self.cell_dlens[0:self.n_cells] = self.cell_dlens_dev[0:self.n_cells].get()
-        self.cell_dcenters[0:self.n_cells] = self.cell_dcenters_dev[0:self.n_cells].get()
-        self.cell_dangs[0:self.n_cells] = self.cell_dangs_dev[0:self.n_cells].get()
+        self.cell_centers[self.simulator.live_idxs] = self.cell_centers_dev[0:self.n_cells].get()
+        self.cell_dirs[self.simulator.live_idxs] = self.cell_dirs_dev[0:self.n_cells].get()
+        self.cell_lens[self.simulator.live_idxs] = self.cell_lens_dev[0:self.n_cells].get()
+        self.cell_rads[self.simulator.live_idxs] = self.cell_rads_dev[0:self.n_cells].get()
+        self.cell_dlens[self.simulator.live_idxs] = self.cell_dlens_dev[0:self.n_cells].get()
+        self.cell_dcenters[self.simulator.live_idxs] = self.cell_dcenters_dev[0:self.n_cells].get()
+        self.cell_dangs[self.simulator.live_idxs] = self.cell_dangs_dev[0:self.n_cells].get()
+        self.cell_old_vols[self.simulator.live_idxs] = self.cell_old_vols_dev[0:self.n_cells].get()
+        self.cell_vols[self.simulator.live_idxs] = self.cell_vols_dev[0:self.n_cells].get()
 
     def set_cells(self):
         """Copy cell centers, dirs, lens, and rads to the device from local."""
-        self.cell_centers_dev[0:self.n_cells].set(self.cell_centers[0:self.n_cells])
-        self.cell_dirs_dev[0:self.n_cells].set(self.cell_dirs[0:self.n_cells])
-        self.cell_lens_dev[0:self.n_cells].set(self.cell_lens[0:self.n_cells])
-        self.cell_rads_dev[0:self.n_cells].set(self.cell_rads[0:self.n_cells])
-        self.cell_dlens_dev[0:self.n_cells].set(self.cell_dlens[0:self.n_cells])
-        self.cell_dcenters_dev[0:self.n_cells].set(self.cell_dcenters[0:self.n_cells])
-        self.cell_dangs_dev[0:self.n_cells].set(self.cell_dangs[0:self.n_cells])
+        idx = self.simulator.live_idxs
+        self.cell_centers_dev[0:self.n_cells].set(self.cell_centers[idx])
+        self.cell_dirs_dev[0:self.n_cells].set(self.cell_dirs[idx])
+        self.cell_lens_dev[0:self.n_cells].set(self.cell_lens[idx])
+        self.cell_rads_dev[0:self.n_cells].set(self.cell_rads[idx])
+        self.cell_dlens_dev[0:self.n_cells].set(self.cell_dlens[idx])
+        self.cell_dcenters_dev[0:self.n_cells].set(self.cell_dcenters[idx])
+        self.cell_dangs_dev[0:self.n_cells].set(self.cell_dangs[idx])
+        self.cell_old_vols_dev[0:self.n_cells].set(self.cell_old_vols[idx])
+        self.cell_vols_dev[0:self.n_cells].set(self.cell_vols[idx])
+
 
     def set_planes(self):
         """Copy plane pts, norms, and coeffs to the device from local."""
@@ -472,7 +485,7 @@ class CLBacterium:
         self.ct_dists[0:self.n_cts] = self.ct_dists_dev[0:self.n_cts].get()
         self.ct_pts[0:self.n_cts] = self.ct_pts_dev[0:self.n_cts].get()
         self.ct_norms[0:self.n_cts] = self.ct_norms_dev[0:self.n_cts].get()
-        self.cell_n_cts[0:self.n_cells] = self.cell_n_cts_dev[0:self.n_cells].get()
+        self.cell_n_cts[0:self.simulator.arr_end] = self.cell_n_cts_dev[0:self.n_cells].get()
 
     def matrixTest(self):
         x_dev = cl_array.zeros(self.queue, (self.n_cells,), vec.float8)
@@ -576,19 +589,19 @@ class CLBacterium:
         # set target dlens (taken from growth rates set by updateCellStates)
         #self.cell_target_dlens_dev.set(dt*self.cell_growth_rates)
         #self.cell_dlens_dev.set(dt*self.cell_dlens)
-        self.cell_dlens_dev[0:self.n_cells].set(dt*self.cell_growth_rates[0:self.n_cells])
+        self.cell_dlens_dev[0:self.n_cells].set(dt*self.cell_growth_rates[self.simulator.live_idxs])
 
         # redefine gridding based on the range of cell positions
-        self.cell_centers[0:self.n_cells] = self.cell_centers_dev[0:self.n_cells].get()
+        self.cell_centers[self.simulator.live_idxs] = self.cell_centers_dev[0:self.n_cells].get()
         self.update_grid() # we assume local cell_centers is current
 
         # get each cell into the correct sq and retrieve from the device
         self.bin_cells()
 
         # sort cells and find sq index starts in the list
-        self.cell_sqs = self.cell_sqs_dev[0:self.n_cells].get() # get updated cell sqs
+        self.cell_sqs[self.simulator.live_idxs] = self.cell_sqs_dev[0:self.n_cells].get() # get updated cell sqs
         self.sort_cells()
-        self.sorted_ids_dev.set(self.sorted_ids) # push changes to the device
+        self.sorted_ids_dev[0:self.n_cells].set(self.sorted_ids[0:self.n_cells]) # push changes to the device
         self.sq_inds_dev.set(self.sq_inds)
 
         self.n_cts = 0
@@ -641,17 +654,21 @@ class CLBacterium:
         #for effective growth calulations
         state.oldLen = self.cell_lens[i]
         
-        state.volume = state.length # TO DO: do something better here
+        state.volume = numpy.pi * state.radius**2 * (2*state.radius + state.length) # TO DO: do something better here
         pa = numpy.array(state.pos)
         da = numpy.array(state.dir)
         state.ends = (pa-da*state.length*0.5, pa+da*state.length*0.5)
         state.strainRate = 0.0
         #self.cell_dlens[i] = state.growthRate
         state.startVol = state.volume
+        self.cell_vols[i] = state.volume
+        #self.cell_old_vols[i] = 0
+        #self.cell_vols_dev[i] = 0
+        #self.cell_old_vols_dev[i] = 0
 
     def updateCellNeighbours(self, idx2Id):
-        ct_tos = self.ct_tos_dev[0:self.n_cells,:].get()
-        cell_to_cts = self.cell_n_cts_dev[0:self.n_cells].get()
+        ct_tos = self.ct_tos_dev[0:self.simulator.arr_end,:].get()
+        cell_to_cts = self.cell_n_cts_dev[0:self.simulator.arr_end].get()
         cell_cts = numpy.zeros(self.n_cells, numpy.int32)
         for i in range(self.n_cells):
             for j in range(cell_to_cts[i]):
@@ -693,13 +710,12 @@ class CLBacterium:
         # Length vel is linearisation of exponential growth
         self.cell_growth_rates[i] = state.growthRate*state.length
 
-
     def update_grid(self):
         """Update our grid_(x,y)_min, grid_(x,y)_max, and n_sqs.
 
         Assumes that our copy of cell_centers is current.
         """
-        coords = self.cell_centers.view(numpy.float32).reshape((self.max_cells, 4))
+        coords = self.cell_centers[self.simulator.live_idxs].view(numpy.float32).reshape((self.n_cells, 4))
 
         x_coords = coords[:,0]
         min_x_coord = x_coords.min()
@@ -747,11 +763,11 @@ class CLBacterium:
 
         Calculates local sorted_ids and sq_inds.
         """
-        self.sorted_ids.put(numpy.arange(self.n_cells), numpy.argsort(self.cell_sqs[:self.n_cells]))
+        self.sorted_ids.put(numpy.arange(self.n_cells), numpy.argsort(self.cell_sqs[self.simulator.live_idxs]))
         self.sorted_ids_dev[0:self.n_cells].set(self.sorted_ids[0:self.n_cells])
 
         # find the start of each sq in the list of sorted cell ids and send to the device
-        sorted_sqs = numpy.sort(self.cell_sqs[:self.n_cells])
+        sorted_sqs = numpy.sort(self.cell_sqs[self.simulator.live_idxs])
         self.sq_inds.put(numpy.arange(self.n_sqs), numpy.searchsorted(sorted_sqs, numpy.arange(self.n_sqs), side='left'))
         self.sq_inds_dev.set(self.sq_inds)
 
@@ -850,7 +866,7 @@ class CLBacterium:
 
         # set dtype to int32 so we don't overflow the int32 when summing
         #self.n_cts = self.cell_n_cts_dev.get().sum(dtype=numpy.int32)
-        self.n_cts = cl_array.sum(self.cell_n_cts_dev[0:self.n_cells]).get()
+        self.n_cts = cl_array.sum(self.cell_n_cts_dev[0:self.simulator.arr_end]).get()
 
 
     def collect_tos(self):
@@ -960,8 +976,8 @@ class CLBacterium:
 
         # There must be a way to do this using built in pyopencl - what
         # is it?!
-        self.vclearf(self.deltap_dev[0:self.n_cells])
-        self.vclearf(self.rhs_dev[0:self.n_cells])
+        self.vclearf(self.deltap_dev[0:self.simulator.arr_end])
+        self.vclearf(self.rhs_dev[0:self.simulator.arr_end])
 
         # put M^T n^Tv_rel in rhs (b)
         self.program.calculate_BTBx(self.queue,
@@ -1155,11 +1171,14 @@ class CLBacterium:
 
         self.parents[b] = a
 
-        vols = self.cell_vols_dev[0:self.n_cells].get()
-        daughter_vol = vols[i] / 2.0
-        vols[a] = daughter_vol
-        vols[b] = daughter_vol
-        self.cell_vols_dev[0:self.n_cells].set(vols)
+        #self.cell_vols[self.simulator.live_idxs] = self.cell_vols_dev[0:self.n_cells].get()
+        #daughter_vol = self.cell_vols[i] / 2.0
+        #self.cell_vols[a] = daughter_vol
+        #self.cell_vols[b] = daughter_vol
+        #self.cell_vols_dev[0:self.n_cells].set(self.cell_vols[self.simulator.live_idxs])
+        #self.cell_old_vols[a] = self.cell_old_vols[i] * 0.5
+        #self.cell_old_vols[b] = self.cell_old_vols[i] * 0.5
+        #self.cell_old_vols_dev[0:self.n_cells].set(self.cell_old_vols[self.simulator.live_idxs])
 
         # Inherit velocities from parent (conserve momentum)
         parent_dlin = self.cell_dcenters[i]
@@ -1177,9 +1196,9 @@ class CLBacterium:
     def calc_cell_geom(self):
         """Calculate cell geometry using lens/rads on card."""
         # swap cell vols and cell_vols old
-        tmp = self.cell_old_vols_dev[0:self.n_cells]
+        #tmp = self.cell_old_vols_dev[0:self.n_cells]
         self.cell_old_vols_dev[0:self.n_cells] = self.cell_vols_dev[0:self.n_cells]
-        self.cell_vols_dev[0:self.n_cells] = tmp
+        #self.cell_vols_dev[0:self.n_cells] = tmp
         # update geometry
         self.calc_cell_area(self.cell_areas_dev[0:self.n_cells], \
                             self.cell_rads_dev[0:self.n_cells], \
@@ -1187,7 +1206,6 @@ class CLBacterium:
         self.calc_cell_vol(self.cell_vols_dev[0:self.n_cells], \
                             self.cell_rads_dev[0:self.n_cells], \
                             self.cell_lens_dev[0:self.n_cells])
-
 
     def profileGrid(self):
         if self.n_cts==0:
@@ -1203,7 +1221,7 @@ class CLBacterium:
             self.bin_cells()
 
             # sort cells and find sq index starts in the list
-            self.cell_sqs = self.cell_sqs_dev.get() # get updated cell sqs
+            self.cell_sqs[self.simulator.live_idxs] = self.cell_sqs_dev[0:self.n_cells].get() # get updated cell sqs
             self.sort_cells()
             self.sorted_ids_dev.set(self.sorted_ids) # push changes to the device
             self.sq_inds_dev.set(self.sq_inds)

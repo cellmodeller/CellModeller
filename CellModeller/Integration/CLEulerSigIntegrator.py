@@ -126,6 +126,9 @@ class CLEulerSigIntegrator:
         cellState.signals = self.cellSigLevels[idx,:]
         self.celltype[idx] = numpy.int32(cellState.cellType)
 
+    def kill(self, state):
+        pass
+
     def divide(self, pState, d1State, d2State):
         # Simulator should have organised indexing:
 

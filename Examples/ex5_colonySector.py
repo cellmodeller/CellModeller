@@ -9,7 +9,7 @@ N0 = 10
 
 def setup(sim):
     # Set biophysics, signalling, and regulation models
-    biophys = CLBacterium(sim, jitter_z=False, gamma = 100, max_cells=100000, max_planes=1)
+    biophys = CLBacterium(sim, jitter_z=False, gamma = 100, max_cells=2000, max_planes=1)
 
     regul = ModuleRegulator(sim, sim.moduleName)	# use this file for reg too
     # Only biophys and regulation
@@ -26,19 +26,25 @@ def setup(sim):
     # Add some objects to draw the models
     therenderer = Renderers.GLBacteriumRenderer(sim)
     sim.addRenderer(therenderer)
-    sim.pickleSteps = 1
+    sim.pickleSteps = 5
 
 def init(cell):
     cell.targetVol = 3.5 + random.uniform(0.0,0.5)
     cell.growthRate = 1.0
     cell.n_a = N0//2
     cell.n_b = N0 - cell.n_a
+    cell.killFlag = False
 
 def update(cells):
     for (id, cell) in cells.items():
         cell.color = [0.1, cell.n_a/3.0, cell.n_b/3.0]
-        if cell.volume > cell.targetVol:
+        if cell.length > cell.targetVol:
             cell.divideFlag = True
+        else:
+            p = numpy.array(cell.pos)
+            r = numpy.sqrt(numpy.sum(p*p))
+            if r>40:
+                cell.killFlag = True
 
 def divide(parent, d1, d2):
     d1.targetVol = 3.5 + random.uniform(0.0,0.5)
