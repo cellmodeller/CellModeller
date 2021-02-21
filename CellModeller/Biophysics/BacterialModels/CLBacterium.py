@@ -105,7 +105,7 @@ class CLBacterium:
         self.cell_dirs[i] = tuple(dir+(0,))
         self.cell_lens[i] = cellState.length
         self.cell_rads[i] = rad
-        self.initCellState(cellState)
+        self.initCellState(cellState, None)
         self.set_cells()
         self.calc_cell_geom() # cell needs a volume
 
@@ -156,8 +156,8 @@ class CLBacterium:
     def divide(self, parentState, daughter1State, daughter2State, *args, **kwargs):
         self.divide_cell(parentState.idx, daughter1State.idx, daughter2State.idx)
         # Initialise cellState data
-        self.initCellState(daughter1State)
-        self.initCellState(daughter2State)
+        self.initCellState(daughter1State, parentState)
+        self.initCellState(daughter2State, parentState)
 
     def init_cl(self):
         if self.simulator:
@@ -644,7 +644,7 @@ class CLBacterium:
         self.calc_cell_geom()
         self.sub_tick_initialised=False
 
-    def initCellState(self, state):
+    def initCellState(self, state, pstate):
         cid = state.id
         i = state.idx
         state.pos = [self.cell_centers[i][j] for j in range(3)]
@@ -662,7 +662,11 @@ class CLBacterium:
         #self.cell_dlens[i] = state.growthRate
         state.startVol = state.volume
         self.cell_vols[i] = state.volume
-        #self.cell_old_vols[i] = 0
+        if pstate:
+            self.cell_old_vols[i] = pstate.volume * 0.5
+        else:
+            self.cell_old_vols[i] = 0
+            
         #self.cell_vols_dev[i] = 0
         #self.cell_old_vols_dev[i] = 0
 
@@ -703,7 +707,8 @@ class CLBacterium:
                     state.neighbours.append(self.neighbours[i,n]) #ids of all cells in physical contact
         state.cts = len(state.neighbours)
 
-        state.volume = state.length # TO DO: do something better here
+        state.old_vol = self.cell_old_vols[i]
+        state.volume = self.cell_vols[i] # state.length # TO DO: do something better here
         pa = numpy.array(state.pos)
         da = numpy.array(state.dir)
         state.ends = (pa-da*state.length*0.5, pa+da*state.length*0.5)
