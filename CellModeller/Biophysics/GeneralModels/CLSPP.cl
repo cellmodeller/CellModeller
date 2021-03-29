@@ -639,9 +639,9 @@ __kernel void integrate(__global float4* centers,
                         __global float4* dcenters,
 			__global float4* avg_neighbour_dir,
 			__global float* noise,
-      const float fcil,
-			const float ftax,
-			const float forg,
+      float fcil,
+			float ftax,
+			float forg,
 			const float D,
       const float c_m,
       const float c_o,
@@ -649,7 +649,8 @@ __kernel void integrate(__global float4* centers,
 			const float dt,
 			const int spherical,
 			const float sphere_radius,
-			const int numSignals)
+			const int numSignals,
+      const int steering_along_grad)
 {
   int i = get_global_id(0);
   float4 center_i = centers[i];
@@ -685,7 +686,12 @@ __kernel void integrate(__global float4* centers,
 	org_center_dir = org_center_dir - dot(org_center_dir, normal)*normal;
 	org_center_dir = normalize(org_center_dir);
   } 
-
+  if (steering_along_grad == 0)
+  {
+    fcil = 0;
+    ftax = 0;
+    forg = 0;
+  }
   // Rotate by change in angle around z-axis
   float angle = sqrt(2 * D) * noise_i;
   if (length(avg_neighbour_dir_i)>0.f)
@@ -716,7 +722,10 @@ const float fm,
 const float c_o,
 const float c_m,
 const float chi,
-const float4 porg)
+const float4 porg,
+const int vel_change,
+const int slow_source,
+const float sphere_rad)
 {
   int i = get_global_id(0);
   float4 pos_i = pos[i];
@@ -727,13 +736,31 @@ const float4 porg)
   float y = (c_m - c_o) * expo * (pos[i].s1 - porg.s1) / (chi * dist);
   float z = (c_m - c_o) * expo * (pos[i].s2 - porg.s2) / (chi * dist);
   float4 gradient;
+  float force;
   gradient.s0 = x;
   gradient.s1 = y;
   gradient.s2 = z;
   gradient.s3 = 0.f;
   normalize(gradient);
-  float force = fm + dot(dir_i, gradient);
-  //float force = fm;
+  
+  if (vel_change==1)
+  {
+    force = fm * (1 + dot(dir_i, gradient));
+    }
+  else 
+  {
+    force = fm;
+  }
+  float small_dist =  5*(sphere_rad / 6);
+  if (slow_source == 1) {
+  if (dist > small_dist) {
+    force = 0.5 * fm;
+  }
+  else {
+    force = fm * (1 + dot(dir_i, gradient));
+  }
+  }
+  
   rhs[i].s0123 = rhs[i].s0123 + force * dir_i;
 }
 

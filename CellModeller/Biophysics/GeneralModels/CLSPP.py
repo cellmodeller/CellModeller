@@ -49,11 +49,22 @@ class CLSPP:
                  printing=True,
                  compNeighbours=False,
                  spherical=True,
-                 sphere_radius=50):
+                 sphere_radius=50,
+                 steering_along_grad=True,
+                 vel_change=True,
+                 slowing_source=True):
 
-        # Is the simulaiton on a sphere?
+        # Is the simulation on a sphere?
         self.spherical = spherical
         self.sphere_radius = sphere_radius
+        
+        #type of chemotaxis
+        self.steering_along_grad = steering_along_grad
+        #angular velocity change depending if its direction is towards source
+        self.vel_change = vel_change
+        #velocity change depending on distance from source
+        self.slowing_source = slowing_source
+        #velocity decreases when cells are close to source 
 
         # Should we compute neighbours? (bit slow)
         self.computeNeighbours = compNeighbours
@@ -941,7 +952,10 @@ class CLSPP:
                                numpy.float32(self.c_o),
                                numpy.float32(self.c_m),
                                numpy.float32(self.chi),
-                               numpy.float32(self.porg)
+                               numpy.float32(self.porg),
+                               numpy.int32(self.vel_change*1),
+                               numpy.int32(self.slowing_source*1),
+                               numpy.float32(self.sphere_radius)
                               ).wait()
         
         
@@ -1057,7 +1071,8 @@ class CLSPP:
                                numpy.float32(dt),
                                numpy.int32(self.spherical*1),
                                numpy.float32(self.sphere_radius),
-                               numpy.int32(nSignals)).wait()
+                               numpy.int32(nSignals),
+                               numpy.int32(self.steering_along_grad*1)).wait()
 
     def add_impulse(self):
         self.program.add_impulse(self.queue, (self.n_cells,), None,
