@@ -13,11 +13,8 @@
     <section class="page-header">
       <h1 class="project-name">CellModeller</h1>
       <h2 class="project-tagline">GPU-accelerated multicellular modelling framework</h2>
-      <a href="https://github.com/HaseloffLab/CellModeller/releases/download/v4.3/InstallCellModeller-v4.3-OSX.tgz" class="btn">Install OSX</a>
-      <a href="https://github.com/HaseloffLab/CellModeller/releases/download/v4.3/InstallCellModeller-v4.3-Linux64.tgz" class="btn">Install Linux</a>
       <a href="https://github.com/HaseloffLab/CellModeller/" class="btn">Github</a>
       <a href="https://github.com/HaseloffLab/CellModeller/wiki" class="btn">Documentation</a>
-      <a href="https://groups.google.com/forum/#!forum/cellmodeller-user" class="btn">Google Group</a>
     </section>
 
     <section class="main-content">
@@ -62,25 +59,36 @@ href=pdfs/acs2013.pdf>2013</a>)
 <a id="quick-start" class="anchor" href="#quick-start" aria-hidden="true"><span class="octicon
 octicon-link"></span></a>Quick start</h3>
 
-<p>Download the installer 
-(<a href="https://github.com/HaseloffLab/CellModeller/releases/download/v4.3/InstallCellModeller-v4.3-OSX.tgz">OSX</a>, 
-<a href="https://github.com/HaseloffLab/CellModeller/releases/download/v4.3/InstallCellModeller-v4.3-Linux64.tgz">Linux</a>),
-double click to extract, and then double click InstallCellModeller (on Linux, run the
-InstallCellModeller.sh script). Then open Terminal and:</p>
+<p> Clone the repository:</p>
 
-<pre><code>$ cmgui
+<pre><code>$ git clone https://github.com/HaseloffLab/CellModeller.git
+</code></pre>
+      
+<p> Install the package (it is recommended to create a Conda or virtualenv environment first):</p>
+
+<pre><code>$ cd CellModeller; pip install -e .
 </code></pre>
 
-<p>You can now load and run models, take a look at the 
+<p>Now you should create a folder to store the results of simulations:</p>
+
+<pre><code>$ mkdir -p ~/cellmodeller/data
+</code></pre>
+
+<p>You can now load and run models, either using the GUI or batch mode:</p>
+      
+<pre><code>$ python CellModeller/Scripts/CellModellerGUI.py <model file>
+</code></pre>
+
+<p>Take a look at the 
 <a href="https://github.com/HaseloffLab/CellModeller/wiki/User-Guide">user guide</a> 
 and 
 <a href="https://github.com/HaseloffLab/CellModeller/wiki/Examples">examples</a> 
-(also in ~/cellmodeller/Examples).
+(also in CellModeller/Examples).
 </p>
 
-<p>Or you can work directly in Python:</p>
+<p>Or:</p>
 
-<pre><code>$ cmpython
+<pre><code>$ python CellModeller/Scripts/batch.py <model file>
 </code></pre>
 
 <p>Take a look at the batch script (<a
