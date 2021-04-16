@@ -448,18 +448,10 @@ __kernel void find_contacts_periodic(const int max_cells,
 
   // collision count
   int k = n_cts[i]; //keep existing contacts
-  int num_neighbours = 0; // count number of neighbours (note: not same as contacts since contacts are low-high index
 
-  // what square are we in?
-  int grid_x_range = grid_x_max-grid_x_min;
-  int grid_y_range = grid_y_max-grid_y_min;
-  int sq_row = sqs[i] / grid_x_range; // square row
-  int sq_col = sqs[i] % grid_x_range; // square col
   // focal cell's square
   int sq_f = sqs[i];
 
-  // loop through our square and the eight squares surrounding it
-  // (fewer squares if we're on an edge)
   // loop through the cell's 9 neighbours
   for (int neigh_index = 0; neigh_index < 9; neigh_index++) {
 		
@@ -468,94 +460,156 @@ __kernel void find_contacts_periodic(const int max_cells,
 	
 	 // index of offset vector for this neighbour
 	 int offset_ind = sq_neighbour_offset_inds[sq_f*9 + neigh_index];
-
-      // loop through all the cell ids in the current square (but
-      // don't go past the end of the list)
-      for (int n = sq_inds[sq]; n < (sq < n_sqs-1 ? sq_inds[sq+1] : n_cells); n++) {
-        
-        int j = sorted_ids[n]; // the neighboring cell
-        
-  if (j<=i) continue; // we can't collide with ourself, only find low -> hi contacts
-	int n_existing_cts=0;
-	int existing_cts_idx[2];
 	
-		// Look for any existing contacts, count them, and store idx's
-		for (int m=i*max_contacts; m<i*max_contacts+n_cts[i]; m++)
-		{
-		  if (tos[m]==j)
-		  {
-		     existing_cts_idx[n_existing_cts++] = m;
-		  }
-		}
-	float4 offset = offset_vecs[offset_ind];
-  
-  if (length(centers[i]-centers[j] - offset) > rads[i]+rads[j]+MARGIN && n_existing_cts==0)
+	 // loop through all the cells listed in this square
+	 for (int n = sq_inds[sq]; n < (sq < n_sqs-1 ? sq_inds[sq+1] : n_cells); n++) {
+
+        int j = sorted_ids[n]; // the neighboring cell
+
+        if (j<=i) continue; // we can't collide with ourself, only find low -> hi contacts
+
+        // Look for any existing contacts, count them, and store idx's
+        int n_existing_cts=0;
+        int existing_cts_idx[2];
+        for (int m=i*max_contacts; m<i*max_contacts+n_cts[i]; m++)
+        {
+          if (tos[m]==j)
+          {
+             existing_cts_idx[n_existing_cts++] = m;
+          }
+        }
+
+		// look up the offset vector for this neighbour		
+		float4 offset = offset_vecs[offset_ind];
+
+        // Are we within possible touching distance, or is there an existing contact to update?
+        if (length(centers[i]-centers[j] - offset) > rads[i]+rads[j]+MARGIN && n_existing_cts==0)
         {
           // if not...
           continue;
         }
-  float dist = length(centers[i]-centers[j] - offset) - rads[i]-rads[j];
-  int ct_i;
-  ct_i = i*max_contacts+k;
-	// Compute sum to find average neighbour direction
-  
-	if (dist < MARGIN || n_existing_cts>0)
-	{
-		num_neighbours++;
-		sum_nbr_dir_i = sum_nbr_dir_i + centers[j] - centers[i];
-	}
 
-       
+        // if so, find closest points
+        float4 pi, pj; // pi is point on our line seg, pj point on other
+        closest_points_on_segments(centers[i], (centers[j]+offset),
+                                   dirs[i], dirs[j],
+                                   &pi, &pj);
 
+        float4 v_ij = pj-pi; // vector between closest points
+        float dist = length(v_ij) - (rads[i]+rads[j]);
+        float4 norm = normalize(v_ij); // normal on our cell at the contact
+        float4 pt = pi + rads[i]*norm; // point on the capsule surface
+          
+        int ct_i;
+        ct_i = i*max_contacts+k; // index of this contact
 
-	// This is the model from Smeets et al. (2016)
-	float dij = length(centers[j]-centers[i] - offset);
-	const float R = 1.f;
-	float dist_adh = -(2.f/R) * ( Ws - (Ws + Wc) * (dij - R) / R );
-	float4 pt = 0.5f * (centers[i]+centers[j] + offset);
-	float4 norm = normalize(centers[j]-centers[i]-offset);
-
+        float stiffness = 1.0;
         
-         // index of this contact
-
-        float stiffness = 1.f;
-        
-        if (dist < MARGIN || n_existing_cts>0)
+        float overlap_length = 1.0;
+          
+        if (dist < MARGIN)
         {
-	    if (n_existing_cts==0)
+            if (n_existing_cts==0)
             {
               // make new contact and compute distance etc.
               k++; // next contact
               frs[ct_i] = i;
               tos[ct_i] = j;
-              dists[ct_i] = dist_adh;
+              dists[ct_i] = dist;
               pts[ct_i] = pt;
               norms[ct_i] = norm;
-              reldists[ct_i] = stiffness*dist_adh;
+              reldists[ct_i] = stiffness*RHS_FRAC*dist;
               stiff[ct_i] = stiffness;
+              overlap[ct_i] = overlap_length;
+              
+              // log the offset used for this neighbour
+              to_offset_inds[ct_i] = offset_ind;
             }
-	if(n_existing_cts>0){
-	  // recompute dist etc. for existing contact
-	  int idx = existing_cts_idx[0];
-	  dists[idx] = dist;
-	  pts[idx] = pt;
-	  norms[idx] = norm;
-	  reldists[idx] = stiffness*dist_adh;
-	  stiff[idx] = stiffness;
+	}
+        if(n_existing_cts>0){
+          // recompute dist etc. for existing contact
+          int idx = existing_cts_idx[0];
+          dists[idx] = dist;
+          pts[idx] = pt;
+          norms[idx] = norm;
+          reldists[idx] = stiffness*RHS_FRAC*dist;
+          stiff[idx] = stiffness;
+          overlap[idx]=overlap_length;
+          
+    	  // Assuming that offset ind cannot have changed; do not update 
+        }
+
+
+        if (!two_pts){
+	  if(n_existing_cts>1){
+	    // Not parallel, but were before - how to deal with this?
+	    // Set stiffness and rhs (reldists) to zero so that this row has no effect
+	    int idx = existing_cts_idx[1];
+	    /*dists[idx] = 0.0;
+	    pts[idx] = pt;
+	    norms[idx] = norm;*/
+	    reldists[idx] = 0.0;
+    	stiff[idx] = 0.0;
+        overlap[idx]=overlap_length;
+        
+        // Assuming that offset ind cannot have changed; and in any case this is a zeroed contact.
+	  }
+	  continue;
 	}
 
+        // if we had two contacts, add the second point
+        v_ij = pj2-pi2;
+        dist = length(v_ij) - (rads[i]+rads[j]);
+        norm = normalize(v_ij);
+        pt = pi2 + rads[i]*norm;
+          
+	// Are cells moving together or penetrating?
+	if (dist < MARGIN)
+	{
+            if (n_existing_cts<2)
+            {
+              ct_i = i*max_contacts+k;
+              k++;
+              frs[ct_i] = i;
+              tos[ct_i] = j;
+              dists[ct_i] = dist;
+              pts[ct_i] = pt;
+              norms[ct_i] = norm;
+              reldists[ct_i] = stiffness*RHS_FRAC*dist;
+              stiff[ct_i] = stiffness;
+              overlap[ct_i]=overlap_length;
+              
+              // log the offset used for this neighbour
+    	  	  to_offset_inds[ct_i] = offset_ind;
+            }
 	}
-	}
-     
-  }
+        if(n_existing_cts>1){
+          // recompute dist etc. for existing contact
+          int idx = existing_cts_idx[1];
+          dists[idx] = dist;
+          pts[idx] = pt;
+          norms[idx] = norm;
+          reldists[idx] = stiffness*RHS_FRAC*dist;
+          stiff[idx] = stiffness;
+          overlap[idx]=overlap_length;
+          
+          // Assuming that offset ind cannot have changed; do not update
+        }
+
+      }
+    }
   n_cts[i] = k;
-  avg_neighbour_dir[i] = normalize( sum_nbr_dir_i / (float) num_neighbours );
 
   // zero out unused contacts
   // this IS necessary for calculate_Mx to work
   for (int u = k; u < max_contacts; u++) {
     frs[i*max_contacts+u] = 0;
     tos[i*max_contacts+u] = 0;
+    
+    // AFAIK this we don't need to zero offsets 
+    // - this is only necessary above because calculate_Mx 
+    // will handle any non-zero to or fr entry as being a true contact
+    //to_offset_inds[i*max_contacts+u] = 0;
   }
 }
 
@@ -686,6 +740,9 @@ __kernel void collect_tos_periodic(const int max_cells,
   }
 
 }
+
+
+
 __kernel void build_matrix(const int max_contacts,
                            __global const float4* centers,
                            __global const float4* dirs,
@@ -725,11 +782,8 @@ __kernel void build_matrix(const int max_contacts,
 }
 
 __kernel void build_matrix_periodic(const int max_contacts,
-                           const float muA,
-                           const float gamma,
                            __global const float4* centers,
                            __global const float4* dirs,
-                           __global const float* lens,
                            __global const float* rads,
                            __global const int* n_cts,
                            __global const int* frs,
@@ -738,9 +792,10 @@ __kernel void build_matrix_periodic(const int max_contacts,
                            __global const float4* pts,
                            __global const float4* norms,
                            __global const float4* offset_vecs,
-                           __global float4* fr_ents,
-                           __global float4* to_ents,
+                           __global float8* fr_ents,
+                           __global float8* to_ents,
                            __global float* stiff)
+                           
 {
   int id = get_global_id(0);
   int ct = get_global_id(1);
@@ -749,34 +804,50 @@ __kernel void build_matrix_periodic(const int max_contacts,
 
   int i = id*max_contacts + ct;
 
-  float4 fr_ent = 0.f;
+  int a = frs[i];
+  float4 r_a = pts[i]-centers[a];
+  float8 fr_ent = 0.f;
+
+  float4 Ia[4];
+  
+  float4 nxr_a = 0.f;
+  nxr_a = cross(norms[i], r_a);
 
   fr_ent.s012 = norms[i].s012;
+  fr_ent.s3 = -dot(nxr_a, Ia[0]);
+  fr_ent.s4 = -dot(nxr_a, Ia[1]);
+  fr_ent.s5 = -dot(nxr_a, Ia[2]);
+  fr_ent.s6 = dot(dirs[a], r_a) * dot(dirs[a], norms[i]);
   fr_ents[i] = fr_ent * stiff[i];
 
   int b = tos[i];
 
-  // plane and sphere contacts have no to_ent, and have negative indices
+  // plane contacts have no to_ent, and have negative indices
   if (b < 0) {
     to_ents[i] = 0.f;
     return;
   }
-// index of offset vector for this neighbour
-  // int offset_ind = to_offset_inds[i];
   
-  // // look up the offset vector for this neighbour		
-  // float4 offset = offset_vecs[offset_ind];
-  // float4 Ib[4];
+  // index of offset vector for this neighbour
+  int offset_ind = to_offset_inds[i];
+  
+  // look up the offset vector for this neighbour		
+  float4 offset = offset_vecs[offset_ind];
+
   // when computing contact vector, pts is already offset; now offset centers similarly
-  // float4 r_b = pts[i]-centers[b]-offset;
-  float4 to_ent = 0.f;
-  // float4 nxr_b = 0.f;
-  // nxr_b = cross(norms[i], r_b);
+  float4 r_b = pts[i]-centers[b]-offset;
+  float8 to_ent = 0.f;
+
+  float4 Ib[4];
+  
+  float4 nxr_b = 0.f;
+  nxr_b = cross(norms[i], r_b);
+
   to_ent.s012 = norms[i].s012;
-  
-  
-  
-  
+  to_ent.s3 = -dot(nxr_b, Ib[0]);
+  to_ent.s4 = -dot(nxr_b, Ib[1]);
+  to_ent.s5 = -dot(nxr_b, Ib[2]);
+  to_ent.s6 = dot(dirs[b], r_b) * dot(dirs[b], norms[i]);
   to_ents[i] = to_ent * stiff[i];
 }
 
@@ -866,24 +937,62 @@ __kernel void predict(__global const float4* centers,
 
 }
 
-__kernel void add_impulse(const float gamma_s,
-                          __global const float4* deltap,
+// __kernel void add_impulse(const float gamma_s,
+//                           __global const float4* deltap,
+//                           __global const float4* dirs,
+//                           __global const float* rads,
+//                           __global float4* dcenters)
+// {
+//   int i = get_global_id(0);
+
+//   float4 dir_i = dirs[i];
+//   float rad_i = rads[i];
+//   float4 deltap_i = deltap[i];
+
+//   float4 dplin = 0.f;
+//   dplin.s012 = deltap_i.s012;
+//   dcenters[i] += dplin;
+// }
+
+__kernel void add_impulse(const float muA,
+                          const float gamma,
+                          __global const float8* deltap,
                           __global const float4* dirs,
+                          __global const float* lens,
                           __global const float* rads,
-                          __global float4* dcenters)
+                          __global float4* dcenters,
+                          __global float4* dangs,
+                          __global const float* target_dlens,
+                          __global float* dlens)
 {
   int i = get_global_id(0);
 
   float4 dir_i = dirs[i];
+  float len_i = lens[i];
   float rad_i = rads[i];
-  float4 deltap_i = deltap[i];
+  float8 deltap_i = deltap[i];
 
   float4 dplin = 0.f;
   dplin.s012 = deltap_i.s012;
-  dcenters[i] += dplin;
+  dcenters[i] += dplin/(muA*(lens[i]+2.f*rads[i]));
+
+  // FIXME: should probably store these so we don't recompute them
+  float4 Iinv[4];
+  cyl_inv_inertia_tensor(muA, len_i+2.f*rad_i, dir_i, Iinv);
+  float4 dL = 0.f;
+  dL.s012 = deltap_i.s345;
+  float4 dpang = matmul(Iinv, dL);
+  float dpangmag = length(dpang);
+  if (dpangmag>ANG_LIMIT)
+  {
+    dpang *= ANG_LIMIT/dpangmag;
+  }
+  dangs[i] += dpang;
+  
+  float dplen = deltap_i.s6;
+  //dlens[i] += max(0.f, target_dlens[i] + dplen/gamma);
+  dlens[i] = max(0.f, dlens[i]+dplen/gamma);
 }
-
-
 float angle_between_vectors(float4 vec1, float4 vec2, float4 normal)
 {
     // Get the unsigned angle as arccos(dot product)
@@ -979,6 +1088,38 @@ __kernel void integrate(__global float4* centers,
   dcenters[i] = 0.f;
 }
 
+// __kernel void integrate(__global float4* centers,
+//                         __global float4* dirs,
+//                         __global float* lens,
+//                         __global float4* dcenters,
+//                         __global float4* dangs,
+//                         __global float* dlens)
+// {
+//   int i = get_global_id(0);
+//   float4 center_i = centers[i];
+//   float4 dir_i = dirs[i];
+//   float len_i = lens[i];
+//   float4 dcenter_i = dcenters[i];
+//   float4 dang_i = dangs[i];
+//   float dlen_i = dlens[i];
+
+//   centers[i] = center_i + dcenter_i;
+
+//   if (length(dang_i)>1e-12)
+//   {
+//     float4 rot_axis = normalize(dang_i);
+//     float rot_angle = length(dang_i);
+//     dirs[i] = normalize(rot(rot_axis, rot_angle, dir_i));
+//   }
+
+//   lens[i] = len_i + dlen_i;
+
+//   // fully damped
+//   dcenters[i] = 0.f;
+//   dangs[i] = 0.f;
+//   dlens[i] = 0.f;
+// }
+
 __kernel void add_force(__global float4* rhs,
 __global float4* pos,
 __global float4* dir,
@@ -1060,6 +1201,7 @@ __kernel void update_images(__global float4* centers,
       centers[i].y -= domain_height;  
   }
 }
+
 //__kernel void add_force(__global float4* rhs,
 //__global float4* pos,
 //__global float4* dir,
