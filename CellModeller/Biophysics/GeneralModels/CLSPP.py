@@ -12,7 +12,6 @@ from pyopencl.clmath import cos, sin
 import random
 import time
 from pyopencl.clrandom import PhiloxGenerator
-import numdifftools as nd
 
 
 ct_map = {}
@@ -1014,44 +1013,21 @@ class CLSPP:
 
 
     def build_matrix(self):
-        
-        if self.periodic:
-            self.program.collect_tos_periodic(self.queue,
-                            (self.n_cells,),
-                                None,
-                        numpy.int32(self.max_cells),
-                        numpy.int32(self.n_cells),
-                        numpy.int32(self.grid_x_min),
-                        numpy.int32(self.grid_x_max),
-                        numpy.int32(self.grid_y_min),
-                        numpy.int32(self.grid_y_max),
-                        numpy.int32(self.n_sqs),
-                        numpy.int32(self.max_contacts),
-                        self.cell_sqs_dev.data,
-                        self.sorted_ids_dev.data,
-                        self.sq_inds_dev.data,
-                        self.cell_n_cts_dev.data,
-                        self.ct_frs_dev.data,
-                        self.ct_tos_dev.data,
-                        self.sq_neighbour_inds_dev.data,
-                        self.cell_tos_dev.data,
-                        self.n_cell_tos_dev.data).wait()
-        else:
-            self.program.build_matrix(self.queue,
-                                  (self.n_cells, self.max_contacts),
-                                  None,
-                                  numpy.int32(self.max_contacts),
-                                  self.pred_cell_centers_dev.data,
-                                  self.pred_cell_dirs_dev.data,
-                                  self.cell_rads_dev.data,
-                                  self.cell_n_cts_dev.data,
-                                  self.ct_frs_dev.data,
-                                  self.ct_tos_dev.data,
-                                  self.ct_pts_dev.data,
-                                  self.ct_norms_dev.data,
-                                  self.fr_ents_dev.data,
-                                  self.to_ents_dev.data,
-                                  self.ct_stiff_dev.data).wait()
+        self.program.build_matrix(self.queue,
+                              (self.n_cells, self.max_contacts),
+                              None,
+                              numpy.int32(self.max_contacts),
+                              self.pred_cell_centers_dev.data,
+                              self.pred_cell_dirs_dev.data,
+                              self.cell_rads_dev.data,
+                              self.cell_n_cts_dev.data,
+                              self.ct_frs_dev.data,
+                              self.ct_tos_dev.data,
+                              self.ct_pts_dev.data,
+                              self.ct_norms_dev.data,
+                              self.fr_ents_dev.data,
+                              self.to_ents_dev.data,
+                              self.ct_stiff_dev.data).wait()
     
 
     def calculate_Ax(self, Ax, x, dt, alpha):

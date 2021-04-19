@@ -502,25 +502,25 @@ __kernel void find_contacts_periodic(const int max_cells,
 	if (dist < MARGIN || n_existing_cts>0)
 	{
 		num_neighbours++;
-		sum_nbr_dir_i = sum_nbr_dir_i + centers[j] - centers[i];
+		sum_nbr_dir_i = sum_nbr_dir_i + centers[j] + offset - centers[i];
 	}
 
        
 
 
 	// This is the model from Smeets et al. (2016)
-	float dij = length(centers[j]-centers[i] - offset);
+	float dij = length(centers[j]-centers[i] + offset);
 	const float R = 1.f;
 	float dist_adh = -(2.f/R) * ( Ws - (Ws + Wc) * (dij - R) / R );
 	float4 pt = 0.5f * (centers[i]+centers[j] + offset);
-	float4 norm = normalize(centers[j]-centers[i]-offset);
+	float4 norm = normalize(centers[j]-centers[i]+offset);
 
         
          // index of this contact
 
         float stiffness = 1.f;
         
-        if (dist < MARGIN || n_existing_cts>0)
+        if (dist < MARGIN)
         {
 	    if (n_existing_cts==0)
             {
@@ -534,17 +534,17 @@ __kernel void find_contacts_periodic(const int max_cells,
               reldists[ct_i] = stiffness*dist_adh;
               stiff[ct_i] = stiffness;
             }
+	}
 	if(n_existing_cts>0){
 	  // recompute dist etc. for existing contact
 	  int idx = existing_cts_idx[0];
-	  dists[idx] = dist;
+	  dists[idx] = dist_adh;
 	  pts[idx] = pt;
 	  norms[idx] = norm;
 	  reldists[idx] = stiffness*dist_adh;
 	  stiff[idx] = stiffness;
 	}
 
-	}
 	}
      
   }
@@ -721,62 +721,6 @@ __kernel void build_matrix(const int max_contacts,
 
   float4 to_ent = 0.f;
   to_ent.s012 = norms[i].s012;
-  to_ents[i] = to_ent * stiff[i];
-}
-
-__kernel void build_matrix_periodic(const int max_contacts,
-                           const float muA,
-                           const float gamma,
-                           __global const float4* centers,
-                           __global const float4* dirs,
-                           __global const float* lens,
-                           __global const float* rads,
-                           __global const int* n_cts,
-                           __global const int* frs,
-                           __global const int* tos,
-                           __global const int* to_offset_inds,
-                           __global const float4* pts,
-                           __global const float4* norms,
-                           __global const float4* offset_vecs,
-                           __global float4* fr_ents,
-                           __global float4* to_ents,
-                           __global float* stiff)
-{
-  int id = get_global_id(0);
-  int ct = get_global_id(1);
-
-  if (ct >= n_cts[id]) return;
-
-  int i = id*max_contacts + ct;
-
-  float4 fr_ent = 0.f;
-
-  fr_ent.s012 = norms[i].s012;
-  fr_ents[i] = fr_ent * stiff[i];
-
-  int b = tos[i];
-
-  // plane and sphere contacts have no to_ent, and have negative indices
-  if (b < 0) {
-    to_ents[i] = 0.f;
-    return;
-  }
-// index of offset vector for this neighbour
-  // int offset_ind = to_offset_inds[i];
-  
-  // // look up the offset vector for this neighbour		
-  // float4 offset = offset_vecs[offset_ind];
-  // float4 Ib[4];
-  // when computing contact vector, pts is already offset; now offset centers similarly
-  // float4 r_b = pts[i]-centers[b]-offset;
-  float4 to_ent = 0.f;
-  // float4 nxr_b = 0.f;
-  // nxr_b = cross(norms[i], r_b);
-  to_ent.s012 = norms[i].s012;
-  
-  
-  
-  
   to_ents[i] = to_ent * stiff[i];
 }
 
