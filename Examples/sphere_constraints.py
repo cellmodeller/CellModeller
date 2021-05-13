@@ -13,7 +13,7 @@ def setup(sim):
     
     #max_sqr
     #biophys = CLBacterium(sim, max_cells=max_cells, jitter_z=False, max_sqs=256**2)
-    biophys = CLBacterium(sim, max_cells=max_cells, jitter_z=False, max_spheres=1, gamma=100.)
+    biophys = CLBacterium(sim, max_cells=max_cells, jitter_z=True, max_spheres=2, gamma=100.)
 
     # use this file for reg too
     regul = ModuleRegulator(sim)
@@ -21,9 +21,10 @@ def setup(sim):
     sim.init(biophys, regul, None, None)
 
     # Specify the initial cell and its location in the simulation
-    sim.addCell(cellType=0, pos=(0,0,0))
+    sim.addCell(cellType=0, pos=(25,0,0))
 
-    biophys.addSphere((0,0,0), 10, 1.0, -1)
+    biophys.addSphere((0,0,0), 25, 1.0, -1)
+    biophys.addSphere((0,0,0), 25, 1.0, 1)
 
 
     # Add some objects to draw the models
@@ -39,6 +40,7 @@ def init(cell):
     #cell.growthRate = 0.6
     cell.growthRate = 1.0
     cell.color = [0, 1, 0]
+    cell.killFlag = False
 
 def update(cells):
     #Iterate through each cell and flag cells that reach target size for division

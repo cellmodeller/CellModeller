@@ -46,6 +46,9 @@ class CLEulerIntegrator:
         # Rate views (references) to the data
         self.specRate = self.rates[0:self.maxSpecDataLen].reshape(self.maxCells,self.nSpecies)
 
+    def kill(self, cell_state):
+        self.nCells -= 1
+
     def addCell(self, cellState):
         idx = cellState.idx
         self.nCells += 1
@@ -57,22 +60,16 @@ class CLEulerIntegrator:
 
         # Set up slicing of levels for each daughter and copy parent levels
         d1idx = d1State.idx
-        self.nCells += 1
-        self.specLevel[d1idx,:] = pState.species
+        self.specLevel[d1idx,:] = pState.species[:]
         d1State.species = self.specLevel[d1idx,:]
         self.celltype[d1idx] = d1State.cellType
 
         d2idx = d2State.idx
-        self.nCells += 1
-        self.specLevel[d2idx,:] = pState.species
-        d1State.species = self.specLevel[d1idx,:]
-        self.celltype[d1idx] = d1State.cellType
-
-        d2idx = d2State.idx
-        self.nCells += 1
-        self.specLevel[d2idx,:] = pState.species
+        self.specLevel[d2idx,:] = pState.species[:]
         d2State.species = self.specLevel[d2idx,:]
         self.celltype[d2idx] = d2State.cellType
+
+        self.nCells += 1
 
     def setRegulator(self, regul):
         self.regul = regul
@@ -102,9 +99,8 @@ class CLEulerIntegrator:
 
 
     def dydt(self):
-        self.celltype_dev.set(self.celltype)
+        self.celltype_dev[0:self.nCells].set(self.celltype[self.sim.live_idxs])
         # compute species rates
-        self.specLevel_dev.set(self.specLevel)
         self.program.speciesRates(self.queue, (self.nCells,), None,
                                   numpy.int32(self.nSpecies),
                                   self.sim.phys.cell_centers_dev.data,
@@ -114,7 +110,7 @@ class CLEulerIntegrator:
                                   self.effgrow_dev.data,
                                   self.specLevel_dev.data,
                                   self.specRate_dev.data).wait()
-        self.specRate[:] = self.specRate_dev.get()
+        self.specRate[self.sim.live_idxs,:] = self.specRate_dev[0:self.nCells,:].get()
 
     def step(self, dt):
         if dt!=self.dt:
@@ -137,14 +133,19 @@ class CLEulerIntegrator:
         cs = self.cellStates
         for id,c in list(cs.items()):
             self.effgrow[c.idx] = numpy.float32(c.effGrowth)
-        self.effgrow_dev.set(self.effgrow)
+        self.effgrow_dev[0:self.nCells].set(self.effgrow[self.sim.live_idxs])
 
+        self.specLevel_dev[0:self.nCells,:].set(self.specLevel[self.sim.live_idxs,:])
         # growth dilution of species
         self.diluteSpecies()
 
         self.dydt()
-        self.rates[0:self.dataLen] *= self.dt
-        self.levels[0:self.dataLen] += self.rates[0:self.dataLen]
+        self.specLevel[self.sim.live_idxs,:] = self.specLevel_dev[0:self.nCells,:].get()
+
+        #self.rates[0:self.dataLen] *= self.dt
+        self.specRate[self.sim.live_idxs,:] *= self.dt
+        #self.levels[0:self.dataLen] += self.rates[0:self.dataLen]
+        self.specLevel[self.sim.live_idxs,:] += self.specRate[self.sim.live_idxs,:]
 
 
 # Put the final signal levels into the cell states
@@ -157,20 +158,18 @@ class CLEulerIntegrator:
         self.cellStates = self.sim.cellStates
         self.levels = specLevel
         self.makeViews()
-        self.specLevel_dev.set(self.specLevel)
+        self.specLevel_dev[0:self.nCells,:].set(self.specLevel[self.sim.live_idxs,:])
         cs = self.cellStates
         for id,c in list(cs.items()):
             c.species = self.specLevel[c.idx,:]
             self.celltype[c.idx] = numpy.int32(c.cellType)
-        self.celltype_dev.set(self.celltype)
+        self.celltype_dev[0:self.nCells].set(self.celltype[self.sim.live_idxs])
 
 
     def diluteSpecies(self):
-        self.specLevel_dev.set(self.specLevel)
         self.program.diluteSpecs(self.queue, (self.nCells,), None,
                                  numpy.int32(self.nSpecies),
                                  self.sim.phys.cell_old_vols_dev.data,
                                  self.sim.phys.cell_vols_dev.data,
                                  self.specLevel_dev.data).wait()
-        self.specLevel[:] = self.specLevel_dev.get()
 

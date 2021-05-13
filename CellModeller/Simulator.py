@@ -54,6 +54,9 @@ visualised.
         # No cells yet, initialise indices and empty lists/dicts, zero counters
         self._next_id = 1
         self._next_idx = 0
+        self.live_idxs = numpy.zeros((0,), dtype=numpy.int32)
+        self.dead_idxs = numpy.zeros((0,), dtype=numpy.int32)
+        self.arr_end = 0
         self.idToIdx = {}
         self.idxToId = {}
         self.cellStates = {}
@@ -154,7 +157,13 @@ visualised.
     ## Get the index (into flat arrays) of the next cell to be created
     def next_idx(self):
         idx = self._next_idx
-        self._next_idx += 1
+        if len(self.dead_idxs)>0:
+            self._next_idx = self.dead_idxs[0]
+            self.dead_idxs = self.dead_idxs[1:]
+        else:
+            self.arr_end += 1
+            self._next_idx = self.arr_end
+        self.live_idxs = numpy.append(self.live_idxs, idx)
         return idx
 
 
@@ -277,6 +286,16 @@ visualised.
         # Recreate models via module setup
         self.module.setup(self)
 
+    def kill(self, state):
+        self.live_idxs = self.live_idxs[self.live_idxs!=state.idx]
+        self.dead_idxs = numpy.append(self.dead_idxs, state.idx)
+        self.phys.kill(state)
+        if self.integ:
+            self.integ.kill(state)
+        self.reg.kill(state)
+        id = state.id
+        del self.cellStates[id]
+        del self.idToIdx[id]
 
     # Divide a cell to two daughter cells
     def divide(self, pState):
@@ -355,6 +374,9 @@ visualised.
             state.time = self.stepNum * self.dt
             if state.divideFlag:
                 self.divide(state) #neighbours no longer current
+            else:
+                if state.killFlag:
+                    self.kill(state)
 
         self.phys.set_cells()
         while not self.phys.step(self.dt): #neighbours are current here

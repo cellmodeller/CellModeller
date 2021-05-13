@@ -9,7 +9,7 @@ outfile = 'all.csv'
 
 def setup(sim):
     # Set biophysics, signalling, and regulation models
-    biophys = CLBacterium(sim, jitter_z=False, max_cells=100000, gamma=100.)
+    biophys = CLBacterium(sim, jitter_z=False, max_cells=2000, max_planes=3, gamma=100.)
 
     # use this file for reg too
     regul = ModuleRegulator(sim, sim.moduleName)	
@@ -17,7 +17,12 @@ def setup(sim):
     sim.init(biophys, regul, None, None)
  
     # Specify the initial cell and its location in the simulation
-    sim.addCell(cellType=0, pos=(0,0,0), dir=(1,0,0))
+    sim.addCell(cellType=0, pos=(-5,0,0), dir=(1,0,0))
+    sim.addCell(cellType=1, pos=(5,0,0), dir=(1,0,0))
+
+    biophys.addPlane((0,-12.5,0), (0,1,0), 1)
+    biophys.addPlane((0,12.5,0), (0,-1,0), 1)
+    #biophys.addPlane((0,0,0), (1,0,0), 1)
 
     # Add some objects to draw the models
     #if sim.is_gui:
@@ -28,20 +33,26 @@ def setup(sim):
     #    print("Running in batch mode: no display will be output")
 
     sim.pickleSteps = 100
-    sim.saveOutput = True
+    sim.saveOutput = False
 
 def init(cell):
     # Specify mean and distribution of initial cell size
     cell.targetVol = 3.5 + random.uniform(0.0,0.5)
     # Specify growth rate of cells
-    cell.growthRate = 1.0
+    cell.growthRate = 1
     cell.color = cell_cols[cell.cellType]
+    cell.killFlag = False
 
 def update(cells):
     #Iterate through each cell and flag cells that reach target size for division
     for (id, cell) in cells.items():
-        if cell.volume > cell.targetVol:
+        if cell.length > cell.targetVol:
             cell.divideFlag = True
+        else:
+            p = numpy.array(cell.pos)
+            r = numpy.sqrt(numpy.sum(p*p))
+            if r>40:
+                cell.killFlag = True
 
         gr = cell.strainRate/0.05
         cgr = gr - 0.5

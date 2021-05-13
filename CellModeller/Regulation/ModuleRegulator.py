@@ -58,4 +58,5 @@ class ModuleRegulator:
         if callable(divfunc):
             divfunc(pState, d1State, d2State)
 
-
+    def kill(self, state):
+        pass
