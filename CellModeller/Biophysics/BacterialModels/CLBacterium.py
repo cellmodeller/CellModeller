@@ -469,6 +469,7 @@ class CLBacterium:
         self.cell_dangs_dev[0:self.n_cells].set(self.cell_dangs[idx])
         self.cell_old_vols_dev[0:self.n_cells].set(self.cell_old_vols[idx])
         self.cell_vols_dev[0:self.n_cells].set(self.cell_vols[idx])
+        self.cell_force_dev[0:self.n_cells].set(self.cell_force[idx])
 
     def set_planes(self):
         """Copy plane pts, norms, and coeffs to the device from local."""
