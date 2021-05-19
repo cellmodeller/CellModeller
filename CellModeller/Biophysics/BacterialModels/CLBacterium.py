@@ -204,6 +204,11 @@ class CLBacterium:
         self.vdot = ReductionKernel(self.context, numpy.float32, neutral="0",
                 reduce_expr="a+b", map_expr="dot(x[i].s0123,y[i].s0123)+dot(x[i].s4567,y[i].s4567)",
                 arguments="__global float8 *x, __global float8 *y")
+
+        # Add a force to position part of generalised position vector
+        self.add_force = ElementwiseKernel(self.context,
+                                            "float8 *pos, const float mag, const float4 *dir",
+                                            "pos[i].s012 = pos[i].s012 + dir[i].s012", "add_force")
     
 
     def init_data(self):
@@ -236,6 +241,9 @@ class CLBacterium:
         self.cell_dlens_dev = cl_array.zeros(self.queue, cell_geom, numpy.float32)
         self.cell_target_dlens_dev = cl_array.zeros(self.queue, cell_geom, numpy.float32)
         self.cell_growth_rates = numpy.zeros(cell_geom, numpy.float32)
+        # Arbitrary external force applied to center of mass
+        self.cell_force = numpy.zeros(cell_geom, vec.float4)
+        self.cell_force_dev = cl_array.zeros(self.queue, cell_geom, vec.float4)
 
         # cell geometry calculated from l and r
         self.cell_areas_dev = cl_array.zeros(self.queue, cell_geom, numpy.float32)
@@ -461,7 +469,7 @@ class CLBacterium:
         self.cell_dangs_dev[0:self.n_cells].set(self.cell_dangs[idx])
         self.cell_old_vols_dev[0:self.n_cells].set(self.cell_old_vols[idx])
         self.cell_vols_dev[0:self.n_cells].set(self.cell_vols[idx])
-
+        self.cell_force_dev[0:self.n_cells].set(self.cell_force[idx])
 
     def set_planes(self):
         """Copy plane pts, norms, and coeffs to the device from local."""
@@ -709,6 +717,9 @@ class CLBacterium:
         state.ends = (pa-da*state.length*0.5, pa+da*state.length*0.5)
         # Length vel is linearisation of exponential growth
         self.cell_growth_rates[i] = state.growthRate*state.length
+        # External forces
+        for j in range(3):
+            self.cell_force[i][j] = state.force[j]
 
     def update_grid(self):
         """Update our grid_(x,y)_min, grid_(x,y)_max, and n_sqs.
@@ -991,7 +1002,7 @@ class CLBacterium:
                                     self.to_ents_dev.data,
                                     self.ct_reldists_dev.data,
                                     self.rhs_dev.data).wait()
-
+        self.add_force(self.rhs_dev, 1, self.cell_force_dev).wait()
 
         # res = b-Ax
         self.calculate_Ax(self.BTBx_dev, self.deltap_dev, dt, alpha)
