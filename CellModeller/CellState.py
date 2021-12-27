@@ -11,3 +11,4 @@ class CellState:
         self.cellAge = 0
         self.neighbours = []
         self.effGrowth = 0.0
+        self.removeFlag = False #Added by -AY; maybe there is a better solution???

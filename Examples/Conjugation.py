@@ -10,7 +10,7 @@ delta_sig = 0.45
 
 def setup(sim):
     # Set biophysics module
-    biophys = CLBacterium(sim, jitter_z=False, max_cells=50000,gamma=10.0, cgs_tol=1E-5,compNeighbours=True)
+    biophys = CLBacterium(sim, jitter_z=False, max_cells=10000,gamma=10.0, cgs_tol=1E-5,compNeighbours=True)
 
     # Set up regulation module
     regul = ModuleRegulator(sim, sim.moduleName)	
@@ -32,7 +32,7 @@ def init(cell):
     # Specify mean and distribution of initial cell size
     cell.targetVol = cell.length + random.gauss(delta,delta_sig)
     # Specify growth rate of cells
-    cell.growthRate = 1.0
+    cell.growthRate = 0.5
     if cell.cellType == 0: cell.color = (1.0,0.0,0.0)
     elif cell.cellType == 1: cell.color = (0.0,1.0,0.0)
     elif cell.cellType == 2: cell.color = (0.0,0.0,1.0)

@@ -153,7 +153,8 @@ visualised.
 
     ## Get the index (into flat arrays) of the next cell to be created
     def next_idx(self):
-        idx = self._next_idx
+        idx = self._next_idx #If I replace this with line below, it works, but cell types and identities get messed up.
+        #idx = self.phys.n_cells #For simulations that require removing cells at boundaries -AY
         self._next_idx += 1
         return idx
 
@@ -320,6 +321,20 @@ visualised.
             self.integ.divide(pState, d1State, d2State)
         self.reg.divide(pState, d1State, d2State)
 
+    #From WPJS -AY
+    def kill(self, state):
+   	   
+   	   # carry out any actions listed in module
+   	   self.reg.kill(state)
+   	   
+   	   # mask the cell so that the mechanics algorithm ignores it
+   	   self.phys.delete(state)
+   	   
+   	   # delete all instance of cell at cellState level
+   	   cid = state.id
+   	   #print 'Removing cell with id %i' % cid
+   	   del self.cellStates[cid]
+
     ## Add a new cell to the simulator
     def addCell(self, cellType=0, cellAdh=0, length=3.5, **kwargs):
         cid = self.next_id()
@@ -337,7 +352,13 @@ visualised.
         if self.sig:
             self.sig.addCell(cs)
         self.phys.addCell(cs, **kwargs)
-
+    
+    '''
+    # Added by AY; currently only removes cells from biophysics, need to add removal from integ and sig (nCells -= 1)
+    def removeCell(self,state):
+        self.phys.removeCell(state)
+    '''
+        
     #---
     # Some functions to modify existing cells (e.g. from GUI)
     # Eventually prob better to have a generic editCell() that deals with this stuff
@@ -353,10 +374,21 @@ visualised.
         states = dict(self.cellStates)
         for (cid,state) in list(states.items()):
             state.time = self.stepNum * self.dt
+            
+            #From WPJS -AY
+            if state.deathFlag:			# priority 1: death
+		   	  self.kill(state)
+		   	  
             if state.divideFlag:
                 self.divide(state) #neighbours no longer current
-
-        self.phys.set_cells()
+            self.phys.set_cells()
+            
+            '''
+            #Added by -AY to remove cells
+            if state.removeFlag:
+                self.removeCell(state)
+            '''
+            
         while not self.phys.step(self.dt): #neighbours are current here
             pass
         if self.sig:

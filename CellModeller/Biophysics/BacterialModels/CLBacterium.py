@@ -108,7 +108,18 @@ class CLBacterium:
         self.initCellState(cellState)
         self.set_cells()
         self.calc_cell_geom() # cell needs a volume
-
+        
+    '''
+    #---
+    # Added by AY
+    def removeCell(self, cellState):
+        cid = cellState.id
+        #Comment line below out to make the program sort of work (n_cells still keeps going up though...)
+        self.n_cells -= 1
+        del self.simulator.cellStates[cid] #I've confirmed that this does delete the cell in CellStates
+        self.set_cells()
+    '''
+        
     #---
     # Some functions to modify existing cells (e.g. from GUI)
     # Eventually prob better to have a generic editCell() that deals with this stuff
@@ -127,7 +138,7 @@ class CLBacterium:
         self.simulator.cellStates[cid].pos = [self.cell_centers[i][j] for j in range(3)]
         self.set_cells()
         self.updateCellState(cellState)
-
+        
     def addPlane(self, pt, norm, coeff):
         pidx = self.n_planes
         self.n_planes += 1
@@ -153,6 +164,11 @@ class CLBacterium:
         # Initialise cellState data
         self.initCellState(daughter1State)
         self.initCellState(daughter2State)
+        
+    #From WPJS -AY
+    def delete(self, state):
+		self.delete_cell(state.idx)
+		self.deleteCellState(state)		# currently this does nothing - is it necessary?
 
     def init_cl(self):
         if self.simulator:
@@ -314,6 +330,10 @@ class CLBacterium:
         self.Ap_dev = cl_array.zeros(self.queue, cell_geom, vec.float8)
         self.res_dev = cl_array.zeros(self.queue, cell_geom, vec.float8)
         self.rhs_dev = cl_array.zeros(self.queue, cell_geom, vec.float8)
+        
+        # cell removal (WPJS) -AY
+		self.isDeleted = numpy.zeros(cell_geom, numpy.int32)
+		self.isDeleted_dev = cl_array.zeros(self.queue, cell_geom, numpy.int32)
     
 
     def load_from_cellstates(self, cell_states):
@@ -630,6 +650,10 @@ class CLBacterium:
         self.integrate()
         self.calc_cell_geom()
         self.sub_tick_initialised=False
+        
+    #From WPJS, but it doesn't do anything... -AY
+    def deleteCellState(self, state):
+		pass
 
     def initCellState(self, state):
         cid = state.id
@@ -795,7 +819,8 @@ class CLBacterium:
                                          self.ct_pts_dev.data,
                                          self.ct_norms_dev.data,
                                          self.ct_reldists_dev.data,
-                                         self.ct_stiff_dev.data).wait()
+                                         self.ct_stiff_dev.data,
+                                         self.isDeleted_dev.data).wait() #Added isDeleted_dev from WPJS -AY
 
         self.program.find_sphere_contacts(self.queue,
                                          (self.n_cells,),
@@ -1105,7 +1130,7 @@ class CLBacterium:
         # idxs of the two new cells
         a = d1i
         b = d2i
-
+        
         # seems to be making shallow copies without the tuple calls
         parent_center = tuple(self.cell_centers[i])
         parent_dir = tuple(self.cell_dirs[i])
@@ -1172,6 +1197,38 @@ class CLBacterium:
 
         #return indices of daughter cells
         return (a,b)
+        
+    #From WPJS -AY
+    def delete_cell(self, i):
+		"""Remove cell with idx = i from the mechanics algorithm."""
+		# at the moment, this just means hiding it from the contact finder...
+		self.isDeleted[i] = 1
+		self.isDeleted_dev.set(self.isDeleted)
+		
+		# delete this cell's entries in contact lists
+		# self.ct_tos =
+		# here's how find_contacts does this for // contacts 
+		#self.ct_reldists_dev[i] = 0.0;		
+		#self.ct_stiff_dev[i] = 0.0;   #nope - shouldn't be 0!
+
+             
+		"""
+		ct_geom = (self.max_cells, self.max_contacts)
+		self.ct_tos =
+		self.ct_tos_dev = 
+		self.ct_dists =
+		self.ct_dists_dev = 
+		self.ct_pts = numpy.zeros(ct_geom, vec.float4)
+		self.ct_pts_dev = cl_array.zeros(self.queue, ct_geom, vec.float4)
+		self.ct_norms = numpy.zeros(ct_geom, vec.float4)
+		self.ct_norms_dev = cl_array.zeros(self.queue, ct_geom, vec.float4)
+		self.ct_stiff_dev = cl_array.zeros(self.queue, ct_geom, numpy.float32)
+		# where the contacts pointing to this cell are collected
+		self.cell_tos = numpy.zeros(ct_geom, numpy.int32)
+		self.cell_tos_dev = cl_array.zeros(self.queue, ct_geom, numpy.int32)
+		self.n_cell_tos = numpy.zeros(cell_geom, numpy.int32)
+		self.n_cell_tos_dev = cl_array.zeros(self.queue, cell_geom, numpy.int32)
+		"""
 
 
     def calc_cell_geom(self):

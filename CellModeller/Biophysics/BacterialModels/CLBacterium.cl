@@ -540,10 +540,14 @@ __kernel void find_contacts(const int max_cells,
                             __global float4* norms,
                             __global float* reldists,
                             __global float* stiff,
-                            __global float* overlap)
+                            __global float* overlap
+                            __global const int* isDeleted) //Added isDeleted from WPJS
 {
   // our id
   int i = get_global_id(0);
+  
+  // check if this is a deleted cell
+  int status_i = isDeleted[i];
 
   // collision count
   int k = n_cts[i]; //keep existing contacts
@@ -567,6 +571,9 @@ __kernel void find_contacts(const int max_cells,
       for (int n = sq_inds[sq]; n < (sq < n_sqs-1 ? sq_inds[sq+1] : n_cells); n++) {
 
         int j = sorted_ids[n]; // the neighboring cell
+        
+        int status_j = isDeleted[j];
+  		    if (status_j==1) continue; // we can't collide with deleted cells -AY, WPJS
 
         if (j<=i) continue; // we can't collide with ourself, only find low -> hi contacts
 
