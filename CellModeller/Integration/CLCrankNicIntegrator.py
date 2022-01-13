@@ -54,12 +54,11 @@ def unique_stable(ar, return_index=False, return_inverse=False):
         return ar[flag]
 
 
-
-
 class CLCrankNicIntegrator:
     def __init__(self, sim, nSignals, nSpecies, maxCells, sig, greensThreshold=1e-12, regul=None, boundcond='constant'):
         self.sim = sim
         self.dt = self.sim.dt
+        self.stepNum = self.sim.stepNum
         self.greensThreshold = greensThreshold
         self.regul = regul
         self.boundcond = boundcond
@@ -105,7 +104,6 @@ class CLCrankNicIntegrator:
         cs = self.cellStates
         for id,c in list(cs.items()):
             c.species = self.specLevel[c.idx,:]
-
 
     def makeViews(self):
         # Level views (references) to the data
@@ -196,6 +194,10 @@ class CLCrankNicIntegrator:
 
         self.celltype = numpy.zeros((self.maxCells,),dtype=numpy.int32)
         self.celltype_dev = cl_array.zeros(self.queue, (self.maxCells,),dtype=numpy.int32)
+        
+        self.effGrowth = numpy.zeros((self.maxCells,),dtype=numpy.float32)
+        self.effGrowth_dev = cl_array.zeros(self.queue,
+            (self.maxCells,),dtype=numpy.float32)
         #self.pos_dev = cl_array.zeros(self.queue, (self.maxCells,), dtype=vec.float4)
 
     def initKernels(self):
@@ -243,15 +245,19 @@ class CLCrankNicIntegrator:
                 self.cellSigLevels_dev.data).wait()
 
         self.celltype_dev.set(self.celltype)
+        self.effGrowth_dev.set(self.effGrowth)
+                
         # compute species rates
         self.specLevel_dev.set(self.specLevel)
         self.program.speciesRates(self.queue, (self.nCells,), None,
+                                  numpy.int32(self.stepNum),
                                   numpy.int32(self.nSignals),
                                   numpy.int32(self.nSpecies),
                                   numpy.float32(self.sim.sig.dV),
                                   self.sim.phys.cell_areas_dev.data,
                                   self.sim.phys.cell_vols_dev.data,
                                   self.celltype_dev.data,
+                                  self.effGrowth_dev.data,
                                   self.specLevel_dev.data,
                                   self.cellSigLevels_dev.data,
                                   self.specRate_dev.data).wait()
@@ -295,7 +301,8 @@ class CLCrankNicIntegrator:
         if dt!=self.dt:
             print("I can only integrate at fixed dt!")
             return
-
+        
+        self.stepNum = self.sim.stepNum
         self.nCells = len(self.cellStates)
         # Check we have enough space allocated
         try:
@@ -346,7 +353,9 @@ class CLCrankNicIntegrator:
         # Update cellType array
         for (id,c) in list(self.cellStates.items()):
             self.celltype[c.idx] = numpy.int32(c.cellType)
+            self.effGrowth[c.idx] = numpy.float32(c.effGrowth)
         self.celltype_dev.set(self.celltype)
+        self.effGrowth_dev.set(self.effGrowth)
 
 
     def diluteSpecies(self):
@@ -372,5 +381,10 @@ class CLCrankNicIntegrator:
             c.signals = self.cellSigLevels[c.idx,:]
             self.celltype[c.idx] = numpy.int32(c.cellType)
         self.celltype_dev.set(self.celltype)
+
+    def applySignal(self, signalNo, conc):
+        self.initLevels = conc * numpy.ones(self.gridDim,dtype=numpy.float32)
+        grid = self.signalLevel.reshape(self.gridDim)
+        grid[signalNo,:] = self.initLevels[signalNo]
 
 

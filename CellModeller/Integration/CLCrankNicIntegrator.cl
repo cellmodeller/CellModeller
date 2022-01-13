@@ -4,7 +4,7 @@ void userSignalRates(float gridVolume, float area, float volume, const int cellT
 {
     %(sigKernel)s
 }
-void userSpecRates(float gridVolume, float area, float volume, const int cellType, __global float* rates, __global float* species, __global const float* signals)
+void userSpecRates(float gridVolume, float area, float volume, const int cellType, const float effGrowth, const int stepNum, __global float* rates, __global float* species, __global const float* signals)
 {
     %(specKernel)s
 }
@@ -107,25 +107,29 @@ __kernel void setCellSignals(const int numSignals,
 }
 
 
-__kernel void speciesRates(const int numSignals,
+__kernel void speciesRates(const int stepnum,
+                           const int numSignals,
                            const int numSpecies,
                            const float gridVolume,
                            __global const float* areas,
                            __global const float* volumes,
                            __global const int* celltype,
+                           __global const float* effgrowth,
                            __global const float* cellSpecLevels,
                            __global const float* cellSignalLevels,
                            __global float* specRate)
 {
     int id = get_global_id(0);
+    int stepNum = stepnum;
     int sigbase = id*numSignals;
     int specbase = id*numSpecies;
     int cellType = celltype[id];
+    float effGrowth = effgrowth[id];
     __global const float* species = cellSpecLevels+specbase;
     __global const float* signals = cellSignalLevels+sigbase;
     __global float* rates = specRate+specbase;
 
-    userSpecRates(gridVolume, areas[id], volumes[id], cellType, rates, species, signals);
+    userSpecRates(gridVolume, areas[id], volumes[id], cellType, effGrowth, stepNum, rates, species, signals);
 }
 
 
@@ -270,25 +274,30 @@ __kernel void setCellSignalsImplicit(const int numSignals,
     }
 }
 
-__kernel void speciesRatesImplicit(const int numSignals,
+
+__kernel void speciesRatesImplicit(const int stepnum,
+                                   const int numSignals,
                                    const int numSpecies,
                                    const float gridVolume,
                                    __global const float* areas,
                                    __global const float* volumes,
                                    __global const int* celltype,
+                                   __global const float* effgrowth,
                                    __global float* cellSpecLevels,
                                    __global const float* cellSignalLevels,
                                    __global float* specRate)
 {
     int id = get_global_id(0);
+    int stepNum = stepnum;
     int sigbase = id*numSignals*2;
     int specbase = id*numSpecies;
     int cellType = celltype[id];
+    float effGrowth = effgrowth[id];
     __global float* species = cellSpecLevels+specbase;
     __global const float* signals = cellSignalLevels+sigbase;
     __global float* rates = specRate+specbase;
 
-    userSpecRates(gridVolume, areas[id], volumes[id], cellType, rates, species, signals);
+    userSpecRates(gridVolume, areas[id], volumes[id], cellType, effGrowth, stepNum, rates, species, signals);
 }
 
 __kernel void signalRatesImplicit(const int numSignals,
