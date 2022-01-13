@@ -7,7 +7,8 @@ import shutil
 from CellModeller.Simulator import Simulator
 os.environ['PYOPENCL_COMPILER_OUTPUT'] = '1'
 
-max_cells = 7000
+
+max_cells = 40000
 cell_buffer = 256
 
 def simulate(modfilename, platform, device, steps=10):
@@ -15,8 +16,10 @@ def simulate(modfilename, platform, device, steps=10):
     modname = str(name).split('.')[0]
     sys.path.append(path)
     sim = Simulator(modname, 0.025, clPlatformNum=platform, clDeviceNum=device, saveOutput=True)
-    while len(sim.cellStates) < max_cells-cell_buffer:
+    #while len(sim.cellStates) < max_cells-cell_buffer:
+    while sim.stepNum < 1000 and len(sim.cellStates) < max_cells-cell_buffer :
         sim.step()
+
 
 def main():
     # Get module name to load
@@ -31,18 +34,19 @@ def main():
         # User input of OpenCL setup
         import pyopencl as cl
         # Platform
-        platforms = cl.get_platforms()
-        print("Select OpenCL platform:")
-        for i in range(len(platforms)):
-            print(('press '+str(i)+' for '+str(platforms[i])))
-        platnum = int(eval(input('Platform Number: ')))
-
+        #platforms = cl.get_platforms(0)
+        #print("Select OpenCL platform:")
+        #for i in range(len(platforms)):
+        #    print(('press '+str(i)+' for '+str(platforms[i])))
+        #platnum = int(eval(input('Platform Number: ')))
+        platnum = 0
         # Device
-        devices = platforms[platnum].get_devices()
-        print("Select OpenCL device:")
-        for i in range(len(devices)):
-            print(('press '+str(i)+' for '+str(devices[i])))
-        devnum = int(eval(input('Device Number: ')))
+        #devices = platforms[0].get_devices()
+        #print("Select OpenCL device:")
+        #for i in range(len(devices)):
+        #    print(('press '+str(i)+' for '+str(devices[i])))
+        #devnum = int(eval(input('Device Number: ')))
+        devnum = 1
     else:
         platnum = int(sys.argv[2])
         devnum = int(sys.argv[3])

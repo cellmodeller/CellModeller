@@ -24,7 +24,7 @@ class CellModellerPDFGenerator(Canvas):
         self.bg_color = bg_color
         Canvas.__init__(self, name)
         self.network = network
-    
+
     def setup_canvas(self, name, world, page, page_center):
         worldx,worldy = world
         pagex,pagey = page
@@ -121,7 +121,9 @@ for it in cs:
 get_current_contacts(G, data)
 
 print(("num_contacts = " + str(networkx.number_of_edges(G))))
-degrees = list(G.degree().values())
+#degrees = list(G.degree().values())
+degrees = G.degree().values()
+
 print(("mean degree = " + str(np.mean(degrees))))
 
 if list(networkx.get_edge_attributes(G,'color').items()):
@@ -138,4 +140,3 @@ pdf.draw_frame(oname, world, page, center)
 
 #from this, I want the spatial position of every contact, and the graph of the cells that each cell is touching
 #This can be all in one data structure - a graph where each vertex has a position, and each node has a cellState
-
