@@ -183,6 +183,7 @@ visualised.
         if integ:
             self.integ = integ
             self.integ.setRegulator(reg)
+            self.reg.setIntegrator(integ)
 
         if self.sig:
             self.sig.setBiophysics(phys)
@@ -403,7 +404,11 @@ visualised.
         if self.sig and self.integ:
             data['sigGrid'] = self.integ.signalLevel
             data['sigData'] = self.integ.cellSigLevels
-            data['sigGrid'] = self.integ.signalLevel
+        try:
+            self.countHGT
+            data['HGTevents'] = self.HGTevents
+        except AttributeError: pass
+        
         pickle.dump(data, outfile, protocol=-1)
         #output csv file with cell pos,dir,len - sig?
 
