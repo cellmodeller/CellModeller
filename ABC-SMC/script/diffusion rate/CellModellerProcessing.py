@@ -227,12 +227,4 @@ def starting_process(input_directory, cell_types):
         df.insert(column_num, CellType, dataframe['Type'][cnt], True)
         column_num += 1
 
-    #print(df)
     return df
-
-'''
-if __name__ == '__main__':
-    input_directory = '../../unit test/diffusion rate/temp/data/Q9GAFC'
-    cell_types = ['RFP', 'YFP']
-    starting_process(input_directory, cell_types)
-    '''
