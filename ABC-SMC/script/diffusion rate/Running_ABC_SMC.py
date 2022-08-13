@@ -1,7 +1,6 @@
 # Approximate Bayesian Computation with pyabc
 import pyabc
 import sys
-
 sys.path.append('../../../Scripts/')
 from CellModeller.Simulator import Simulator
 import os
@@ -77,7 +76,7 @@ def simulate(modfilename, platform, device, output_name, steps=50):
 def abc_simulation(params):
     # return loaded csv file of sim data
     # Execute CellModeller simulation with given parameters
-    script_name = script_name = ''.join(
+    script_name = ''.join(
         random.SystemRandom().choice(string.ascii_uppercase + string.digits) for _ in range(6))
     print(script_name)
 
