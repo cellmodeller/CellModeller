@@ -294,7 +294,7 @@ class CLBacterium:
         self.ct_stiff_dev = cl_array.zeros(self.queue, ct_geom, numpy.float32)
         self.ct_overlap_dev = cl_array.zeros(self.queue, ct_geom, numpy.float32)
         self.neighbours = numpy.zeros(ct_geom, numpy.int32)
-        self.cell_cts = {}#numpy.zeros(self.max_cells, numpy.int32)
+        self.cell_cts = numpy.zeros(self.max_cells, numpy.int32)
 
         # where the contacts pointing to this cell are collected
         self.cell_tos = numpy.zeros(ct_geom, numpy.int32)
