@@ -54,6 +54,9 @@ visualised.
         # No cells yet, initialise indices and empty lists/dicts, zero counters
         self._next_id = 1
         self._next_idx = 0
+        self.live_idxs = numpy.zeros((0,), dtype=numpy.int32)
+        self.dead_idxs = numpy.zeros((0,), dtype=numpy.int32)
+        self.arr_end = 0
         self.idToIdx = {}
         self.idxToId = {}
         self.cellStates = {}
@@ -154,9 +157,14 @@ visualised.
     ## Get the index (into flat arrays) of the next cell to be created
     def next_idx(self):
         idx = self._next_idx
-        self._next_idx += 1
+        if len(self.dead_idxs)>0:
+            self._next_idx = self.dead_idxs[0]
+            self.dead_idxs = self.dead_idxs[1:]
+        else:
+            self.arr_end += 1
+            self._next_idx = self.arr_end
+        self.live_idxs = numpy.append(self.live_idxs, idx)
         return idx
-
 
     # Currently, the user-defined regulation module creates the
     # biophysics, regulation, and signalling objects in a function
@@ -183,7 +191,6 @@ visualised.
         if integ:
             self.integ = integ
             self.integ.setRegulator(reg)
-            self.reg.setIntegrator(integ)
 
         if self.sig:
             self.sig.setBiophysics(phys)
@@ -278,6 +285,19 @@ visualised.
         # Recreate models via module setup
         self.module.setup(self)
 
+    def kill(self, state):
+        #print("KILLING "+str(state.idx)+" "+str(state.id))
+        self.live_idxs = self.live_idxs[self.live_idxs!=state.idx]
+        self.dead_idxs = numpy.append(self.dead_idxs, state.idx)
+        self.phys.kill(state)
+        if self.integ:
+            self.integ.kill(state)
+        self.reg.kill(state)
+        id = state.id
+        del self.cellStates[id]
+        del self.idToIdx[id]
+        del self.idxToId[state.idx]
+
 
     # Divide a cell to two daughter cells
     def divide(self, pState):
@@ -354,7 +374,9 @@ visualised.
         states = dict(self.cellStates)
         for (cid,state) in list(states.items()):
             state.time = self.stepNum * self.dt
-            if state.divideFlag:
+            if state.killFlag:
+                self.kill(state)
+            elif state.divideFlag:
                 self.divide(state) #neighbours no longer current
 
         self.phys.set_cells()
@@ -404,11 +426,7 @@ visualised.
         if self.sig and self.integ:
             data['sigGrid'] = self.integ.signalLevel
             data['sigData'] = self.integ.cellSigLevels
-        try:
-            self.countHGT
-            data['HGTevents'] = self.HGTevents
-        except AttributeError: pass
-        
+            data['sigGrid'] = self.integ.signalLevel
         pickle.dump(data, outfile, protocol=-1)
         #output csv file with cell pos,dir,len - sig?
 
