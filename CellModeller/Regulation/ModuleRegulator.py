@@ -13,7 +13,7 @@ class ModuleRegulator:
         self.signal = signalling
         # Simulator is responsible for loading the model as a python module
         # This class uses the module imported by Simulator
-        self.module = sim.module
+        self.module = sim.module 
 
     def addCell(self, cellState, **kwargs):
         self.module.init(cellState, **kwargs)
@@ -50,18 +50,19 @@ class ModuleRegulator:
             self.sim.antiB
             if self.sim.tLoad == self.sim.stepNum:
                 self.integ.applySignal(self.sim.antiB,self.sim.conc)
+            if self.sim.tLoad2 == self.sim.stepNum:
+                self.integ.applySignal(self.sim.antiB,self.sim.conc2)
         except AttributeError: pass
         
         try:
             try:
                 self.sim.countHGT
-                self.module.update(self.cellStates,self.sim)
-            except AttributeError:
                 self.module.update(self.cellStates,self.sim.stepNum)
+            except AttributeError:
+                self.module.update(self.cellStates)
         except Exception as e:
             print("Problem with regulation module " + self.modName)
             print(e)
-
 
     def divide(self, pState, d1State, d2State):
         # Call the module's optional divide function
@@ -69,4 +70,5 @@ class ModuleRegulator:
         if callable(divfunc):
             divfunc(pState, d1State, d2State)
 
-
+    def kill(self, state):
+        pass
