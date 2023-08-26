@@ -246,6 +246,7 @@ visualised.
         id_map = {}
         idmax = 0
         for id,state in cellStates.items():
+            self.live_idxs = numpy.append(self.live_idxs,state.idx)
             idx_map[state.id] = state.idx
             id_map[state.idx] = state.id
             if id>idmax:
@@ -416,6 +417,8 @@ visualised.
         data['lineage'] = self.lineage
         data['moduleStr'] = self.moduleOutput
         data['moduleName'] = self.moduleName
+        if self.countHGT:
+            data['HGTevents'] = self.HGTevents
         if self.integ:
         #    print("Writing new pickle format")
             data['specData'] = self.integ.levels
