@@ -57,7 +57,7 @@ class ModuleRegulator:
         try:
             try:
                 self.sim.countHGT
-                self.module.update(self.cellStates,self.sim.stepNum)
+                self.module.update(self.cellStates,self.sim)
             except AttributeError:
                 self.module.update(self.cellStates)
         except Exception as e:
