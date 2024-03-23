@@ -1,7 +1,6 @@
 import copy
 import os.path
 import sys
-import imp
 
 class ModuleRegulator:
     def __init__(self, sim, biophys=None, signalling=None):
