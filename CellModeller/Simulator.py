@@ -7,7 +7,6 @@ import pickle
 import csv
 import numpy
 import inspect
-import imp
 import configparser
 import importlib
 
@@ -77,7 +76,8 @@ visualised.
         self.moduleStr = moduleStr # Import stored python code string (from a pickle usually)
         if self.moduleStr:
             print("Importing model %s from string"%(self.moduleName))
-            self.module = imp.new_module(moduleName)
+            module_spec = importlib.util.spec_from_loader(moduleName, loader=None)
+            self.module = importlib.util.import_from_spec(module_spec)
             exec(moduleStr, self.module.__dict__)
         else:
             # In case the moduleName is a path to a python file:
