@@ -1,5 +1,6 @@
 from CellModeller.Biophysics.BacterialModels.Geometry import *
 
+import time
 import numpy as np
 from scipy.spatial import cKDTree
 
@@ -26,15 +27,55 @@ class Bacterium:
         pass
 
     def step(self, dt):
+        timings = {}
+
+        # Profile grow_cells
+        t0 = time.perf_counter()
         self.grow_cells(dt)
+        timings['grow_cells'] = time.perf_counter() - t0
+
+        # Profile find_neighbours
+        t0 = time.perf_counter()
         self.find_neighbours()
-        for _ in range(self.sub_steps):
-            self.compute_contacts()
+        timings['find_neighbours'] = time.perf_counter() - t0
+
+        t0 = time.perf_counter()
+        self.compute_contacts(update=False)
+        timings['compute_contacts_init'] = time.perf_counter() - t0
+
+        for i in range(self.sub_steps):
+            # Profile compute_contacts
+            t0 = time.perf_counter()
+            self.compute_contacts(update=True)
+            timings[f'compute_contacts_{i}'] = time.perf_counter() - t0
+
+            # Profile compute_torques
+            t0 = time.perf_counter()
             self.compute_torques()
+            timings[f'compute_torques_{i}'] = time.perf_counter() - t0
+
+            # Profile compute_forces
+            t0 = time.perf_counter()
             self.compute_forces()
+            timings[f'compute_forces_{i}'] = time.perf_counter() - t0
+
+            # Profile compute_compression
+            t0 = time.perf_counter()
             self.compute_compression()
+            timings[f'compute_compression_{i}'] = time.perf_counter() - t0
+
+            # Profile integrate
+            t0 = time.perf_counter()
             self.integrate(dt / self.sub_steps)
+            timings[f'integrate_{i}'] = time.perf_counter() - t0
+
+        # Optionally: print timings
+        #print("Step timing profile:")
+        #for name, t in timings.items():
+        #    print(f"  {name}: {t:.6f} s")
+
         return True
+
 
     def grow_cells(self, dt):
         cells = self.sim.cellStates
@@ -62,11 +103,13 @@ class Bacterium:
             # Map indices back to cell IDs
             cells[cid].neighbours = [cid_list[j] for j in indices]
 
-    def compute_contacts(self):
+    def compute_contacts(self, update=False):
         cells = self.sim.cellStates
         for cid, cell in cells.items():
+            neighbours = cell.neighbours if not update else cell.contact_ids
+            cell.contact_ids = []
             cell.contacts = []
-            for nbr_cid in cell.neighbours:
+            for nbr_cid in neighbours:
                 r_a = np.array(cell.pos)
                 r_b = np.array(cells[nbr_cid].pos)
                 len_a = cell.length
@@ -103,6 +146,7 @@ class Bacterium:
                         "normal2": normal2
                         }
                     cell.contacts.append(contact)
+                    cell.contact_ids.append(nbr_cid)
 
     def compute_torques(self):
         cells = self.sim.cellStates
@@ -195,7 +239,7 @@ class Bacterium:
         cells = self.sim.cellStates
         for cid, cell in cells.items():
             # --- Cell compression ---
-            cell.length += np.min(cell.compression * dt / self.gamma, 0)
+            cell.length += np.min(cell.compression * dt, 0)
 
             # --- Linear motion (viscous drag) ---
             force = getattr(cell, 'force', np.zeros(3))

@@ -1,6 +1,7 @@
 import random
 from CellModeller.Regulation.ModuleRegulator import ModuleRegulator
 from CellModeller.Biophysics.BacterialModels.CLBacterium import CLBacterium
+from CellModeller.Biophysics.BacterialModels.Bacterium import Bacterium
 from CellModeller.GUI import Renderers
 import numpy
 import math
@@ -8,8 +9,11 @@ import math
 N0 = 10
 
 def setup(sim):
+    sim.dt = 0.01
+
     # Set biophysics, signalling, and regulation models
-    biophys = CLBacterium(sim, jitter_z=False, gamma = 100, max_cells=100000, max_planes=1)
+    #biophys = CLBacterium(sim, jitter_z=False, gamma = 100, max_cells=100000, max_planes=1)
+    biophys = Bacterium(sim, gamma=100, muA=1, sub_steps=10)
 
     regul = ModuleRegulator(sim, sim.moduleName)	# use this file for reg too
     # Only biophys and regulation
