@@ -1,6 +1,6 @@
 import numpy as np
 
-EPSILON = 0.01
+EPSILON = 0.1
 
 # Multiply a 3x3 matrix and a 3-vector
 def matmul(m: np.ndarray, v: np.ndarray) -> np.ndarray:
@@ -133,7 +133,7 @@ def closest_points_on_segments(r_a, r_b, a, b, len_a, len_b):
     t_a2 = t_b2 = 0.0
     two_pts = False
 
-    if np.sqrt(np.abs(denom)) > EPSILON:
+    if np.sqrt(denom) > EPSILON:
         # non-parallel lines
         t_a0 = (a_dot_r - b_dot_r * a_dot_b) / denom
         t_b0 = (a_dot_r * a_dot_b - b_dot_r) / denom

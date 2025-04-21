@@ -691,7 +691,7 @@ class CLBacterium:
         da = numpy.array(state.dir)
         state.ends = (pa-da*state.length*0.5, pa+da*state.length*0.5)
         # Length vel is linearisation of exponential growth
-        self.cell_growth_rates[i] = state.growthRate*state.length
+        self.cell_growth_rates[i] = state.growthRate * (state.length + state.radius * 2)
 
 
     def update_grid(self):

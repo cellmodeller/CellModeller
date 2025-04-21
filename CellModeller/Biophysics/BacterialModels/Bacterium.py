@@ -5,11 +5,12 @@ import numpy as np
 from scipy.spatial import cKDTree
 
 DELTA = 0.01
+POINT = 0.01
 
 class Bacterium:
-    def __init__(self, sim, gamma, muA, sub_steps=1):
+    def __init__(self, sim, gamma_factor, muA, sub_steps=1):
         self.sim = sim
-        self.gamma = gamma
+        self.gamma_factor = gamma_factor
         self.muA = muA
         self.sub_steps = sub_steps
 
@@ -27,12 +28,14 @@ class Bacterium:
         pass
 
     def step(self, dt):
+        self.gamma = 1
+
         timings = {}
 
         # Profile grow_cells
-        t0 = time.perf_counter()
-        self.grow_cells(dt)
-        timings['grow_cells'] = time.perf_counter() - t0
+        #t0 = time.perf_counter()
+        #self.grow_cells(dt)
+        #timings['grow_cells'] = time.perf_counter() - t0
 
         # Profile find_neighbours
         t0 = time.perf_counter()
@@ -69,10 +72,11 @@ class Bacterium:
             self.integrate(dt / self.sub_steps)
             timings[f'integrate_{i}'] = time.perf_counter() - t0
 
+            self.gamma *= self.gamma_factor
         # Optionally: print timings
-        #print("Step timing profile:")
-        #for name, t in timings.items():
-        #    print(f"  {name}: {t:.6f} s")
+        print("Step timing profile:")
+        for name, t in timings.items():
+            print(f"  {name}: {t:.6f} s")
 
         return True
 
@@ -95,7 +99,7 @@ class Bacterium:
         tree = cKDTree(pos_array)
 
         for i, cid in enumerate(cid_list):
-            radius = 5 # 4 * cells[cid].radius + 2 * cells[cid].length
+            radius = 10 # 4 * cells[cid].radius + 2 * cells[cid].length
             # Find neighbors within given radius
             indices = tree.query_ball_point(pos_array[i], r=radius)
             # Exclude self (i)
@@ -106,9 +110,10 @@ class Bacterium:
     def compute_contacts(self, update=False):
         cells = self.sim.cellStates
         for cid, cell in cells.items():
-            neighbours = cell.neighbours if not update else cell.contact_ids
-            cell.contact_ids = []
-            cell.contacts = []
+            neighbours = cell.neighbours # if not update else cell.contact_ids
+            if not update:
+                cell.contact_ids = []
+                cell.contacts = {}
             for nbr_cid in neighbours:
                 r_a = np.array(cell.pos)
                 r_b = np.array(cells[nbr_cid].pos)
@@ -117,7 +122,7 @@ class Bacterium:
                 rad_a = cell.radius
                 rad_b = cells[nbr_cid].radius
                 centre_dist = np.linalg.norm(r_a - r_b)
-                if centre_dist > len_a/2 + rad_a + len_b/2 + rad_b:
+                if centre_dist > len_a/2 + rad_a + len_b/2 + rad_b and nbr_cid not in cell.contact_ids:
                     # Cell too far away
                     continue
                 a = np.array(cell.dir)
@@ -130,11 +135,14 @@ class Bacterium:
                 if two_pts:
                     normal2 = p_b2 - p_a2
                     normal2 = normalize(normal2)
+                    weight = 2 # + np.abs(np.dot(p_a - p_a2, a))
                 else:
                     normal2 = None
+                    weight = 1
+
                 if dist < DELTA:
                     contact = {
-                        "nbr_cid": nbr_cid, 
+                        "nbr_cid": nbr_cid,
                         "p_a": p_a, 
                         "p_b": p_b, 
                         "p_a2": p_a2, 
@@ -143,16 +151,18 @@ class Bacterium:
                         "dist": dist,
                         "dist2": dist2,
                         "normal": normal,
-                        "normal2": normal2
+                        "normal2": normal2,
+                        "weight": weight
                         }
-                    cell.contacts.append(contact)
-                    cell.contact_ids.append(nbr_cid)
+                    cell.contacts[nbr_cid] = contact # .append(contact)
+                    if nbr_cid not in cell.contact_ids:
+                        cell.contact_ids.append(nbr_cid)
 
     def compute_torques(self):
         cells = self.sim.cellStates
         for cid, cell in cells.items():
             total_torque = np.zeros(3)
-            for contact in cell.contacts:
+            for nbr_cid, contact in cell.contacts.items():
                 p_a = contact["p_a"]
                 p_b = contact["p_b"]
                 two_pts = contact["two_pts"]
@@ -162,9 +172,10 @@ class Bacterium:
                 dist2 = contact["dist2"]
                 normal = contact["normal"]
                 normal2 = contact["normal2"]
+                weight = contact["weight"]
 
                 # Vector from contact point on cell A to B (force direction)
-                force = self.gamma * normal * dist
+                force = weight * self.gamma * normal * dist # min(dist, DELTA)
                 
                 # Lever arm from center of cell to point of contact
                 r = p_a - np.array(cell.pos)
@@ -176,7 +187,7 @@ class Bacterium:
 
                 # If two contact points exist, compute second torque
                 if two_pts:
-                    force2 = self.gamma * normal2 * dist2
+                    force2 = weight * self.gamma * normal2 * dist2 # min(dist2, DELTA)
                     r2 = p_a2 - np.array(cell.pos)
                     torque2 = np.cross(r2, force2)
                     total_torque += torque2
@@ -188,7 +199,7 @@ class Bacterium:
         cells = self.sim.cellStates
         for cid, cell in cells.items():
             total_force = np.zeros(3)
-            for contact in cell.contacts:
+            for nbr_cid, contact in cell.contacts.items():
                 p_a = contact["p_a"]
                 p_b = contact["p_b"]
                 two_pts = contact["two_pts"]
@@ -198,12 +209,13 @@ class Bacterium:
                 dist2 = contact["dist2"]
                 normal = contact["normal"]
                 normal2 = contact["normal2"]
+                weight = contact["weight"]
 
-                force = self.gamma * dist * normal
+                force = weight * self.gamma * normal * dist # min(dist, DELTA)
                 total_force += force
 
                 if two_pts:
-                    force2 = self.gamma * dist2 * normal2
+                    force2 = weight * self.gamma * normal2 * dist2 # min(dist2, DELTA)
                     total_force += force2
 
             # Store the net force
@@ -216,7 +228,7 @@ class Bacterium:
             pos = np.array(cell.pos)
             net_compression = 0.0
 
-            for contact in cell.contacts:
+            for nbr_cid, contact in cell.contacts.items():
                 # Force at first contact point
                 f1 = self.gamma * contact["dist"] * contact["normal"]
                 r1 = contact["p_a"] - pos
@@ -239,7 +251,8 @@ class Bacterium:
         cells = self.sim.cellStates
         for cid, cell in cells.items():
             # --- Cell compression ---
-            cell.length += np.min(cell.compression * dt, 0)
+            length_force = cell.length * cell.growthRate * self.gamma # np.maximum(cell.length * cell.growthRate * self.gamma + cell.compression, 0)
+            length_velocity = length_force / self.gamma / self.muA / cell.length
 
             # --- Linear motion (viscous drag) ---
             force = getattr(cell, 'force', np.zeros(3))
@@ -250,18 +263,23 @@ class Bacterium:
             torque = getattr(cell, 'torque', np.zeros(3))
             dir_vec = normalize(np.array(cell.dir))
             length = cell.length
+            radius = cell.radius
 
             # Inverse inertia tensor in world coordinates
-            I_inv = cyl_inv_inertia_tensor(self.muA, length, dir_vec)
+            I_inv = cyl_inv_inertia_tensor(self.muA, length + 2 * radius, dir_vec)
 
             # Angular velocity: ω = I⁻¹ * τ
             ang_vel = matmul(I_inv, torque)
             theta = np.linalg.norm(ang_vel) * dt
-
+            #theta = np.clip(theta, -0.01, 0.01)
             if theta > 1e-8:
                 axis = ang_vel / np.linalg.norm(ang_vel)
                 new_dir = rot(axis, theta, dir_vec)
                 cell.dir = normalize(new_dir)
+
+            # Compression and growth
+            cell.length += length_velocity * dt
+
             self.compute_ends(cell)
             cell.volume = cell.length # * np.pi * cell.radius ** 2
 

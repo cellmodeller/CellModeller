@@ -7,46 +7,57 @@ import numpy
 import math
 
 N0 = 10
+colors = {0: [1, 0, 0], 1: [0, 1, 0]}
+radius = {0: 0.5, 1: 1}
 
 def setup(sim):
-    sim.dt = 0.01
+    sim.dt = 0.025
 
     # Set biophysics, signalling, and regulation models
-    #biophys = CLBacterium(sim, jitter_z=False, gamma = 100, max_cells=100000, max_planes=1)
-    biophys = Bacterium(sim, gamma=100, muA=1, sub_steps=10)
+    #biophys = CLBacterium(sim, jitter_z=False, gamma = 1, max_cells=100000)
+    biophys = Bacterium(sim, gamma_factor=5, muA=2, sub_steps=3)
 
     regul = ModuleRegulator(sim, sim.moduleName)	# use this file for reg too
     # Only biophys and regulation
     sim.init(biophys, regul, None, None)
 
-    #biophys.addPlane((0,0,0),(0,0,1),1.0) #Base plane
+    #biophys.addPlane((0,0,0),(0,0,1),1.0) #Base plane  
     #biophys.addPlane((10,0,0),(-1,0,0),1.0)
     #biophys.addPlane((-10,0,0),(1,0,0),1.0)
     #biophys.addPlane((0,10,0),(0,-1,0),1.0)
     #biophys.addPlane((0,-10,0),(0,1,0),1.0)
 
-    sim.addCell(cellType=0, pos=(0,0,0))
-
+    for _ in range(1):
+        ct = 0 # (random.uniform(0, 1) > 0.5) * 1
+        R = 0 # random.uniform(0, 100)
+        theta = random.uniform(0, 2 * numpy.pi)
+        pos = R * numpy.array([numpy.cos(theta), numpy.sin(theta), 0])
+        dir = numpy.random.uniform(0, 100, size=(3,))
+        dir[2] = 0
+        dir = dir / numpy.linalg.norm(dir)
+        sim.addCell(cellType=ct, pos=tuple(pos), dir=tuple(dir), rad=radius[ct])
+    
     # Add some objects to draw the models
     therenderer = Renderers.GLBacteriumRenderer(sim)
     sim.addRenderer(therenderer)
     sim.pickleSteps = 1
 
 def init(cell):
-    cell.targetVol = 3.5 + random.uniform(0.0,0.5)
+    cell.targetVol = 5.5 + random.uniform(0.0,0.5) if cell.cellType==1 else 3.5 + random.uniform(0.0,0.5)
     cell.growthRate = 1.0
     cell.n_a = N0//2
     cell.n_b = N0 - cell.n_a
 
 def update(cells):
     for (id, cell) in cells.items():
-        cell.color = [0.1, cell.n_a/3.0, cell.n_b/3.0]
+        #cell.color = [0.1, cell.n_a/3.0, cell.n_b/3.0]
+        cell.color = colors[cell.cellType]
         if cell.volume > cell.targetVol:
             cell.divideFlag = True
 
 def divide(parent, d1, d2):
-    d1.targetVol = 3.5 + random.uniform(0.0,0.5)
-    d2.targetVol = 3.5 + random.uniform(0.0,0.5)
+    d1.targetVol = 5.5 + random.uniform(0.0,0.5) if d1.cellType==1 else 3.5 + random.uniform(0.0,0.5)
+    d2.targetVol = 5.5 + random.uniform(0.0,0.5) if d2.cellType==1 else 3.5 + random.uniform(0.0,0.5)
     plasmids = [0]*parent.n_a*2 + [1]*parent.n_b*2
     random.shuffle(plasmids)
     d1.n_a = 0
