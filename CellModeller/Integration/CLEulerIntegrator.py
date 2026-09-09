@@ -10,6 +10,8 @@ class CLEulerIntegrator:
     
     def __init__(self, sim, nSpecies, maxCells, regul=None):
         self.sim = sim
+        from CellModeller.PartitionedGPU import array_module
+        self.device_arrays = array_module(sim)
         self.dt = self.sim.dt
         self.regul = regul
 
@@ -80,16 +82,16 @@ class CLEulerIntegrator:
         self.initKernels()
 
     def initArrays(self):
-        self.specLevel_dev = cl_array.zeros(self.queue, (self.maxCells,self.nSpecies), dtype=numpy.float32)
-        self.specRate_dev = cl_array.zeros(self.queue, (self.maxCells,self.nSpecies), dtype=numpy.float32)
+        self.specLevel_dev = self.device_arrays.zeros(self.queue, (self.maxCells,self.nSpecies), dtype=numpy.float32)
+        self.specRate_dev = self.device_arrays.zeros(self.queue, (self.maxCells,self.nSpecies), dtype=numpy.float32)
 
         self.celltype = numpy.zeros((self.maxCells,), dtype=numpy.int32)
-        self.celltype_dev = cl_array.zeros(self.queue, (self.maxCells,),dtype=numpy.int32)
+        self.celltype_dev = self.device_arrays.zeros(self.queue, (self.maxCells,),dtype=numpy.int32)
     
         self.effgrow = numpy.zeros((self.maxCells,), dtype=numpy.float32)
-        self.effgrow_dev = cl_array.zeros(self.queue, (self.maxCells,), dtype=numpy.float32)
+        self.effgrow_dev = self.device_arrays.zeros(self.queue, (self.maxCells,), dtype=numpy.float32)
     
-        #self.pos_dev = cl_array.zeros(self.queue, (self.maxCells,), dtype=vec.float4)
+        #self.pos_dev = self.device_arrays.zeros(self.queue, (self.maxCells,), dtype=vec.float4)
 
     def initKernels(self):
         # Get user defined kernel source
@@ -99,6 +101,8 @@ class CLEulerIntegrator:
         # substitute user defined kernel code, and number of signals
         kernel_src = kernel_src%(specRateKernel)
         self.program = cl.Program(self.context, kernel_src).build(cache_dir=False)
+        from CellModeller.MultiGPU import distribute_program, EULER_LAYOUTS
+        self.program = distribute_program(self.sim, self.program, EULER_LAYOUTS, 'CLEulerIntegrator.', kernel_src)
 
 
     def dydt(self):

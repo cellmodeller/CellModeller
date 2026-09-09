@@ -40,6 +40,8 @@ class CLBacterium:
 
         self.frame_no = 0
         self.simulator = simulator
+        from CellModeller.PartitionedGPU import array_module
+        self.device_arrays = array_module(simulator)
         self.regulator = None
         
         self.time_begin = time.time()
@@ -164,31 +166,44 @@ class CLBacterium:
         kernel_src = resource_string(__name__, 'CLBacterium.cl').decode()
 
         self.program = cl.Program(self.context, kernel_src).build(cache_dir=False)
+        from CellModeller.MultiGPU import distribute_program, PHYSICS_LAYOUTS
+        self.program = distribute_program(self.simulator, self.program, PHYSICS_LAYOUTS, 'physics.', kernel_src)
+        pool = getattr(self.simulator, 'CLDevicePool', None)
+        def elementwise(context, arguments, operation, name):
+            if getattr(pool, 'partitioned', False):
+                from CellModeller.PartitionedGPU import PartitionedElementwise
+                return PartitionedElementwise(pool, arguments, operation, name)
+            original = ElementwiseKernel(context, arguments, operation, name)
+            if pool is None:
+                return original
+            from CellModeller.MultiGPU import DistributedElementwise
+            return DistributedElementwise(original, pool, arguments, operation, name)
+
         # Some kernels that seem like they should be built into pyopencl...
-        self.vclearf = ElementwiseKernel(self.context, "float8 *v", "v[i]=0.0", "vecclearf")
-        self.vcleari = ElementwiseKernel(self.context, "int *v", "v[i]=0", "veccleari")
-        self.vadd = ElementwiseKernel(self.context, "float8 *res, const float8 *in1, const float8 *in2",
+        self.vclearf = elementwise(self.context, "float8 *v", "v[i]=0.0", "vecclearf")
+        self.vcleari = elementwise(self.context, "int *v", "v[i]=0", "veccleari")
+        self.vadd = elementwise(self.context, "float8 *res, const float8 *in1, const float8 *in2",
                                       "res[i] = in1[i] + in2[i]", "vecadd")
-        self.vsub = ElementwiseKernel(self.context, "float8 *res, const float8 *in1, const float8 *in2",
+        self.vsub = elementwise(self.context, "float8 *res, const float8 *in1, const float8 *in2",
                                           "res[i] = in1[i] - in2[i]", "vecsub")
-        self.vaddkx = ElementwiseKernel(self.context,
+        self.vaddkx = elementwise(self.context,
                                             "float8 *res, const float k, const float8 *in1, const float8 *in2",
                                             "res[i] = in1[i] + k*in2[i]", "vecaddkx")
-        self.vsubkx = ElementwiseKernel(self.context,
+        self.vsubkx = elementwise(self.context,
                                             "float8 *res, const float k, const float8 *in1, const float8 *in2",
                                             "res[i] = in1[i] - k*in2[i]", "vecsubkx")
-        self.vmulk = ElementwiseKernel(self.context,
+        self.vmulk = elementwise(self.context,
                                             "float8 *res, const float k, const float8 *in1",
                                             "res[i] = k*in1[i]", "vecmulk")
-        self.vnorm = ElementwiseKernel(self.context,
+        self.vnorm = elementwise(self.context,
                                             "float8 *res, const float8 *in1",
-                                            "res[i] = dot(in1[i], in1[i]", "vecnorm")
+                                            "res[i] = dot(in1[i].s0123, in1[i].s0123) + dot(in1[i].s4567, in1[i].s4567)", "vecnorm")
 
 
         # cell geometry kernels
-        self.calc_cell_area = ElementwiseKernel(self.context, "float* res, float* r, float* l",
+        self.calc_cell_area = elementwise(self.context, "float* res, float* r, float* l",
                                            "res[i] = 2.f*3.1415927f*r[i]*(2.f*r[i]+l[i])", "cell_area_kern")
-        self.calc_cell_vol = ElementwiseKernel(self.context, "float* res, float* r, float* l",
+        self.calc_cell_vol = elementwise(self.context, "float* res, float* r, float* l",
                                           "res[i] = 3.1415927f*r[i]*r[i]*(2.f*r[i]+l[i])", "cell_vol_kern")
 
         # A dot product as sum of float4 dot products -
@@ -196,124 +211,139 @@ class CLBacterium:
         # then computing dot
         # NB. Some openCLs seem not to implement dot(float8,float8) so split
         # into float4's
-        self.vdot = ReductionKernel(self.context, numpy.float32, neutral="0",
+        def dot_kernel(context):
+            return ReductionKernel(context, numpy.float32, neutral="0",
                 reduce_expr="a+b", map_expr="dot(x[i].s0123,y[i].s0123)+dot(x[i].s4567,y[i].s4567)",
                 arguments="__global float8 *x, __global float8 *y")
-    
+        def sum_kernel(context):
+            return ReductionKernel(context, numpy.int32, neutral="0",
+                                   reduce_expr="a+b", map_expr="x[i]", arguments="__global int *x")
+        self.vdot = dot_kernel(self.context)
+        self.sum_int = cl_array.sum
+        if pool is not None:
+            if getattr(pool, 'partitioned', False):
+                from CellModeller.PartitionedGPU import PartitionedReduction
+                self.vdot = PartitionedReduction(self.vdot, pool, numpy.float32, 'physics.dot', dot_kernel)
+                self.sum_int = PartitionedReduction(sum_kernel(self.context), pool, numpy.int32,
+                                                    'physics.contact_sum', sum_kernel)
+            else:
+                from CellModeller.MultiGPU import DistributedReduction
+                self.vdot = DistributedReduction(self.vdot, pool, numpy.float32, 'physics.dot')
+                self.sum_int = DistributedReduction(sum_kernel(self.context), pool, numpy.int32, 'physics.contact_sum')
 
     def init_data(self):
         """Set up the data OpenCL will store on the device."""
         # cell data
         cell_geom = (self.max_cells,)
         self.cell_centers = numpy.zeros(cell_geom, vec.float4)
-        self.cell_centers_dev = cl_array.zeros(self.queue, cell_geom, vec.float4)
+        self.cell_centers_dev = self.device_arrays.zeros(self.queue, cell_geom, vec.float4)
         self.cell_dirs = numpy.zeros(cell_geom, vec.float4)
-        self.cell_dirs_dev = cl_array.zeros(self.queue, cell_geom, vec.float4)
+        self.cell_dirs_dev = self.device_arrays.zeros(self.queue, cell_geom, vec.float4)
         self.cell_lens = numpy.zeros(cell_geom, numpy.float32)
-        self.cell_lens_dev = cl_array.zeros(self.queue, cell_geom, numpy.float32)
+        self.cell_lens_dev = self.device_arrays.zeros(self.queue, cell_geom, numpy.float32)
         self.pred_cell_centers = numpy.zeros(cell_geom, vec.float4)
-        self.pred_cell_centers_dev = cl_array.zeros(self.queue, cell_geom, vec.float4)
+        self.pred_cell_centers_dev = self.device_arrays.zeros(self.queue, cell_geom, vec.float4)
         self.pred_cell_dirs = numpy.zeros(cell_geom, vec.float4)
-        self.pred_cell_dirs_dev = cl_array.zeros(self.queue, cell_geom, vec.float4)
+        self.pred_cell_dirs_dev = self.device_arrays.zeros(self.queue, cell_geom, vec.float4)
         self.pred_cell_lens = numpy.zeros(cell_geom, numpy.float32)
-        self.pred_cell_lens_dev = cl_array.zeros(self.queue, cell_geom, numpy.float32)
+        self.pred_cell_lens_dev = self.device_arrays.zeros(self.queue, cell_geom, numpy.float32)
         self.cell_rads = numpy.zeros(cell_geom, numpy.float32)
-        self.cell_rads_dev = cl_array.zeros(self.queue, cell_geom, numpy.float32)
+        self.cell_rads_dev = self.device_arrays.zeros(self.queue, cell_geom, numpy.float32)
         self.cell_sqs = numpy.zeros(cell_geom, numpy.int32)
-        self.cell_sqs_dev = cl_array.zeros(self.queue, cell_geom, numpy.int32)
+        self.cell_sqs_dev = self.device_arrays.zeros(self.queue, cell_geom, numpy.int32)
         self.cell_n_cts = numpy.zeros(cell_geom, numpy.int32)
-        self.cell_n_cts_dev = cl_array.zeros(self.queue, cell_geom, numpy.int32)
+        self.cell_n_cts_dev = self.device_arrays.zeros(self.queue, cell_geom, numpy.int32)
         self.cell_dcenters = numpy.zeros(cell_geom, vec.float4)
-        self.cell_dcenters_dev = cl_array.zeros(self.queue, cell_geom, vec.float4)
+        self.cell_dcenters_dev = self.device_arrays.zeros(self.queue, cell_geom, vec.float4)
         self.cell_dangs = numpy.zeros(cell_geom, vec.float4)
-        self.cell_dangs_dev = cl_array.zeros(self.queue, cell_geom, vec.float4)
+        self.cell_dangs_dev = self.device_arrays.zeros(self.queue, cell_geom, vec.float4)
         self.cell_dlens = numpy.zeros(cell_geom, numpy.float32)
-        self.cell_dlens_dev = cl_array.zeros(self.queue, cell_geom, numpy.float32)
-        self.cell_target_dlens_dev = cl_array.zeros(self.queue, cell_geom, numpy.float32)
+        self.cell_dlens_dev = self.device_arrays.zeros(self.queue, cell_geom, numpy.float32)
+        self.cell_target_dlens_dev = self.device_arrays.zeros(self.queue, cell_geom, numpy.float32)
         self.cell_growth_rates = numpy.zeros(cell_geom, numpy.float32)
 
         # cell geometry calculated from l and r
-        self.cell_areas_dev = cl_array.zeros(self.queue, cell_geom, numpy.float32)
-        self.cell_vols_dev = cl_array.zeros(self.queue, cell_geom, numpy.float32)
-        self.cell_old_vols_dev = cl_array.zeros(self.queue, cell_geom, numpy.float32)
+        self.cell_areas_dev = self.device_arrays.zeros(self.queue, cell_geom, numpy.float32)
+        self.cell_vols_dev = self.device_arrays.zeros(self.queue, cell_geom, numpy.float32)
+        self.cell_old_vols_dev = self.device_arrays.zeros(self.queue, cell_geom, numpy.float32)
 
         # gridding
         self.sq_inds = numpy.zeros((self.max_sqs,), numpy.int32)
-        self.sq_inds_dev = cl_array.zeros(self.queue, (self.max_sqs,), numpy.int32)
+        self.sq_inds_dev = self.device_arrays.zeros(self.queue, (self.max_sqs,), numpy.int32)
         self.sorted_ids = numpy.zeros(cell_geom, numpy.int32)
-        self.sorted_ids_dev = cl_array.zeros(self.queue, cell_geom, numpy.int32)
+        self.sorted_ids_dev = self.device_arrays.zeros(self.queue, cell_geom, numpy.int32)
 
         # constraint planes
         plane_geom = (self.max_planes,)
         self.plane_pts = numpy.zeros(plane_geom, vec.float4)
-        self.plane_pts_dev = cl_array.zeros(self.queue, plane_geom, vec.float4)
+        self.plane_pts_dev = self.device_arrays.zeros(self.queue, plane_geom, vec.float4)
         self.plane_norms = numpy.zeros(plane_geom, vec.float4)
-        self.plane_norms_dev = cl_array.zeros(self.queue, plane_geom, vec.float4)
+        self.plane_norms_dev = self.device_arrays.zeros(self.queue, plane_geom, vec.float4)
         self.plane_coeffs = numpy.zeros(plane_geom, numpy.float32)
-        self.plane_coeffs_dev = cl_array.zeros(self.queue, plane_geom, numpy.float32)
+        self.plane_coeffs_dev = self.device_arrays.zeros(self.queue, plane_geom, numpy.float32)
 
         # constraint spheres
         sphere_geom = (self.max_spheres,)
         self.sphere_pts = numpy.zeros(sphere_geom, vec.float4)
-        self.sphere_pts_dev = cl_array.zeros(self.queue, sphere_geom, vec.float4)
+        self.sphere_pts_dev = self.device_arrays.zeros(self.queue, sphere_geom, vec.float4)
         self.sphere_rads = numpy.zeros(sphere_geom, numpy.float32)
-        self.sphere_rads_dev = cl_array.zeros(self.queue, sphere_geom, numpy.float32)
+        self.sphere_rads_dev = self.device_arrays.zeros(self.queue, sphere_geom, numpy.float32)
         self.sphere_coeffs = numpy.zeros(sphere_geom, numpy.float32)
-        self.sphere_coeffs_dev = cl_array.zeros(self.queue, sphere_geom, numpy.float32)
+        self.sphere_coeffs_dev = self.device_arrays.zeros(self.queue, sphere_geom, numpy.float32)
         self.sphere_norms = numpy.zeros(sphere_geom, numpy.float32)
-        self.sphere_norms_dev = cl_array.zeros(self.queue, sphere_geom, numpy.float32)
+        self.sphere_norms_dev = self.device_arrays.zeros(self.queue, sphere_geom, numpy.float32)
 
         # contact data
         ct_geom = (self.max_cells, self.max_contacts)
         self.ct_frs = numpy.zeros(ct_geom, numpy.int32)
-        self.ct_frs_dev = cl_array.zeros(self.queue, ct_geom, numpy.int32)
+        self.ct_frs_dev = self.device_arrays.zeros(self.queue, ct_geom, numpy.int32)
         self.ct_tos = numpy.zeros(ct_geom, numpy.int32)
-        self.ct_tos_dev = cl_array.zeros(self.queue, ct_geom, numpy.int32)
+        self.ct_tos_dev = self.device_arrays.zeros(self.queue, ct_geom, numpy.int32)
         self.ct_dists = numpy.zeros(ct_geom, numpy.float32)
-        self.ct_dists_dev = cl_array.zeros(self.queue, ct_geom, numpy.float32)
+        self.ct_dists_dev = self.device_arrays.zeros(self.queue, ct_geom, numpy.float32)
         self.ct_pts = numpy.zeros(ct_geom, vec.float4)
-        self.ct_pts_dev = cl_array.zeros(self.queue, ct_geom, vec.float4)
+        self.ct_pts_dev = self.device_arrays.zeros(self.queue, ct_geom, vec.float4)
         self.ct_norms = numpy.zeros(ct_geom, vec.float4)
-        self.ct_norms_dev = cl_array.zeros(self.queue, ct_geom, vec.float4)
-        self.ct_stiff_dev = cl_array.zeros(self.queue, ct_geom, numpy.float32)
-        self.ct_overlap_dev = cl_array.zeros(self.queue, ct_geom, numpy.float32)
+        self.ct_norms_dev = self.device_arrays.zeros(self.queue, ct_geom, vec.float4)
+        self.ct_stiff_dev = self.device_arrays.zeros(self.queue, ct_geom, numpy.float32)
+        self.ct_overlap_dev = self.device_arrays.zeros(self.queue, ct_geom, numpy.float32)
         self.neighbours = numpy.zeros(ct_geom, numpy.int32)
         self.cell_cts = numpy.zeros(self.max_cells, numpy.int32)
 
         # where the contacts pointing to this cell are collected
         self.cell_tos = numpy.zeros(ct_geom, numpy.int32)
-        self.cell_tos_dev = cl_array.zeros(self.queue, ct_geom, numpy.int32)
+        self.cell_tos_dev = self.device_arrays.zeros(self.queue, ct_geom, numpy.int32)
         self.n_cell_tos = numpy.zeros(cell_geom, numpy.int32)
-        self.n_cell_tos_dev = cl_array.zeros(self.queue, cell_geom, numpy.int32)
+        self.n_cell_tos_dev = self.device_arrays.zeros(self.queue, cell_geom, numpy.int32)
 
 
         # the constructed 'matrix'
         mat_geom = (self.max_cells*self.max_contacts,)
         self.ct_inds = numpy.zeros(mat_geom, numpy.int32)
-        self.ct_inds_dev = cl_array.zeros(self.queue, mat_geom, numpy.int32)
+        self.ct_inds_dev = self.device_arrays.zeros(self.queue, mat_geom, numpy.int32)
         self.ct_reldists = numpy.zeros(mat_geom, numpy.float32)
-        self.ct_reldists_dev = cl_array.zeros(self.queue, mat_geom, numpy.float32)
+        self.ct_reldists_dev = self.device_arrays.zeros(self.queue, mat_geom, numpy.float32)
 
         self.fr_ents = numpy.zeros(mat_geom, vec.float8)
-        self.fr_ents_dev = cl_array.zeros(self.queue, mat_geom, vec.float8)
+        self.fr_ents_dev = self.device_arrays.zeros(self.queue, mat_geom, vec.float8)
         self.to_ents = numpy.zeros(mat_geom, vec.float8)
-        self.to_ents_dev = cl_array.zeros(self.queue, mat_geom, vec.float8)
+        self.to_ents_dev = self.device_arrays.zeros(self.queue, mat_geom, vec.float8)
         
 
         # vectors and intermediates
         self.deltap = numpy.zeros(cell_geom, vec.float8)
-        self.deltap_dev = cl_array.zeros(self.queue, cell_geom, vec.float8)
+        self.deltap_dev = self.device_arrays.zeros(self.queue, cell_geom, vec.float8)
         self.Mx = numpy.zeros(mat_geom, numpy.float32)
-        self.Mx_dev = cl_array.zeros(self.queue, mat_geom, numpy.float32)
+        self.Mx_dev = self.device_arrays.zeros(self.queue, mat_geom, numpy.float32)
         self.BTBx = numpy.zeros(cell_geom, vec.float8)
-        self.BTBx_dev = cl_array.zeros(self.queue, cell_geom, vec.float8)
-        self.Minvx_dev = cl_array.zeros(self.queue, cell_geom, vec.float8)
+        self.BTBx_dev = self.device_arrays.zeros(self.queue, cell_geom, vec.float8)
+        self.Minvx_dev = self.device_arrays.zeros(self.queue, cell_geom, vec.float8)
 
         # CGS intermediates
-        self.p_dev = cl_array.zeros(self.queue, cell_geom, vec.float8)
-        self.Ap_dev = cl_array.zeros(self.queue, cell_geom, vec.float8)
-        self.res_dev = cl_array.zeros(self.queue, cell_geom, vec.float8)
-        self.rhs_dev = cl_array.zeros(self.queue, cell_geom, vec.float8)
+        self.p_dev = self.device_arrays.zeros(self.queue, cell_geom, vec.float8)
+        self.Ap_dev = self.device_arrays.zeros(self.queue, cell_geom, vec.float8)
+        self.res_dev = self.device_arrays.zeros(self.queue, cell_geom, vec.float8)
+        self.rhs_dev = self.device_arrays.zeros(self.queue, cell_geom, vec.float8)
     
 
     def load_from_cellstates(self, cell_states):
@@ -475,8 +505,8 @@ class CLBacterium:
         self.cell_n_cts[0:self.n_cells] = self.cell_n_cts_dev[0:self.n_cells].get()
 
     def matrixTest(self):
-        x_dev = cl_array.zeros(self.queue, (self.n_cells,), vec.float8)
-        Ax_dev = cl_array.zeros(self.queue, (self.n_cells,), vec.float8)
+        x_dev = self.device_arrays.zeros(self.queue, (self.n_cells,), vec.float8)
+        Ax_dev = self.device_arrays.zeros(self.queue, (self.n_cells,), vec.float8)
         opstring = ''
         for i in range(self.n_cells):
             x = numpy.zeros((self.n_cells,), vec.float8)
@@ -581,6 +611,9 @@ class CLBacterium:
         # redefine gridding based on the range of cell positions
         self.cell_centers[0:self.n_cells] = self.cell_centers_dev[0:self.n_cells].get()
         self.update_grid() # we assume local cell_centers is current
+        pool = getattr(self.simulator, 'CLDevicePool', None)
+        if getattr(pool, 'partitioned', False):
+            pool.repartition(self.cell_centers[:self.n_cells])
 
         # get each cell into the correct sq and retrieve from the device
         self.bin_cells()
@@ -592,7 +625,7 @@ class CLBacterium:
         self.sq_inds_dev.set(self.sq_inds)
 
         self.n_cts = 0
-        self.vcleari(self.cell_n_cts_dev) # clear the accumulated contact count
+        self.vcleari(self.cell_n_cts_dev[:self.n_cells]) # clear the accumulated contact count
         self.sub_tick_i=0
         self.sub_tick_initialised=True
 
@@ -850,7 +883,7 @@ class CLBacterium:
 
         # set dtype to int32 so we don't overflow the int32 when summing
         #self.n_cts = self.cell_n_cts_dev.get().sum(dtype=numpy.int32)
-        self.n_cts = cl_array.sum(self.cell_n_cts_dev[0:self.n_cells]).get()
+        self.n_cts = self.sum_int(self.cell_n_cts_dev[0:self.n_cells]).get()
 
 
     def collect_tos(self):
@@ -982,7 +1015,8 @@ class CLBacterium:
         self.vsub(self.res_dev[0:self.n_cells], self.rhs_dev[0:self.n_cells], self.BTBx_dev[0:self.n_cells])
 
         # p = res
-        cl.enqueue_copy(self.queue, self.p_dev[0:self.n_cells].data, self.res_dev[0:self.n_cells].data)
+        from CellModeller.PartitionedGPU import copy_array
+        copy_array(self.queue, self.p_dev[0:self.n_cells].data, self.res_dev[0:self.n_cells].data)
 
         # rsold = l2norm(res)
         rsold = self.vdot(self.res_dev[0:self.n_cells], self.res_dev[0:self.n_cells]).get()
@@ -1220,7 +1254,7 @@ class CLBacterium:
         dt = 0.005
         for i in range(1000):
             self.n_cts = 0
-            self.vcleari(self.cell_n_cts_dev) # clear the accumulated contact count
+            self.vcleari(self.cell_n_cts_dev[:self.n_cells]) # clear the accumulated contact count
             self.predict(dt)
             # find all contacts
             self.find_contacts(dt)

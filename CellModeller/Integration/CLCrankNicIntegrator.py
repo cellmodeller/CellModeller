@@ -59,6 +59,8 @@ def unique_stable(ar, return_index=False, return_inverse=False):
 class CLCrankNicIntegrator:
     def __init__(self, sim, nSignals, nSpecies, maxCells, sig, greensThreshold=1e-12, regul=None, boundcond='constant'):
         self.sim = sim
+        from CellModeller.PartitionedGPU import array_module
+        self.device_arrays = array_module(sim)
         self.dt = self.sim.dt
         self.greensThreshold = greensThreshold
         self.regul = regul
@@ -183,20 +185,20 @@ class CLCrankNicIntegrator:
 
     def initArrays(self):
         self.gridIdxs = numpy.zeros((self.maxCells,8),dtype=numpy.int32)
-        self.gridIdxs_dev = cl_array.zeros(self.queue, (self.maxCells,8),dtype=numpy.int32)
+        self.gridIdxs_dev = self.device_arrays.zeros(self.queue, (self.maxCells,8),dtype=numpy.int32)
         self.triWts = numpy.zeros((self.maxCells,8),dtype=numpy.float32)
-        self.triWts_dev = cl_array.zeros(self.queue, (self.maxCells,8),dtype=numpy.float32)
+        self.triWts_dev = self.device_arrays.zeros(self.queue, (self.maxCells,8),dtype=numpy.float32)
         self.cellSigRates = numpy.zeros((self.maxCells,8,self.nSignals),dtype=numpy.float32)
-        self.cellSigRates_dev = cl_array.zeros(self.queue, (self.maxCells,8,self.nSignals),dtype=numpy.float32)
+        self.cellSigRates_dev = self.device_arrays.zeros(self.queue, (self.maxCells,8,self.nSignals),dtype=numpy.float32)
         self.cellSigLevels = numpy.zeros((self.maxCells,self.nSignals),dtype=numpy.float32)
-        self.cellSigLevels_dev = cl_array.zeros(self.queue, (self.maxCells,self.nSignals),dtype=numpy.float32)
-        self.signalLevel_dev = cl_array.zeros(self.queue, self.gridDim,dtype=numpy.float32)
-        self.specLevel_dev = cl_array.zeros(self.queue, (self.maxCells,self.nSpecies), dtype=numpy.float32)
-        self.specRate_dev = cl_array.zeros(self.queue, (self.maxCells,self.nSpecies), dtype=numpy.float32)
+        self.cellSigLevels_dev = self.device_arrays.zeros(self.queue, (self.maxCells,self.nSignals),dtype=numpy.float32)
+        self.signalLevel_dev = self.device_arrays.zeros(self.queue, self.gridDim,dtype=numpy.float32)
+        self.specLevel_dev = self.device_arrays.zeros(self.queue, (self.maxCells,self.nSpecies), dtype=numpy.float32)
+        self.specRate_dev = self.device_arrays.zeros(self.queue, (self.maxCells,self.nSpecies), dtype=numpy.float32)
 
         self.celltype = numpy.zeros((self.maxCells,),dtype=numpy.int32)
-        self.celltype_dev = cl_array.zeros(self.queue, (self.maxCells,),dtype=numpy.int32)
-        #self.pos_dev = cl_array.zeros(self.queue, (self.maxCells,), dtype=vec.float4)
+        self.celltype_dev = self.device_arrays.zeros(self.queue, (self.maxCells,),dtype=numpy.int32)
+        #self.pos_dev = self.device_arrays.zeros(self.queue, (self.maxCells,), dtype=vec.float4)
 
     def initKernels(self):
         # Get user defined kernel source
@@ -210,6 +212,8 @@ class CLCrankNicIntegrator:
                                    'specKernel': specRateKernel,
                                    'nSignals': self.nSignals}
         self.program = cl.Program(self.context, kernel_src).build(cache_dir=False)
+        from CellModeller.MultiGPU import distribute_program, SIGNAL_LAYOUTS
+        self.program = distribute_program(self.sim, self.program, SIGNAL_LAYOUTS, 'CLCrankNicIntegrator.', kernel_src)
 
 
     def dydt(self):

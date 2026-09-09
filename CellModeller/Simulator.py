@@ -39,7 +39,11 @@ visualised.
                     saveOutput=False, \
                     clPlatformNum=0, \
                     clDeviceNum=0, \
-                    is_gui=False):
+                    is_gui=False, \
+                    clDeviceNums=None, \
+                    clDeviceWeights=None, \
+                    clMultiGPUMinCells=1024, \
+                    clMultiGPUMemory="partitioned"):
         # Is this simulator running in a gui?
         self.is_gui = is_gui
 
@@ -67,7 +71,9 @@ visualised.
             self.cfg_file = os.path.join(os.environ["CMPATH"], 'CMconfig.cfg')
         else:
             self.cfg_file = 'CellModeller/CMconfig.cfg'
-        if not self.init_cl(platnum=clPlatformNum, devnum=clDeviceNum):
+        if not self.init_cl(platnum=clPlatformNum, devnum=clDeviceNum,
+                            devnums=clDeviceNums, weights=clDeviceWeights,
+                            min_cells=clMultiGPUMinCells, memory_mode=clMultiGPUMemory):
             print("Couldn't initialise OpenCL context")
             return
 
@@ -191,39 +197,54 @@ visualised.
             self.reg.setSignalling(sig)
 
 
-    ## Set up the OpenCL contex, the configuration is set up the first time, and is saved in the config file
-    def init_cl(self, platnum, devnum):
-        # Check that specified platform exists
+    ## Set up the selected OpenCL devices, queues, and optional shared work pool.
+    def init_cl(self, platnum, devnum, devnums=None, weights=None, min_cells=1024, memory_mode="replicated"):
+        from .MultiGPU import device_indices, normalized_weights
+        import numbers
         platforms = cl.get_platforms()
-        if len(platforms)<=platnum:
-            print("Specified OpenCL platform number (%d) does not exist.")
-            print("Options are:")
-            for p in range(len(platforms)):
-                print("%d: %s"%(p, str(platforms[p]))) 
-            return False
+        if (isinstance(platnum, bool) or not isinstance(platnum, numbers.Integral)
+                or not 0 <= platnum < len(platforms)):
+            raise ValueError('Invalid OpenCL platform index: %r' % platnum)
+        platform = platforms[platnum]
+        devices = platform.get_devices()
+        indices = device_indices(devices, devnums, devnum)
+        self.clDeviceWeights = normalized_weights(weights, len(indices))
+        if isinstance(min_cells, bool) or not isinstance(min_cells, numbers.Integral) or min_cells < 1:
+            raise ValueError('clMultiGPUMinCells must be a positive integer')
+        if memory_mode not in ('partitioned', 'replicated'):
+            raise ValueError("clMultiGPUMemory must be 'partitioned' or 'replicated'")
+        self.clMultiGPUMemory = memory_mode
+        self.clMultiGPUMinCells = min_cells
+        self.clDeviceNums = indices
+        self.CLDevices = [devices[i] for i in indices]
+        if len(self.CLDevices) > 1 and memory_mode == 'partitioned':
+            # Separate contexts prevent a driver's implicit migration policy
+            # from allocating every worker's buffers on the primary device.
+            self.CLContexts = [cl.Context(properties=[(cl.context_properties.PLATFORM, platform)],
+                                          devices=[device]) for device in self.CLDevices]
         else:
-            platform = platforms[platnum]
-
-        # Check that specified device exists on that platform
-        devices = platforms[platnum].get_devices()
-        if len(devices)<=devnum:
-            print("Specified OpenCL device number (%d) does not exist on platform %s."%(devnum,platform))
-            print("Options are:")
-            for d in range(len(devices)):
-                print("%d: %s"%(d, str(devices[d]))) 
-            return False
+            context = cl.Context(properties=[(cl.context_properties.PLATFORM, platform)],
+                                 devices=self.CLDevices)
+            self.CLContexts = [context]*len(self.CLDevices)
+        self.CLContext = self.CLContexts[0]
+        self.CLQueues = [cl.CommandQueue(context, device=device)
+                         for context, device in zip(self.CLContexts, self.CLDevices)]
+        self.CLQueue = self.CLQueues[0]
+        from .MultiGPU import DevicePool
+        if len(self.CLQueues) > 1 and memory_mode == 'partitioned':
+            from .PartitionedGPU import PartitionedPool
+            self.CLDevicePool = PartitionedPool(self.CLQueues, self.clDeviceWeights, min_cells)
         else:
-            device = devices[devnum]
-
-        # Create a context and queue
-        self.CLContext = cl.Context(properties=[(cl.context_properties.PLATFORM, platform)],
-                                          devices=[device])
-        self.CLQueue = cl.CommandQueue(self.CLContext)
-        print("Set up OpenCL context:")
-        print("  Platform: %s"%(str(platform.name)))
-        print("  Device: %s"%(str(device.name)))
+            self.CLDevicePool = (DevicePool(self.CLQueues, self.clDeviceWeights, min_cells)
+                                 if len(self.CLQueues) > 1 else None)
+        self.CLMemoryStats = getattr(self.CLDevicePool, 'memory_stats', {})
+        self.CLWorkStats = self.CLDevicePool.stats if self.CLDevicePool else {}
+        print('Set up OpenCL context:')
+        print('  Platform: %s' % platform.name)
+        for device, weight in zip(self.CLDevices, self.clDeviceWeights):
+            print('  Device: %s (workload share %.1f%%)' % (device.name, weight*100))
         return True
-        
+
     ## Get the OpenCL context and queue for running kernels 
     def getOpenCL(self):
         return (self.CLContext, self.CLQueue)

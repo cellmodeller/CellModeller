@@ -2,7 +2,9 @@ import PyQt5
 from PyQt5 import QtCore, QtGui
 from PyQt5.Qt import Qt
 from PyQt5.QtCore import QObject, QTimer, pyqtSignal, pyqtSlot
-from PyQt5.QtWidgets import QInputDialog, QFileDialog
+from PyQt5.QtWidgets import (QInputDialog, QFileDialog, QDialog, QVBoxLayout,
+                             QLabel, QListWidget, QAbstractItemView,
+                             QDialogButtonBox, QLineEdit, QSpinBox, QMessageBox, QComboBox)
 from .PyGLWidget import PyGLWidget
 from OpenGL.GL import *
 from OpenGL.GLU import *
@@ -36,6 +38,10 @@ class PyGLCMViewer(PyGLWidget):
         self.loadingFromPickle = False
         self.clPlatformNum=0
         self.clDeviceNum=0
+        self.clDeviceNums=None
+        self.clDeviceWeights=None
+        self.clMultiGPUMinCells=1024
+        self.clMultiGPUMemory="partitioned"
 
         # Initial view setup
         self.set_radius(32)
@@ -96,24 +102,63 @@ class PyGLCMViewer(PyGLWidget):
         platforms = cl.get_platforms()
         devices = platforms[self.clPlatformNum].get_devices()
 
-        devlist = [str(d.name) for d in devices]
-        devdict = dict(list(zip(devlist, list(range(len(devlist))))))
-        
-        if len(devlist)==1:
+        if len(devices) == 1:
             self.clDeviceNum = 0
+            self.clDeviceNums = None
+            self.clDeviceWeights = None
             return True
-        
-        qsDeviceName, ok = QInputDialog.getItem(self, \
-                                            'Choose OpenCL device', \
-                                            'Available devices:', \
-                                            devlist, \
-                                            editable=False)
-        if not ok:
-            print("You didn't select a OpenCL device...")
+        if not devices:
+            QMessageBox.warning(self, 'OpenCL devices', 'No devices are available on this platform.')
             return False
-        else:
-            self.clDeviceNum = devdict[qsDeviceName]
-            return True
+
+        dialog = QDialog(self)
+        dialog.setWindowTitle('Choose simulation devices')
+        layout = QVBoxLayout(dialog)
+        layout.addWidget(QLabel('Select one device, or multiple GPUs for shared simulation work.'))
+        choices = QListWidget()
+        choices.setSelectionMode(QAbstractItemView.MultiSelection)
+        for index, device in enumerate(devices):
+            choices.addItem('%d: %s' % (index, device.name))
+        choices.item(0).setSelected(True)
+        layout.addWidget(choices)
+        layout.addWidget(QLabel('Workload weights in selected device order (blank = equal):'))
+        weights = QLineEdit()
+        weights.setPlaceholderText('e.g. 2,1')
+        layout.addWidget(weights)
+        layout.addWidget(QLabel('Minimum work items for multi-GPU execution:'))
+        threshold = QSpinBox()
+        threshold.setRange(1, 2147483647)
+        threshold.setValue(self.clMultiGPUMinCells)
+        layout.addWidget(threshold)
+        layout.addWidget(QLabel('GPU memory mode (partitioned supports larger populations):'))
+        memory_mode = QComboBox()
+        memory_mode.addItems(['partitioned', 'replicated'])
+        memory_mode.setCurrentText(self.clMultiGPUMemory)
+        layout.addWidget(memory_mode)
+        layout.addWidget(QLabel('Partitioned mode uses host RAM and keeps all selected GPUs active.'))
+        buttons = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
+        layout.addWidget(buttons)
+        buttons.rejected.connect(dialog.reject)
+
+        def accept_devices():
+            from CellModeller.MultiGPU import device_indices, normalized_weights
+            selected = [i for i in range(len(devices)) if choices.item(i).isSelected()]
+            try:
+                selected = device_indices(devices, selected)
+                shares = None if not weights.text().strip() else [float(w) for w in weights.text().split(',')]
+                shares = normalized_weights(shares, len(selected))
+            except ValueError as error:
+                QMessageBox.warning(dialog, 'Invalid device settings', str(error))
+                return
+            self.clDeviceNums = selected
+            self.clDeviceNum = selected[0]
+            self.clDeviceWeights = shares
+            self.clMultiGPUMinCells = threshold.value()
+            self.clMultiGPUMemory = memory_mode.currentText()
+            dialog.accept()
+
+        buttons.accepted.connect(accept_devices)
+        return dialog.exec_() == QDialog.Accepted
 
 
     @pyqtSlot(bool)
@@ -139,6 +184,10 @@ class PyGLCMViewer(PyGLWidget):
                             moduleStr=self.moduleStr, \
                             clPlatformNum=self.clPlatformNum, \
                             clDeviceNum=self.clDeviceNum, \
+                            clDeviceNums=self.clDeviceNums, \
+                            clDeviceWeights=self.clDeviceWeights, \
+                            clMultiGPUMinCells=self.clMultiGPUMinCells, \
+                            clMultiGPUMemory=self.clMultiGPUMemory, \
                             is_gui=True) 
             self.setSimulator(sim) 
         else:
@@ -146,6 +195,10 @@ class PyGLCMViewer(PyGLWidget):
                                 self.dt, \
                                 clPlatformNum=self.clPlatformNum, \
                                 clDeviceNum=self.clDeviceNum, \
+                                clDeviceNums=self.clDeviceNums, \
+                                clDeviceWeights=self.clDeviceWeights, \
+                                clMultiGPUMinCells=self.clMultiGPUMinCells, \
+                                clMultiGPUMemory=self.clMultiGPUMemory, \
                                 is_gui=True) 
             self.setSimulator(sim) 
         self.frameNo = 0
@@ -187,6 +240,10 @@ class PyGLCMViewer(PyGLWidget):
                                     moduleStr=self.moduleStr, \
                                     clPlatformNum=self.clPlatformNum, \
                                     clDeviceNum=self.clDeviceNum, \
+                                    clDeviceNums=self.clDeviceNums, \
+                                    clDeviceWeights=self.clDeviceWeights, \
+                                    clMultiGPUMinCells=self.clMultiGPUMinCells, \
+                                    clMultiGPUMemory=self.clMultiGPUMemory, \
                                     is_gui=True) 
  
                 self.loadingFromPickle = True
@@ -221,6 +278,10 @@ class PyGLCMViewer(PyGLWidget):
                                     self.dt, \
                                     clPlatformNum=self.clPlatformNum, \
                                     clDeviceNum=self.clDeviceNum, \
+                                    clDeviceNums=self.clDeviceNums, \
+                                    clDeviceWeights=self.clDeviceWeights, \
+                                    clMultiGPUMinCells=self.clMultiGPUMinCells, \
+                                    clMultiGPUMemory=self.clMultiGPUMemory, \
                                     is_gui=True) 
  
             self.setSimulator(sim)

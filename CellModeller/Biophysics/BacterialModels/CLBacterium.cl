@@ -842,9 +842,12 @@ __kernel void calculate_Bx(const int max_contacts,
   int b = tos[i];
   if (a == 0 && b == 0) return; // not a contact
   float8 to_ents_i = b < 0 ? 0.f : to_ents[i];
+  // Boundary contacts have a negative destination index. Do not dereference
+  // it even when to_ents_i is zero: the out-of-bounds read is undefined.
+  float8 to_delta = b < 0 ? (float8)(0.f) : deltap[b];
   //my machine can't dot float8s...
-  float res0123 = dot(fr_ents[i].s0123, deltap[a].s0123) - dot(to_ents_i.s0123, deltap[b].s0123);
-  float res4567 = dot(fr_ents[i].s4567, deltap[a].s4567) - dot(to_ents_i.s4567, deltap[b].s4567);
+  float res0123 = dot(fr_ents[i].s0123, deltap[a].s0123) - dot(to_ents_i.s0123, to_delta.s0123);
+  float res4567 = dot(fr_ents[i].s4567, deltap[a].s4567) - dot(to_ents_i.s4567, to_delta.s4567);
   Bx[i] = res0123 + res4567;
 }
 

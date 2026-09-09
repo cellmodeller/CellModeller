@@ -6,3 +6,5 @@ Multicellular modelling framework, created by Tim Rudge, PJ Steiner, and Jim Has
 
 - [Contributing](Community/contributing.md)
 - [Code of Conduct](Community/code_of_conduct.md)
+
+- [Configure multi-GPU simulations](Doc/multi_gpu.md)
