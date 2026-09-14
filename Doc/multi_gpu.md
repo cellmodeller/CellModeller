@@ -150,6 +150,60 @@ has been measured on hardware in the implementation environment.
 
 ## Validation
 
+### Growing-colony capacity example
+
+Load `Examples/multigpu_stress.py` in the GUI and select your GPUs with
+partitioned memory. The default grows 256 founders toward 100,000 cells with
+mechanics, contact/CG solver work, division and four intracellular species.
+It reserves division slots so a single step cannot exceed the array capacity.
+Growth stops at the target; the GUI can continue running to inspect the colony.
+Signal diffusion is not part of this example.
+
+For capacity testing, run without rendering or pickle output:
+
+```bash
+python Examples/multigpu_stress.py --devices auto --max-cells auto --log stress-auto.jsonl
+```
+
+`auto` estimates a target using available host RAM (including exposed Linux
+container limits), device memory, allocation limits, weights and a halo reserve.
+It is a planning heuristic, not a measurement of free GPU memory or the maximum
+supported population. It does not override the backend's allocation guards.
+The default estimate uses a 0.5 memory fraction; `--memory-fraction` changes that
+estimate up to 0.8. Explicit targets bypass the estimate and let you approach the
+practical limit across separate runs. Large founder counts are expensive to
+initialize, so increase `--initial-cells` cautiously.
+
+For controlled comparisons use the same explicit population target, initial
+population, seed, timestep and species count, with a different log per run:
+
+```bash
+python Examples/multigpu_stress.py --devices 0 --max-cells 200000 --log stress-one.jsonl
+python Examples/multigpu_stress.py --devices 0,1 --max-cells 200000 --log stress-two.jsonl
+```
+
+The runner logs interval times, population, per-stage work-item counts and
+planned per-device scratch. It checks finite geometry/species and positive
+lengths at reporting intervals and completion. It holds the target population
+for 100 steps by default, with a 10,000-step overall bound. `target_held` means
+that target completed; `step_limit` does not mean capacity was reached. Failures
+are logged and re-raised, rather than silently reducing the workload. Logs are
+created exclusively so earlier results are not overwritten. Use external GPU
+telemetry alongside these logs; work counts are not utilization measurements.
+Full compute utilization or full VRAM occupancy cannot be guaranteed by a model
+file, especially with the host-staged partitioned backend.
+
+For an estimated-capacity GUI run, set the environment before launch:
+
+```bash
+CM_STRESS_MAX_CELLS=auto python Scripts/CellModellerGUI.py
+```
+
+Then load the example and select the GPUs. `--help` documents all CLI options
+and their GUI environment equivalents. GUI diagnostics describe the preceding
+completed steps. Use the hardware comparison suite below to test numerical
+agreement; successful stress execution alone does not establish equivalence.
+
 ```bash
 python -m unittest discover -s tests -v
 ```
