@@ -169,6 +169,11 @@ class CLBacterium:
         from CellModeller.MultiGPU import distribute_program, PHYSICS_LAYOUTS
         self.program = distribute_program(self.simulator, self.program, PHYSICS_LAYOUTS, 'physics.', kernel_src)
         pool = getattr(self.simulator, 'CLDevicePool', None)
+        self.resident_solver = None
+        if getattr(pool, 'partitioned', False):
+            from CellModeller.ResidentSolver import ResidentCG
+            self.resident_solver = ResidentCG(pool)
+            self.simulator.CLResidentSolverStats = self.resident_solver.stats
         def elementwise(context, arguments, operation, name):
             if getattr(pool, 'partitioned', False):
                 from CellModeller.PartitionedGPU import PartitionedElementwise
@@ -989,6 +994,12 @@ class CLBacterium:
         #print(self.Minvx_dev)
 
     def CGSSolve(self, dt, alpha, substep=False):
+        if getattr(self, 'resident_solver', None) is not None:
+            result = self.resident_solver.solve(self)
+            if self.printing and self.frame_no % 10 == 0:
+                print('%5i %6i cells %6i cts %6i iterations residual = %f (resident CG)' %
+                      (self.frame_no, self.n_cells, self.n_cts, result[0], result[1]))
+            return result
         # Solve A^TA\deltap=A^Tb (Ax=b)
 
         # There must be a way to do this using built in pyopencl - what
@@ -1284,5 +1295,4 @@ class CLBacterium:
         t2 = time.clock()
         print("CGS timing for 1000 calls, time per call (s) = %f"%((t2-t1)*0.001))
         open("cgs_prof","a").write( "%i, %i, %i, %f\n"%(self.n_cells,self.n_cts,iters,(t2-t1)*0.001) )
-
 

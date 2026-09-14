@@ -278,6 +278,7 @@ def specRateCL():
         self.assertIsInstance(multi.phys.cell_centers_dev, PartitionedArray)
         self.assertIsInstance(multi.integ.specLevel_dev, PartitionedArray)
         self.assertNotEqual(multi.CLQueues[0].context, multi.CLQueues[1].context)
+        self.assertIsNotNone(multi.phys.resident_solver)
         for step in range(4):
             if step == 2:
                 for sim in (single, multi):
@@ -293,6 +294,11 @@ def specRateCL():
                 np.testing.assert_allclose(right.dir, left.dir, rtol=2e-3, atol=2e-4)
                 np.testing.assert_allclose(right.length, left.length, rtol=2e-3, atol=2e-4)
                 np.testing.assert_allclose(right.species, left.species, rtol=2e-3, atol=2e-4)
+        resident = multi.CLResidentSolverStats
+        self.assertIn('residual', resident)
+        self.assertEqual(resident['solution_bytes'], len(multi.cellStates)*32)
+        self.assertEqual(sum(resident['owned_cells']), len(multi.cellStates))
+        self.assertTrue(np.isfinite(resident['residual']))
         for stage in ('physics.calculate_Bx', 'physics.calculate_BTBx', 'physics.dot',
                       'vecaddkx', 'CLEulerIntegrator.speciesRates', 'physics.integrate'):
             self.assertIn(stage, multi.CLWorkStats)

@@ -238,6 +238,8 @@ visualised.
             self.CLDevicePool = (DevicePool(self.CLQueues, self.clDeviceWeights, min_cells)
                                  if len(self.CLQueues) > 1 else None)
         self.CLMemoryStats = getattr(self.CLDevicePool, 'memory_stats', {})
+        self.CLTransferStats = getattr(self.CLDevicePool, 'transfer_stats', [])
+        self.CLResidentSolverStats = {}
         self.CLWorkStats = self.CLDevicePool.stats if self.CLDevicePool else {}
         print('Set up OpenCL context:')
         print('  Platform: %s' % platform.name)
@@ -471,5 +473,4 @@ visualised.
                 self.integ.setLevels(data['specData'],data['sigData'])
             elif 'specData' in data:
                 self.integ.setLevels(data['specData'])
-
 

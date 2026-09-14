@@ -1,12 +1,14 @@
 """Host-staged spatial partitions: no full simulation buffer lives on any GPU.
 
-Host state is authoritative between stages. Each launch uploads only owned
-rows and its read halo, then commits owned outputs after every device succeeds.
+Host state is authoritative between stages. Each launch refreshes owned
+rows and its read halo in bounded resident buffers, then commits owned outputs
+after every device succeeds.
 This trades PCIe traffic/host RAM for aggregate GPU capacity. It is deliberately
 separate from the backwards-compatible replicated backend.
 """
 import math
 import re
+from collections import OrderedDict
 from dataclasses import dataclass
 
 import numpy as np
@@ -118,6 +120,58 @@ class PartitionedPool:
         self.memory_stats = {}
         self.memory_fraction = memory_fraction
         self.cell_order = None
+        self.resident = [OrderedDict() for _ in queues]
+        self.transfer_stats = [dict(allocations=0, uploaded_bytes=0, reused_bytes=0,
+                                    downloaded_bytes=0) for _ in queues]
+
+    def resident_bytes(self, device):
+        return sum(entry[0].size for entry in self.resident[device].values())
+
+    def upload(self, device, key, array):
+        """Reuse compact buffers and upload only changed contiguous row ranges.
+
+        Retained host snapshots detect writes through arbitrary NumPy aliases,
+        not merely .set() calls. Keys include the region, so repartitioning
+        cannot mistake an old ownership map for the new one.
+        """
+        value = np.ascontiguousarray(array)
+        if not value.nbytes:
+            value = np.zeros(1, np.int32)
+        rows = value.view(np.uint8).reshape(len(value), -1)
+        cache = self.resident[device]
+        entry = cache.pop(key, None)
+        stats = self.transfer_stats[device]
+        queue = self.queues[device]
+        if entry is None or entry[1] is None or entry[1].shape != rows.shape:
+            buffer = cl.Buffer(queue.context, cl.mem_flags.READ_WRITE | cl.mem_flags.COPY_HOST_PTR,
+                               hostbuf=value)
+            entry = [buffer, rows.copy()]
+            stats['allocations'] += 1
+            stats['uploaded_bytes'] += rows.nbytes
+        else:
+            changed = np.flatnonzero(np.any(entry[1] != rows, axis=1))
+            stats['reused_bytes'] += rows.nbytes - len(changed)*rows.shape[1]
+            if len(changed):
+                # Bound enqueue overhead for heavily fragmented changes.
+                cuts = np.flatnonzero(np.diff(changed) != 1) + 1
+                ranges = np.split(changed, cuts) if len(cuts) < 32 else [np.arange(len(rows))]
+                for indices in ranges:
+                    start, stop = int(indices[0]), int(indices[-1]) + 1
+                    block = rows[start:stop]
+                    cl.enqueue_copy(queue, entry[0], block,
+                                    device_offset=start*rows.shape[1]).wait()
+                    stats['uploaded_bytes'] += block.nbytes
+                entry[1][:] = rows
+        cache[key] = entry
+        return entry
+
+    def trim_resident(self):
+        for device, cache in enumerate(self.resident):
+            budget = min(256*2**20, int(self.queues[device].device.global_mem_size*0.2))
+            size = self.resident_bytes(device)
+            while cache and (size > budget or len(cache) > 256):
+                _, entry = cache.popitem(last=False)
+                size -= entry[0].size
 
     def repartition(self, centers):
         """Recursive spatial bisection balances population, not cell ID ranges."""
@@ -137,6 +191,11 @@ class PartitionedPool:
 
     def check_memory(self, device, sizes):
         hardware = self.queues[device].device
+        # Admission is conservative: count all retained storage plus the full
+        # incoming stage. Eviction never turns a fitting stage into a failure.
+        if self.resident_bytes(device) + sum(sizes) > hardware.global_mem_size*self.memory_fraction:
+            self.queues[device].finish()
+            self.resident[device].clear()
         largest = max(sizes, default=0)
         if largest > hardware.max_mem_alloc_size or sum(sizes) > hardware.global_mem_size*self.memory_fraction:
             raise MemoryError('Partition on GPU %s needs %d bytes (largest buffer %d); '
@@ -144,9 +203,10 @@ class PartitionedPool:
                               (hardware.name, sum(sizes), largest))
 
     def clear_cache(self):
-        # No persistent device replicas; completed stages release scratch buffers.
         for queue in self.queues:
             queue.finish()
+        for cache in self.resident:
+            cache.clear()
 
 
 def spatial_order(xyz, weights):
@@ -484,16 +544,16 @@ class PartitionedProgram:
                 for device, ids, regions, packed in prepared:
                     worker_queue = self.pool.queues[device]
                     raw, metadata, references = [], [], []
-                    def upload(array):
-                        value = np.ascontiguousarray(array)
-                        if not value.nbytes:
-                            value = np.zeros(1, np.int32)
-                        buffer = cl.Buffer(worker_queue.context, cl.mem_flags.READ_WRITE | cl.mem_flags.COPY_HOST_PTR,
-                                           hostbuf=value)
-                        references.append(buffer)
-                        return buffer
-                    owner_dev, error_dev = upload(ids), upload(np.zeros(1, np.uint32))
-                    for arg, value, region, data in zip(arguments, args, regions, packed):
+                    entries = {}
+                    def upload(key, array):
+                        entry = self.pool.upload(device, key, array)
+                        references.append(entry[0])
+                        return entry
+                    owner_dev = upload(('owners', ids.tobytes()), ids)[0]
+                    error_entry = upload(('error',), np.zeros(1, np.uint32))
+                    error_dev = error_entry[0]
+                    error_entry[1] = None  # Kernel may set it, including failed launches.
+                    for index, (arg, value, region, data) in enumerate(zip(arguments, args, regions, packed)):
                         if region is None:
                             raw.append(value)
                         else:
@@ -501,13 +561,21 @@ class PartitionedProgram:
                             # the stage error flag. Even an empty halo needs a
                             # full typed row so that this error path is in bounds.
                             device_data = data if data.nbytes else np.zeros((1, region.width*arg.itemsize), np.uint8)
-                            raw.append(upload(device_data))
-                            metadata.extend([upload(region.ids), np.int32(len(region.ids)), np.int32(region.width)])
+                            key = ('data', arg.name, value.array.__array_interface__['data'][0],
+                                   value.size, region.width*arg.itemsize, region.ids.tobytes())
+                            entry = upload(key, device_data)
+                            entries[index] = entry
+                            raw.append(entry[0])
+                            metadata.extend([upload(('indices', region.ids.tobytes()), region.ids)[0],
+                                             np.int32(len(region.ids)), np.int32(region.width)])
+                    for index, width, _ in outputs:
+                        if width:
+                            entries[index][1] = None
                     event = kernels[device](worker_queue, (len(ids),)+tuple(shape[1:]), None,
                                    *raw, owner_dev, error_dev, *metadata)
                     worker_queue.flush()
-                    workers.append((device, ids, regions, packed, raw, error_dev, event, references))
-                for device, ids, regions, packed, raw, error_dev, event, references in workers:
+                    workers.append((device, ids, regions, packed, raw, error_dev, event, references, entries))
+                for device, ids, regions, packed, raw, error_dev, event, references, entries in workers:
                     event.wait()
                     error = np.zeros(1, np.uint32)
                     cl.enqueue_copy(self.pool.queues[device], error, error_dev).wait()
@@ -517,15 +585,21 @@ class PartitionedProgram:
                     for index, width, _ in outputs:
                         if width:
                             cl.enqueue_copy(self.pool.queues[device], packed[index], raw[index]).wait()
+                            self.pool.transfer_stats[device]['downloaded_bytes'] += packed[index].nbytes
+                            entries[index][1] = packed[index].view(np.uint8).reshape(len(packed[index]), -1).copy()
                 # Commit only after all workers/halos succeed, keeping host
                 # state unchanged if a launch reports an error.
-                for device, ids, regions, packed, raw, error_dev, event, references in workers:
+                for device, ids, regions, packed, raw, error_dev, event, references, entries in workers:
                     for index, width, _ in outputs:
                         if width:
                             regions[index].commit(args[index], arguments[index].itemsize, packed[index], ids)
+            except BaseException:
+                self.pool.clear_cache()
+                raise
             finally:
                 for worker_queue in self.pool.queues:
                     worker_queue.finish()
+                self.pool.trim_resident()
             self.pool.record(self.label+name, owned, math.prod(shape[1:]))
             self.pool.memory_stats[self.label+name] = usage
             return Completed()

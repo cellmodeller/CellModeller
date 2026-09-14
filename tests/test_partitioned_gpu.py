@@ -40,7 +40,13 @@ class Queue:
         pass
 
 
-def copy(queue, target, source):
+def copy(queue, target, source, device_offset=0):
+    if isinstance(target, FakeBuffer):
+        if target.context != queue.context:
+            raise AssertionError('Cross-context upload')
+        data = source.view(np.uint8).reshape(-1)
+        target.data[device_offset:device_offset+len(data)] = data
+        return Event()
     if source.context != queue.context:
         raise AssertionError('Cross-context copy')
     target.view(np.uint8).reshape(-1)[:] = source.data
@@ -143,6 +149,41 @@ class PartitionedTests(unittest.TestCase):
         with self.assertRaisesRegex(RuntimeError, 'missing halo'):
             program.advance(pool.queues[0], (100,), None, inp.data, out.data)
         np.testing.assert_array_equal(out.get(), np.zeros(100))
+        self.assertTrue(all(not cache for cache in pool.resident))
+
+    def test_resident_reuse_and_host_alias_write(self):
+        pool, program, inp, out = self.fixture()
+        program.advance(pool.queues[0], (100,), None, inp.data, out.data)
+        before = [dict(s) for s in pool.transfer_stats]
+        program.advance(pool.queues[0], (100,), None, inp.data, out.data)
+        for old, new in zip(before, pool.transfer_stats):
+            self.assertGreater(new['reused_bytes'], old['reused_bytes'])
+            # Only the error flag needs a fresh allocation/upload.
+            self.assertEqual(new['allocations'] - old['allocations'], 1)
+            self.assertEqual(new['uploaded_bytes'] - old['uploaded_bytes'], 4)
+        inp.array[3] = 999  # Bypass .set(): NumPy aliases must remain coherent.
+        before = pool.transfer_stats[0]['uploaded_bytes']
+        program.advance(pool.queues[0], (100,), None, inp.data, out.data)
+        self.assertEqual(pool.transfer_stats[0]['uploaded_bytes'] - before, 8)
+        np.testing.assert_array_equal(out.get(), inp.get()*2)
+
+    def test_resident_repartition_and_clear(self):
+        pool, program, inp, out = self.fixture()
+        program.advance(pool.queues[0], (100,), None, inp.data, out.data)
+        pool.cell_order = np.arange(100, dtype=np.int32)[::-1]
+        inp.array[:] += 1
+        program.advance(pool.queues[0], (100,), None, inp.data, out.data)
+        np.testing.assert_array_equal(out.get(), inp.get()*2)
+        pool.clear_cache()
+        self.assertTrue(all(not cache for cache in pool.resident))
+
+    def test_resident_cache_evicted_for_fitting_stage(self):
+        pool, program, inp, out = self.fixture()
+        program.advance(pool.queues[0], (100,), None, inp.data, out.data)
+        self.assertGreater(pool.resident_bytes(0), 0)
+        pool.queues[0].device.global_mem_size = 2000
+        pool.check_memory(0, [800, 700])
+        self.assertEqual(pool.resident_bytes(0), 0)
 
     def test_capacity_is_checked_before_any_allocation(self):
         pool, program, inp, out = self.fixture()

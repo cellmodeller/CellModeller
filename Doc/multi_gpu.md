@@ -1,7 +1,8 @@
 # Multi-GPU simulations and larger populations
 
 Multi-GPU simulations now default to **partitioned GPU memory**. The host keeps
-canonical cell, contact, solver, and integration arrays. Each GPU processes its
+canonical cell, contact, and integration arrays between stages. During a
+conjugate-gradient solve, working vectors remain on the GPUs. Each GPU processes its
 owned cells and receives only the neighboring data required by that stage.
 There is no full-state allocation on GPU 0 and no full-state replica on every
 GPU in this mode.
@@ -74,8 +75,49 @@ implicit driver placement of all workers' allocations on a single primary
 device. All exchanges are staged through host RAM. Kernels remap global indices
 into compact local buffers. Missing neighbor entries or contact-capacity errors
 abort the stage. Owned results are committed only after every worker succeeds.
-GPU scratch buffers are released when the stage completes; full canonical
-state resides in host RAM between stages.
+Completed stages retain a bounded cache of compact device buffers. Unchanged
+inputs reuse resident data; modified contiguous row ranges are uploaded. Host
+snapshots detect changes even through NumPy aliases. The cache is limited to
+256 MiB or 20% of device memory per device (whichever is smaller), with at most
+256 entries, and is evicted when needed for stage admission. Host snapshots
+consume additional RAM. Kernel failures invalidate cached state. Full simulation
+state remains in host RAM outside the resident solver described below.
+
+## Resident conjugate-gradient solver
+
+In partitioned mode, `CLBacterium.CGSSolve` now uses a dedicated resident solver.
+Each solve uploads its compact incident-contact matrix and geometry once. The
+solution, residual, search direction and matrix-product vectors then stay on the
+GPUs throughout the iterations. The original inertia/regularization kernel is
+reused; a compact contact operator applies the same forward/transpose terms.
+The final displacement is read back and committed after all partitions succeed.
+Unused host solver scratch arrays are not synchronized with these iterates.
+
+Remote search-direction endpoints are gathered on the owning GPUs. Only these
+halo vectors cross device boundaries each iteration; distinct OpenCL contexts
+still require a GPU-to-host-to-GPU transfer. Reduction partials are read back as
+scalars for convergence checks and coefficient calculation. Thus the solver's
+working arrays are GPU-resident, but control is host-coordinated, and this is
+not direct peer-to-peer communication or an entirely GPU-only simulation.
+Residency lasts for one solve, not across changing contact matrices. Matrix
+construction, contact discovery and simulation bookkeeping retain their host
+staging. Readbacks and host packing remain outside the solver.
+
+All resident allocations are checked before upload. Stage caches are cleared
+before a solve to reserve its memory budget. Allocation failures or numerical
+breakdowns raise errors without committing a partial displacement. As in the
+legacy solver, reaching the iteration bound returns the current solution;
+`converged` in the solver diagnostics distinguishes it from tolerance convergence.
+The single-device and replicated solver paths are unchanged.
+
+`sim.CLResidentSolverStats` describes the latest solve: iteration count, residual,
+convergence, owned counts, planned bytes, halo traffic (both transfer directions),
+scalar readback bytes and final solution bytes. `sim.CLTransferStats` separately
+tracks cumulative cached-stage allocations, upload/reuse bytes and output
+readback bytes; it excludes solver traffic and some control transfers. Neither
+is a whole-process profiler. Reduction order can change numerical roundoff;
+run the hardware comparisons before using these results for scientific analysis.
+No hardware speedup or full-utilization result has been established locally.
 
 ## Covered computation
 
