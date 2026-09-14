@@ -152,27 +152,28 @@ has been measured on hardware in the implementation environment.
 
 ### Growing-colony capacity example
 
-For a dedicated graphical setup with no environment variables, launch:
+Load `Examples/multigpu_stress_gui.py` using **Load Model** in the normal
+CellModeller GUI, select GPUs and partitioned memory, then click **Run**.
+This is a conventional model like `ex1_simpleGrowth2D.py`: one founder at the
+origin, the standard rod geometry, growth rate 2.0, and daughter division
+thresholds between 2.5 and 3.0. Colony shape emerges from growth and mechanics;
+no rectangular grid of aligned cells is imposed. It uses the standard renderer
+and mechanics without extra species integration or a separate dashboard.
 
-```bash
-python Examples/multigpu_stress_gui.py
-```
+Edit the constants at the top of that file to change `max_cells` (100,000 by
+default), `max_contacts`, `max_sqs`, seed and growth rate. Increase grid capacity
+as needed for larger colonies. Each flagged division reserves a cell slot and
+growth stops at the population limit. The regular Save Pickles control remains
+available, with saving disabled initially. Contact work is printed periodically.
+The file is a loadable model, not a standalone launcher.
 
-Choose an explicit population target or memory-based estimate, founders,
-contacts, species, growth rate, seed and reporting interval. Then select GPUs,
-weights and partitioned memory in the normal device dialog. Click **Run** in
-the colony window. A separate status window shows population, selected devices,
-weights, cumulative contact work and latest planned contact scratch memory.
-Status refreshes between simulation steps, so expensive steps may delay it.
-The launcher is standalone; use `multigpu_stress.py` for the **Load Model** action.
-To change the launcher's settings, close it and launch it again.
-
-Load `Examples/multigpu_stress.py` in the GUI and select your GPUs with
-partitioned memory. The default grows 256 founders toward 100,000 cells with
-mechanics, contact/CG solver work, division and four intracellular species.
-It reserves division slots so a single step cannot exceed the array capacity.
-Growth stops at the target; the GUI can continue running to inspect the colony.
-Signal diffusion is not part of this example.
+`Examples/multigpu_stress.py` also starts from one cell by default, with the same
+growth and division parameters, and retains four species plus headless logging
+and capacity estimation. It can also be loaded in the GUI. An explicit
+`--initial-cells` greater than one uses separated founders on a disk with varied
+orientations; use the default to grow a colony from a single founder. Neither
+example exercises signal diffusion. Multiple GPUs cannot receive nonempty
+cell partitions until the population is large enough.
 
 For capacity testing, run without rendering or pickle output:
 
@@ -214,7 +215,7 @@ For an estimated-capacity GUI run, set the environment before launch:
 CM_STRESS_MAX_CELLS=auto python Scripts/CellModellerGUI.py
 ```
 
-Then load the example and select the GPUs. `--help` documents all CLI options
+Then load `multigpu_stress.py` and select the GPUs. `--help` documents all CLI options
 and their GUI environment equivalents. GUI diagnostics describe the preceding
 completed steps. Use the hardware comparison suite below to test numerical
 agreement; successful stress execution alone does not establish equivalence.

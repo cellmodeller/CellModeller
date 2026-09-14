@@ -1,7 +1,7 @@
 """Growing-colony capacity test: mechanics, CG solver, division and species.
 
 GUI: load this file; select all desired GPUs, equal weights and partitioned mode.
-Default: grow 256 founders toward 100,000 cells, then stop growth/division.
+Default: grow one founder toward 100,000 cells, then stop growth/division.
 For larger GUI runs set CM_STRESS_MAX_CELLS=auto before launching the GUI.
 
 Headless (recommended for capacity measurements, from the repository root):
@@ -73,9 +73,9 @@ def capacity_estimate(sim, contacts, species, fraction, available):
 def configuration(sim):
     def value(name, default, convert=int):
         return convert(os.environ.get('CM_STRESS_' + name, str(default)))
-    cfg = dict(initial_cells=value('INITIAL_CELLS', 256),
+    cfg = dict(initial_cells=value('INITIAL_CELLS', 1),
                max_contacts=value('MAX_CONTACTS', 32), species=value('SPECIES', 4),
-               seed=value('SEED', 12345), growth_rate=value('GROWTH_RATE', 1.0, float),
+               seed=value('SEED', 12345), growth_rate=value('GROWTH_RATE', 2.0, float),
                report_every=value('REPORT_EVERY', 10),
                memory_fraction=value('MEMORY_FRACTION', 0.5, float))
     if any(cfg[key] < 1 for key in ('initial_cells', 'species', 'report_every')):
@@ -98,6 +98,20 @@ def configuration(sim):
     if not 0 < cfg['max_sqs'] < 2**31:
         raise ValueError('max_sqs must be positive and fit signed 32-bit indexing')
     return cfg
+
+
+def founder_geometry(count, rng):
+    """One founder by default; optional separated, unoriented disk inoculum."""
+    if count == 1:
+        yield (0.0, 0.0, 0.0), (1.0, 0.0, 0.0)
+        return
+    golden_angle = math.pi * (3.0 - math.sqrt(5.0))
+    for index in range(count):
+        radius = 6.0 * math.sqrt(index)
+        angle = index * golden_angle
+        orientation = rng.uniform(0.0, 2.0 * math.pi)
+        yield ((radius * math.cos(angle), radius * math.sin(angle), 0.0),
+               (math.cos(orientation), math.sin(orientation), 0.0))
 
 
 def setup(sim):
@@ -127,15 +141,11 @@ def setup(sim):
     integrator = CLEulerIntegrator(sim, _cfg['species'], _cfg['max_cells'])
     sim.init(physics, ModuleRegulator(sim), None, integrator)
 
-    # Near-touching rods in a rectangular colony. Gentle growth creates contacts
-    # across spatial partitions without starting with severe overlaps.
-    count = _cfg['initial_cells']
-    columns = max(1, math.ceil(math.sqrt(count / 3.0)))
-    rows = math.ceil(count / columns)
-    for index in range(count):
-        x = (index % columns - (columns - 1) / 2) * 3.1
-        y = (index // columns - (rows - 1) / 2) * 1.05
-        sim.addCell(pos=(x, y, 0.0), dir=(1.0, 0.0, 0.0), length=2.0)
+    # Match the simple-growth examples: a single cell at the origin grows
+    # into a colony. Optional multiple founders are spaced on a disk, with
+    # varied orientations, instead of imposing a rectangular aligned lattice.
+    for pos, direction in founder_geometry(_cfg['initial_cells'], _rng):
+        sim.addCell(cellType=0, pos=pos, dir=direction)
     if sim.is_gui:
         from CellModeller.GUI import Renderers
         sim.addRenderer(Renderers.GLBacteriumRenderer(sim))
@@ -145,10 +155,10 @@ def setup(sim):
 
 
 def init(cell):
-    cell.targetVol = 3.8 + _rng.uniform(-0.3, 0.3)
+    cell.targetVol = 2.5 + _rng.uniform(0.0, 0.5)
     cell.growthRate = _cfg['growth_rate']
     cell.species[:] = 0.2
-    cell.color = [0.15, 0.85, 0.35]
+    cell.color = [0.1, 1.0, 0.3]
 
 
 def update(cells):
@@ -169,7 +179,7 @@ def update(cells):
 
 def divide(parent, daughter1, daughter2):
     for daughter in (daughter1, daughter2):
-        daughter.targetVol = 3.8 + _rng.uniform(-0.3, 0.3)
+        daughter.targetVol = 2.5 + _rng.uniform(0.0, 0.5)
 
 
 def specRateCL():
@@ -218,12 +228,12 @@ def main():
     parser.add_argument('--weights', help='Comma-separated positive weights; omitted means equal')
     parser.add_argument('--gpu-memory', choices=['partitioned', 'replicated'], default='partitioned')
     parser.add_argument('--max-cells', default='100000', help="Population target, or 'auto' for a memory estimate")
-    parser.add_argument('--initial-cells', type=int, default=256, help='Founders; large values make initialization expensive')
+    parser.add_argument('--initial-cells', type=int, default=1, help='Founders; default one cell like the growth examples')
     parser.add_argument('--max-contacts', type=int, default=32)
     parser.add_argument('--max-sqs', type=int, help='Grid capacity; default max(192**2, 4*max_cells)')
     parser.add_argument('--species', type=int, default=4)
     parser.add_argument('--seed', type=int, default=12345)
-    parser.add_argument('--growth-rate', type=float, default=1.0)
+    parser.add_argument('--growth-rate', type=float, default=2.0)
     parser.add_argument('--memory-fraction', type=float, default=0.5, help='Auto estimate fraction, (0, 0.8]; not a runtime quota')
     parser.add_argument('--report-every', type=int, default=10)
     parser.add_argument('--dt', type=float, default=0.025)

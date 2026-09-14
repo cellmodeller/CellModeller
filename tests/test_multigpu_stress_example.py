@@ -1,7 +1,9 @@
 """Capacity policy checks for the example; no OpenCL installation required."""
 import importlib.util
+import ast
 import io
 import os
+import random
 from pathlib import Path
 from types import SimpleNamespace
 import unittest
@@ -15,6 +17,37 @@ SPEC.loader.exec_module(stress)
 
 
 class StressExampleTests(unittest.TestCase):
+    def test_default_founder_matches_growth_examples(self):
+        with patch.dict(os.environ, {}, clear=True):
+            cfg = stress.configuration(None)
+        self.assertEqual(cfg['initial_cells'], 1)
+        self.assertEqual(cfg['growth_rate'], 2.0)
+        self.assertEqual(list(stress.founder_geometry(1, random.Random(123))),
+                         [((0.0, 0.0, 0.0), (1.0, 0.0, 0.0))])
+
+    def test_gui_model_uses_standard_setup_and_division_budget(self):
+        # Execute model callbacks with stand-ins so this remains GPU-independent.
+        path = Path(__file__).resolve().parents[1] / 'Examples/multigpu_stress_gui.py'
+        tree = ast.parse(path.read_text())
+        tree.body = [node for node in tree.body if not isinstance(node, (ast.Import, ast.ImportFrom))]
+        calls = []
+        namespace = dict(random=random,
+                         CLBacterium=lambda sim, **kw: calls.append(kw) or 'physics',
+                         ModuleRegulator=lambda sim: 'regulator')
+        exec(compile(tree, str(path), 'exec'), namespace)
+        sim = SimpleNamespace(is_gui=False, stepNum=0, CLWorkStats={},
+                              init=lambda *args: calls.append(args),
+                              addCell=lambda **kw: calls.append(kw),
+                              setSaveOutput=lambda enabled: None)
+        namespace['setup'](sim)
+        self.assertIn(('physics', 'regulator', None, None), calls)
+        self.assertEqual(calls[-1], dict(cellType=0, pos=(0, 0, 0)))
+        namespace['max_cells'] = 3
+        cells = {i: SimpleNamespace(volume=4, targetVol=3) for i in range(2)}
+        namespace['update'](cells)
+        self.assertEqual(sum(c.divideFlag for c in cells.values()), 1)
+        self.assertTrue(all(c.growthRate == 0 for c in cells.values()))
+
     def test_simultaneous_divisions_cannot_exceed_capacity(self):
         stress._cfg = dict(max_cells=10, growth_rate=1.0, report_every=10)
         stress._sim = SimpleNamespace(is_gui=False)
@@ -46,7 +79,7 @@ class StressExampleTests(unittest.TestCase):
                              int(2**19 / (8192 + 768 * 32 + 32 * 4)))
 
     def test_configuration_rejects_overflow_and_small_capacity(self):
-        for env in ({'CM_STRESS_MAX_CELLS': '1'},
+        for env in ({'CM_STRESS_MAX_CELLS': '0'},
                     {'CM_STRESS_MAX_CELLS': str(2**30)},
                     {'CM_STRESS_MAX_CONTACTS': '4'},
                     {'CM_STRESS_GROWTH_RATE': 'nan'}):
