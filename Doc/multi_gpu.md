@@ -152,6 +152,21 @@ has been measured on hardware in the implementation environment.
 
 ### Growing-colony capacity example
 
+For a dedicated graphical setup with no environment variables, launch:
+
+```bash
+python Examples/multigpu_stress_gui.py
+```
+
+Choose an explicit population target or memory-based estimate, founders,
+contacts, species, growth rate, seed and reporting interval. Then select GPUs,
+weights and partitioned memory in the normal device dialog. Click **Run** in
+the colony window. A separate status window shows population, selected devices,
+weights, cumulative contact work and latest planned contact scratch memory.
+Status refreshes between simulation steps, so expensive steps may delay it.
+The launcher is standalone; use `multigpu_stress.py` for the **Load Model** action.
+To change the launcher's settings, close it and launch it again.
+
 Load `Examples/multigpu_stress.py` in the GUI and select your GPUs with
 partitioned memory. The default grows 256 founders toward 100,000 cells with
 mechanics, contact/CG solver work, division and four intracellular species.
