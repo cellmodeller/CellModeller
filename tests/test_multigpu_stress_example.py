@@ -31,8 +31,12 @@ class StressExampleTests(unittest.TestCase):
         tree = ast.parse(path.read_text())
         tree.body = [node for node in tree.body if not isinstance(node, (ast.Import, ast.ImportFrom))]
         calls = []
-        namespace = dict(random=random,
-                         CLBacterium=lambda sim, **kw: calls.append(kw) or 'physics',
+        class Physics:
+            def __init__(self, sim, **kw):
+                calls.append(kw)
+        namespace = dict(random=random, capacity_estimate=lambda *args: 123456,
+                         host_available_bytes=lambda: 2**30,
+                         CLBacterium=Physics,
                          ModuleRegulator=lambda sim: 'regulator')
         exec(compile(tree, str(path), 'exec'), namespace)
         sim = SimpleNamespace(is_gui=False, stepNum=0, CLWorkStats={},
@@ -40,9 +44,12 @@ class StressExampleTests(unittest.TestCase):
                               addCell=lambda **kw: calls.append(kw),
                               setSaveOutput=lambda enabled: None)
         namespace['setup'](sim)
-        self.assertIn(('physics', 'regulator', None, None), calls)
+        self.assertIsInstance(calls[1][0], Physics)
+        self.assertEqual(calls[1][1:], ('regulator', None, None))
+        self.assertEqual(calls[0]['max_cells'], 123456)
+        self.assertEqual(calls[0]['max_sqs'], 4 * 123456)
         self.assertEqual(calls[-1], dict(cellType=0, pos=(0, 0, 0)))
-        namespace['max_cells'] = 3
+        namespace['_capacity'] = 3
         cells = {i: SimpleNamespace(volume=4, targetVol=3) for i in range(2)}
         namespace['update'](cells)
         self.assertEqual(sum(c.divideFlag for c in cells.values()), 1)

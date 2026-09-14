@@ -160,9 +160,15 @@ thresholds between 2.5 and 3.0. Colony shape emerges from growth and mechanics;
 no rectangular grid of aligned cells is imposed. It uses the standard renderer
 and mechanics without extra species integration or a separate dashboard.
 
-Edit the constants at the top of that file to change `max_cells` (100,000 by
-default), `max_contacts`, `max_sqs`, seed and growth rate. Increase grid capacity
-as needed for larger colonies. Each flagged division reserves a cell slot and
+The GUI model now defaults to `max_cells = "auto"`, estimating a population
+target from available host RAM and the selected GPUs with a 0.7 planning
+fraction. It prints the target at startup and sizes the spatial grid accordingly.
+This removes the fixed 100,000-cell ceiling; it does not establish the largest
+possible population or guarantee full GPU utilization. Set an integer
+`max_cells` for reproducible comparisons, or edit `memory_fraction`,
+`max_contacts`, `max_sqs`, seed and growth rate at the top of the file.
+Changing capacity requires reloading/restarting the model; it cannot resize
+the already-running simulation. Each flagged division reserves a cell slot and
 growth stops at the population limit. The regular Save Pickles control remains
 available, with saving disabled initially. Contact work is printed periodically.
 The file is a loadable model, not a standalone launcher.
