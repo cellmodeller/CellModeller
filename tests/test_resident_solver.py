@@ -42,6 +42,11 @@ def copy(queue, target, source, byte_count=None, device_offset=0, **kwargs):
 
 class Program:
     fail = False
+    retrievals = 0
+    def __getattribute__(self, name):
+        if name.startswith('rd_') or name == 'calculate_Mx':
+            type(self).retrievals += 1
+        return object.__getattribute__(self, name)
     def __init__(self, *args):
         pass
     def build(self):
@@ -132,7 +137,9 @@ class ResidentTests(unittest.TestCase):
     def test_resident_iterations_match_dense_reference(self):
         pool, phys, expected = self.fixture()
         solver = self.module.ResidentCG(pool)
+        retrievals = Program.retrievals
         iterations, residual = solver.solve(phys)
+        self.assertEqual(Program.retrievals, retrievals)
         self.assertGreater(iterations, 0)
         self.assertLess(residual, phys.cgs_tol)
         np.testing.assert_allclose(phys.deltap_dev.array, expected, rtol=1e-4, atol=1e-5)

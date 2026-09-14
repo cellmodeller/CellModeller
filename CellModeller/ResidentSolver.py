@@ -6,6 +6,7 @@ The final displacement is committed only after successful finite readback.
 """
 import math
 from pathlib import Path
+from types import SimpleNamespace
 
 import numpy as np
 
@@ -95,6 +96,12 @@ class ResidentCG:
         # Use the original inertia implementation and calculate_Mx kernel.
         physics = (Path(__file__).parent / 'Biophysics/BacterialModels/CLBacterium.cl').read_text()
         self.programs = [cl.Program(q.context, physics+'\n'+SOURCE).build() for q in pool.queues]
+        # Program attribute lookup creates a new PyOpenCL Kernel each time.
+        # Retain one callable per device; solver dispatch is host-serial.
+        names = ('rd_transpose', 'rd_gather', 'rd_bx', 'calculate_Mx',
+                 'rd_regularize', 'rd_update', 'rd_direction')
+        self.kernels = [SimpleNamespace(**{name: getattr(program, name) for name in names})
+                        for program in self.programs]
         self.dots = [ReductionKernel(q.context, np.float32, neutral='0', reduce_expr='a+b',
                       map_expr='dot(x[i].s0123,y[i].s0123)+dot(x[i].s4567,y[i].s4567)',
                       arguments='__global float8 *x, __global float8 *y') for q in pool.queues]
@@ -170,7 +177,7 @@ class ResidentCG:
                 route['host_values'] = np.empty(len(route['indices']), vec.float8)
 
             def transpose(device, source, result):
-                b, q, program = workers[device], pool.queues[device], self.programs[device]
+                b, q, program = workers[device], pool.queues[device], self.kernels[device]
                 program.rd_transpose(q, (len(owned[device]),), None,
                                      *[b[k].data for k in ('offsets', 'contacts', 'signs', 'f', 't')],
                                      b[source].data, b[result].data)
@@ -180,7 +187,7 @@ class ResidentCG:
                 for route in routes:
                     source = route['source']
                     q = pool.queues[source]
-                    self.programs[source].rd_gather(q, (len(route['indices']),), None,
+                    self.kernels[source].rd_gather(q, (len(route['indices']),), None,
                         route['gpu_indices'].data, workers[source]['p'].data, route['gpu_values'].data)
                     events.append(cl.enqueue_copy(q, route['host_values'], route['gpu_values'].data, is_blocking=False))
                     q.flush()
@@ -219,7 +226,7 @@ class ResidentCG:
                 for device, b in enumerate(workers):
                     if b is None:
                         continue
-                    q, program = pool.queues[device], self.programs[device]
+                    q, program = pool.queues[device], self.kernels[device]
                     contacts = len(plans[device]['contact_ids'])
                     if contacts:
                         program.rd_bx(q, (contacts,), None,
@@ -236,7 +243,7 @@ class ResidentCG:
                 alpha = np.float32(rsold/p_ap)
                 for device, b in enumerate(workers):
                     if b is not None:
-                        self.programs[device].rd_update(pool.queues[device], (len(owned[device]),), None,
+                        self.kernels[device].rd_update(pool.queues[device], (len(owned[device]),), None,
                                                         alpha, *[b[k].data for k in ('x', 'r', 'p', 'ap')])
                 pool.record('vecaddkx', owned)
                 rsnew = dot('r', 'r')
@@ -247,7 +254,7 @@ class ResidentCG:
                 beta = np.float32(rsnew/rsold)
                 for device, b in enumerate(workers):
                     if b is not None:
-                        self.programs[device].rd_direction(pool.queues[device], (len(owned[device]),), None,
+                        self.kernels[device].rd_direction(pool.queues[device], (len(owned[device]),), None,
                                                            beta, b['p'].data, b['r'].data)
                 rsold = rsnew
             # Stage the complete solution before committing any partition.
