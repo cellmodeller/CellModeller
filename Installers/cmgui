@@ -1,4 +1,0 @@
-#!/bin/bash
-source $HOME/.bash_profile
-source activate cellmodeller
-python $CMPATH/Scripts/CellModellerGUI.py $1 
