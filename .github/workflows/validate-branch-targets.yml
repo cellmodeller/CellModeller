@@ -1,0 +1,58 @@
+name: Validate PR Branch Targets
+
+on:
+  pull_request:
+    branches:
+      - dev*
+      - staging
+      - main
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Check branch naming and targets
+      run: |
+        HEAD="${{ github.head_ref }}"
+        BASE="${{ github.base_ref }}"
+
+        echo "Head branch: $HEAD"
+        echo "Base branch: $BASE"
+
+        #
+        # === ALLOWED HEAD BRANCH PATTERNS ===
+        #
+        if [[ ! "$HEAD" =~ ^(feature|bug|hotfix)/ && ! "$HEAD" =~ ^dev.*$ && "$HEAD" != "staging" ]]; then
+          echo "❌ Branch name must start with 'feature/', 'bug/', 'hotfix/', 'dev*', or be 'staging'."
+          exit 1
+        fi
+
+        #
+        # === MERGE RULES ===
+        #
+
+        # 1. feature/bug/hotfix/dev* may NOT merge directly into main
+        if [[ ( "$HEAD" =~ ^(feature|bug|hotfix)/ || "$HEAD" =~ ^dev.*$ ) && "$BASE" == "main" ]]; then
+          echo "❌ '$HEAD' cannot merge into 'main'. Merge into 'staging' instead."
+          exit 1
+        fi
+
+        # 2. feature/bug/hotfix branches may only merge into dev* or staging
+        if [[ "$HEAD" =~ ^(feature|bug|hotfix)/ && ! "$BASE" =~ ^(dev.*|staging)$ ]]; then
+          echo "❌ Feature/bug/hotfix branches may only merge into 'dev*' or 'staging'."
+          exit 1
+        fi
+
+        # 3. dev* branches may only merge into staging or other dev* branches
+        if [[ "$HEAD" =~ ^dev.*$ && ! "$BASE" =~ ^(staging|dev.*)$ ]]; then
+          echo "❌ Dev* branches may only merge into 'staging' or another dev* branch."
+          exit 1
+        fi
+
+        # 4. staging may only merge into main
+        if [[ "$HEAD" == "staging" && "$BASE" != "main" ]]; then
+          echo "❌ 'staging' may only merge into 'main'."
+          exit 1
+        fi
+
+        echo "✅ PR branch name and target are valid."
