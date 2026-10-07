@@ -166,7 +166,7 @@ visualised.
     # and have the user-defined func initialise the 3 modules
 
     ## Specify models to be used by simulator object. The four inputs are
-    # 'phys' = physical model of cell iteractions
+    # 'phys' = physical model of cell interactions
     # 'reg' = regulatory model of biochemical circuit in the cell
     # 'sig' = signaling model of intercellular chemical reaction diffusion.
     # 'integ' = integrator
@@ -191,7 +191,7 @@ visualised.
             self.reg.setSignalling(sig)
 
 
-    ## Set up the OpenCL contex, the configuration is set up the first time, and is saved in the config file
+    ## Set up the OpenCL context, the configuration is set up the first time, and is saved in the config file
     def init_cl(self, platnum, devnum):
         # Check that specified platform exists
         platforms = cl.get_platforms()
@@ -378,10 +378,10 @@ visualised.
         for row in list:
             cpos = [float(row[0]),float(row[1]),float(row[2])]
             cdir = [float(row[3]),float(row[4]),float(row[5])]
-            clen = float(row[6]) #radius should be removed from this in the analysis
+            cell_len = float(row[6]) #radius should be removed from this in the analysis
             ndir = cdir/numpy.linalg.norm(cdir) #normalize cell dir just in case
             #this should probably also check for overlaps
-            self.addCell(pos=tuple(cpos), dir=tuple(ndir), length=clen)
+            self.addCell(pos=tuple(cpos), dir=tuple(ndir), length=cell_len)
 
     ## Write current simulation state to an output file
     def writePickle(self, csv=False):

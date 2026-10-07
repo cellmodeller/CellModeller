@@ -5,8 +5,8 @@ import urllib.request, urllib.error, urllib.parse
 
 
 # indicates whether we should perform SBML document consistency check.
-# supressed by default because the MSR SBML library does not produce valid SBML. 
-supressConsistencyCheck = True
+# suppressed by default because the MSR SBML library does not produce valid SBML. 
+suppressConsistencyCheck = True
 
 
 # get the array index of given species ID:
@@ -24,7 +24,7 @@ def specOdeNameFromId(specId):
 # checks the given SBML document for consistency and raises
 # an exception if internal inconsistency is detected.
 def checkSBMLConsistency(document):
-    if supressConsistencyCheck:
+    if suppressConsistencyCheck:
         return
     
     numFailures = document.checkInternalConsistency()

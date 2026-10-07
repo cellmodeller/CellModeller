@@ -191,7 +191,7 @@ class GLGridRenderer:
         glDisable(GL_TEXTURE_2D)
 
 class GLPlantSignalRenderer:
-    # Render signals as chanels rgb
+    # Render signals as channels rgb
     def __init__(self, sim, chanIdx):
         self.sim = sim
         self.wallcol = [0, 0, 0]
