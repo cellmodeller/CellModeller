@@ -40,12 +40,12 @@ def SBMLModelFromSBMLFile(sbmlFile):
     reader = SBMLReader()    
     document = reader.readSBML(sbmlFile)
     if document.getNumErrors()>0:
-	print("Errors in reading SBML file...")
-    checkSBMLConsistency(document)
-    model = document.getModel()
+        print("Errors in reading SBML file...")
+        checkSBMLConsistency(document)
+        model = document.getModel()
     if not model:
-	print("No model!")
-    return model
+        print("No model!")
+        return model
 
 
 # load SBML model form given string.
@@ -124,7 +124,7 @@ def pythonMathFromASTNode(astNode, kineticLaw, model):
             return "1"
         
     else:    
-	raise Exception("Un-supported AST node type: " + str(astNode.isName()) + ", node: " + str(astNode.getType()))
+	    raise Exception("Un-supported AST node type: " + str(astNode.isName()) + ", node: " + str(astNode.getType()))
         
 
 # constructs a python program string from given SBML model.

@@ -1,0 +1,15 @@
+Metadata-Version: 2.4
+Name: CellModeller
+Version: 4.5.0+2.sha62325df
+Requires-Python: >=3
+Requires-Dist: numpy
+Requires-Dist: scipy
+Requires-Dist: pyopengl
+Requires-Dist: mako
+Requires-Dist: pyqt5
+Requires-Dist: pyopencl
+Requires-Dist: reportlab
+Requires-Dist: matplotlib
+Requires-Dist: setuptools<82,>=70
+Dynamic: requires-dist
+Dynamic: requires-python

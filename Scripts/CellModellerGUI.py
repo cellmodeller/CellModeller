@@ -10,9 +10,9 @@ from PyQt5.QtWidgets import QApplication
 from PyQt5 import uic
 from PyQt5.QtCore import *
 
-import CellModeller.GUI.Renderers
+import CellModeller.gui.Renderers
 from CellModeller import Simulator
-from CellModeller.GUI.PyGLCMViewer import PyGLCMViewer, RenderInfo
+from CellModeller.gui.PyGLCMViewer import PyGLCMViewer, RenderInfo
 from pkg_resources import resource_stream
 
 import os
@@ -22,7 +22,7 @@ import sys
 qapp = QApplication([])
 
 # The UI
-uifile = resource_stream('CellModeller.GUI', 'PyGLGUI.ui')
+uifile = resource_stream('CellModeller.gui', 'PyGLGUI.ui')
 ui = uic.loadUi(uifile)
 ui.show()
 ui.raise_()

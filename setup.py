@@ -26,7 +26,7 @@ setup(
     packages=[
         'CellModeller',
         'CellModeller.Regulation',
-        'CellModeller.GUI'
+        'CellModeller.gui'
     ],
     package_data={'': ['*.cl', '*.ui']},
     python_requires='>=3',
