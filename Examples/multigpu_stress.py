@@ -8,6 +8,14 @@ Headless (recommended for capacity measurements, from the repository root):
     python Examples/multigpu_stress.py --devices auto --max-cells auto
     python Examples/multigpu_stress.py --devices 0,1 --max-cells 200000
     python Examples/multigpu_stress.py --devices 0 --max-cells 200000
+    python Examples/multigpu_stress.py --devices 0,1,2,3 --checkpoint latest.pickle
+    python Examples/multigpu_stress.py --devices 0,1,2,3 --resume latest.pickle --log resumed.jsonl
+
+With --checkpoint, Ctrl+C/SIGTERM requests a stop after the current step and an
+atomic save. Wait for CHECKPOINT saved and stopped_checkpointed before ending
+the session. Periodic checkpoints default to every 100 completed steps. Resume
+restores the workload and RNG states; device selection remains configurable.
+Only load trusted checkpoints. See Examples/multigpu_checkpointing.md.
 
 Run --help for controls. 'auto' is a conservative memory-based target estimate,
 NOT a measured maximum or a promise of full GPU utilization. Increase explicit
@@ -22,6 +30,10 @@ Run tests/test_multi_gpu_hardware.py for numerical comparison coverage.
 """
 
 import argparse
+import hashlib
+import pickle
+import signal
+import tempfile
 import json
 import math
 import os
@@ -221,6 +233,74 @@ def validate_state(sim):
         raise FloatingPointError('Nonpositive cell length detected')
 
 
+
+def checkpoint_signature():
+    """Reject resume against different simulation source, including dirty edits."""
+    root = Path(__file__).resolve().parents[1]
+    digest = hashlib.sha256()
+    paths = sorted((root / 'CellModeller').rglob('*.py'))
+    paths += sorted((root / 'CellModeller').rglob('*.cl'))
+    paths.append(Path(__file__).resolve())
+    for path in paths:
+        digest.update(str(path.relative_to(root)).encode())
+        digest.update(path.read_bytes())
+    return digest.hexdigest()
+
+
+def save_checkpoint(path, sim, model, reached, hold_steps):
+    """Replace one checkpoint atomically, only after a fully completed step."""
+    import numpy as np
+    data = dict(format='cellmodeller-stress-v1', source=checkpoint_signature(),
+                config=dict(model._cfg), dt=sim.dt, reached=reached,
+                hold_steps=hold_steps, stepNum=sim.stepNum,
+                cellStates=sim.cellStates, lineage=sim.lineage,
+                next_id=sim._next_id, next_idx=sim._next_idx,
+                specData=sim.integ.levels,
+                model_rng=model._rng.getstate(), python_rng=random.getstate(),
+                numpy_rng=np.random.get_state())
+    path = Path(path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    tmp = None
+    try:
+        with tempfile.NamedTemporaryFile(dir=path.parent, prefix=path.name + '.',
+                                         suffix='.tmp', delete=False) as stream:
+            tmp = stream.name
+            pickle.dump(data, stream, protocol=pickle.HIGHEST_PROTOCOL)
+            stream.flush()
+            os.fsync(stream.fileno())
+        os.replace(tmp, path)
+        tmp = None
+    finally:
+        if tmp is not None:
+            os.unlink(tmp)
+    print('CHECKPOINT saved: %s (next step %d, %d cells)' %
+          (path, sim.stepNum, len(sim.cellStates)), flush=True)
+
+
+def read_checkpoint(path):
+    # Pickle is executable data: only load checkpoints you created/trust.
+    with open(path, 'rb') as stream:
+        data = pickle.load(stream)
+    if data.get('format') != 'cellmodeller-stress-v1':
+        raise ValueError('Not a resumable headless stress checkpoint (GUI pickles are unsupported)')
+    if data['source'] != checkpoint_signature():
+        raise ValueError('Checkpoint source differs: restore the original CellModeller checkout')
+    return data
+
+
+def restore_checkpoint(sim, model, data):
+    import numpy as np
+    sim.loadFromPickle(data)
+    sim._next_id, sim._next_idx = data['next_id'], data['next_idx']
+    # The generic pickle loader does not restore this integrator counter.
+    sim.integ.nCells = len(sim.cellStates)
+    model._rng.setstate(data['model_rng'])
+    random.setstate(data['python_rng'])
+    np.random.set_state(data['numpy_rng'])
+    model._previous, model._last_report = {}, time.perf_counter()
+    sim.CLWorkStats.clear()
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument('--platform', type=int, default=0)
@@ -237,10 +317,29 @@ def main():
     parser.add_argument('--memory-fraction', type=float, default=0.5, help='Auto estimate fraction, (0, 0.8]; not a runtime quota')
     parser.add_argument('--report-every', type=int, default=10)
     parser.add_argument('--dt', type=float, default=0.025)
-    parser.add_argument('--steps', type=int, default=10000, help='Maximum steps even if target is not reached')
+    parser.add_argument('--steps', type=int, default=10000, help='Maximum additional steps in this invocation')
     parser.add_argument('--hold-steps', type=int, default=100, help='Steps at target with growth disabled')
     parser.add_argument('--log', default='multigpu-stress.jsonl', help='Exclusive-create JSONL log path')
+    parser.add_argument('--checkpoint', help='Atomic rolling checkpoint filename; enables safe stop')
+    parser.add_argument('--checkpoint-every', type=int, default=100, help='Completed steps between checkpoints')
+    parser.add_argument('--resume', help='Resume a trusted headless checkpoint; restores workload, dt and hold progress')
     args = parser.parse_args()
+    if args.checkpoint_every < 1:
+        parser.error('checkpoint-every must be positive')
+    resumed = read_checkpoint(args.resume) if args.resume else None
+    if resumed:
+        for key, value in resumed['config'].items():
+            setattr(args, key, value)
+        args.dt, args.hold_steps = resumed['dt'], resumed['hold_steps']
+        if not args.checkpoint:
+            args.checkpoint = args.resume
+        print('RESUME: saved workload, dt and hold settings override command-line values', flush=True)
+    if args.checkpoint and Path(args.checkpoint).exists() and not (
+            args.resume and Path(args.checkpoint).resolve() == Path(args.resume).resolve()):
+        parser.error('Checkpoint already exists; use --resume or a new checkpoint filename')
+    stop_requested = []
+    old_handlers = {}
+
     if not math.isfinite(args.dt) or args.dt <= 0 or args.steps < 1 or args.hold_steps < 1:
         parser.error('dt, steps and hold-steps must be positive')
     try:
@@ -258,6 +357,11 @@ def main():
     with open(args.log, 'x') as stream:
         sim = None
         try:
+            if args.checkpoint:
+                def request_stop(signum, frame):
+                    stop_requested.append(signum)
+                for signum in (signal.SIGINT, signal.SIGTERM):
+                    old_handlers[signum] = signal.signal(signum, request_stop)
             sim = Simulator(str(Path(__file__).resolve()), args.dt, saveOutput=False,
                             clPlatformNum=args.platform, clDeviceNums=devices,
                             clDeviceWeights=weights, clMultiGPUMemory=args.gpu_memory)
@@ -267,8 +371,22 @@ def main():
                                                        driver=d.driver_version) for d in sim.CLDevices],
                                          weights=sim.clDeviceWeights)) + '\n')
             stream.flush()
-            reached = None
+            reached = resumed['reached'] if resumed else None
+            if resumed:
+                restore_checkpoint(sim, model, resumed)
+                model.validate_state(sim)
+                stream.write(json.dumps(dict(event='resume', step=sim.stepNum,
+                                             checkpoint=args.resume)) + '\n')
+                stream.flush()
+            if args.checkpoint:
+                save_checkpoint(args.checkpoint, sim, model, reached, args.hold_steps)
+            stopped = False
             for _ in range(args.steps):
+                if stop_requested:
+                    stopped = True
+                    break
+                if reached is not None and sim.stepNum - reached >= args.hold_steps:
+                    break
                 sim.step()
                 if sim.stepNum % model._cfg['report_every'] == 0:
                     model.validate_state(sim)
@@ -276,11 +394,16 @@ def main():
                 if len(sim.cellStates) == model._cfg['max_cells']:
                     if reached is None:
                         reached = sim.stepNum
-                    if sim.stepNum - reached >= args.hold_steps:
-                        break
+                if args.checkpoint and sim.stepNum % args.checkpoint_every == 0:
+                    save_checkpoint(args.checkpoint, sim, model, reached, args.hold_steps)
+                if stop_requested:
+                    stopped = True
+                    break
             model.validate_state(sim)
             model.report(sim, stream)
-            status = 'target_held' if reached is not None and sim.stepNum - reached >= args.hold_steps else 'step_limit'
+            if args.checkpoint:
+                save_checkpoint(args.checkpoint, sim, model, reached, args.hold_steps)
+            status = 'stopped_checkpointed' if stopped else 'target_held' if reached is not None and sim.stepNum - reached >= args.hold_steps else 'step_limit'
             stream.write(json.dumps(dict(event='end', status=status, cells=len(sim.cellStates))) + '\n')
             print('STRESS finished:', status, '(step_limit does not establish maximum capacity)', flush=True)
         except (Exception, KeyboardInterrupt) as error:
@@ -289,6 +412,9 @@ def main():
                                          cells=len(sim.cellStates) if sim else None)) + '\n')
             stream.flush()
             raise
+        finally:
+            for signum, handler in old_handlers.items():
+                signal.signal(signum, handler)
 
 
 if __name__ == '__main__':
