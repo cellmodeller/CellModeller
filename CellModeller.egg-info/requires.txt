@@ -1,9 +1,0 @@
-numpy
-scipy
-pyopengl
-mako
-pyqt5
-pyopencl
-reportlab
-matplotlib
-setuptools<82,>=70
