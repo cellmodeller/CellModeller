@@ -3,7 +3,7 @@ from PyQt5 import QtCore, QtGui
 from PyQt5.Qt import Qt
 from PyQt5.QtCore import QObject, QTimer, pyqtSignal, pyqtSlot
 from PyQt5.QtWidgets import QInputDialog, QFileDialog
-from .PyGLWidget import PyGLWidget
+from .py_gl_widget import PyGLWidget
 from OpenGL.GL import *
 from OpenGL.GLU import *
 
