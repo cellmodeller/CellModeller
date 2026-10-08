@@ -7,7 +7,7 @@ import CellModeller
 import subprocess
 import string
 import shutil
-from CellModeller.Simulator import Simulator
+from CellModeller.simulator import Simulator
 import networkx
 from reportlab.pdfgen.canvas import Canvas
 from reportlab.lib import units

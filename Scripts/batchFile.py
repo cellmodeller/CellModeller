@@ -6,7 +6,7 @@ import shutil
 import time
 from exceptions import OSError
 
-from CellModeller.Simulator import Simulator
+from CellModeller.simulator import Simulator
 
 sys.path.append('./')
 

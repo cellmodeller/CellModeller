@@ -1,4 +1,4 @@
-from .CellState import CellState
+from .cell_state import CellState
 import copy
 import pyopencl as cl
 import sys

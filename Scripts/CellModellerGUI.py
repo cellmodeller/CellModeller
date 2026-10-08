@@ -11,7 +11,7 @@ from PyQt5 import uic
 from PyQt5.QtCore import *
 
 import CellModeller.gui.renderers
-from CellModeller import Simulator
+from CellModeller import simulator
 from CellModeller.gui.py_gl_cm_viewer import PyGLCMViewer, RenderInfo
 from pkg_resources import resource_stream
 
