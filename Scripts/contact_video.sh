@@ -7,19 +7,18 @@
 # Run Draw2DPDF to generate pdf files
 for f in $( ls *.pickle ); do
     echo Processing: $f
-    python $HOME/Code/CellModeller/Scripts/draw_2d_pdf.py $f
+    $CMPATH/bin/cmpython $CMPATH/Scripts/contact_graph.py $f
 done
 
 # Convert and resize etc. pdf files into jpegs
 for f in $( ls *.pdf ); do
     NAME=`basename $f .pdf`
     convert \
-           -colorspace RGB \
-	   -verbose       \
-           -density 150   \
-            $NAME.pdf      \
-            $NAME.png
+        -verbose       \
+        -density 300   \
+        $NAME.pdf      \
+        $NAME.jpg
 done
 
 # Run ffmpeg to generate video file
-ffmpeg -framerate 7 -i %*.png -vf scale=1920:1080 -r 24 $1
+ffmpeg -framerate 20 -pattern_type glob -i "step-*_graph.jpg" -vf scale=1920:1080 -r 24 $1

@@ -5,8 +5,8 @@ import urllib.request, urllib.error, urllib.parse
 
 
 # indicates whether we should perform SBML document consistency check.
-# supressed by default because the MSR SBML library does not produce valid SBML. 
-supressConsistencyCheck = True
+# suppressed by default because the MSR SBML library does not produce valid SBML. 
+suppressConsistencyCheck = True
 
 
 # get the array index of given species ID:
@@ -24,7 +24,7 @@ def specOdeNameFromId(specId):
 # checks the given SBML document for consistency and raises
 # an exception if internal inconsistency is detected.
 def checkSBMLConsistency(document):
-    if supressConsistencyCheck:
+    if suppressConsistencyCheck:
         return
     
     numFailures = document.checkInternalConsistency()
@@ -40,12 +40,12 @@ def SBMLModelFromSBMLFile(sbmlFile):
     reader = SBMLReader()    
     document = reader.readSBML(sbmlFile)
     if document.getNumErrors()>0:
-	print("Errors in reading SBML file...")
-    checkSBMLConsistency(document)
-    model = document.getModel()
+        print("Errors in reading SBML file...")
+        checkSBMLConsistency(document)
+        model = document.getModel()
     if not model:
-	print("No model!")
-    return model
+        print("No model!")
+        return model
 
 
 # load SBML model form given string.
@@ -124,7 +124,7 @@ def pythonMathFromASTNode(astNode, kineticLaw, model):
             return "1"
         
     else:    
-	raise Exception("Un-supported AST node type: " + str(astNode.isName()) + ", node: " + str(astNode.getType()))
+	    raise Exception("Un-supported AST node type: " + str(astNode.isName()) + ", node: " + str(astNode.getType()))
         
 
 # constructs a python program string from given SBML model.

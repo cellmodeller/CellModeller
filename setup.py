@@ -19,17 +19,14 @@ except:
 setup(
     name='CellModeller',
     install_requires=[
-        'numpy', 'scipy', 'pyopengl', 'mako', 'pyqt5', 'pyopencl', 'reportlab', 'matplotlib'
+        'numpy', 'scipy', 'pyopengl', 'mako', 'pyqt5', 'pyopencl', 'reportlab', 'matplotlib',
+        # resource_string/resource_stream come from pkg_resources, removed in setuptools 82
+        'setuptools>=70,<82',
     ],
     packages=[
         'CellModeller',
-        'CellModeller.Biophysics',
-        'CellModeller.Biophysics.BacterialModels',
-        'CellModeller.Biophysics.GeneralModels',
-        'CellModeller.Integration',
         'CellModeller.Regulation',
-        'CellModeller.Signalling',
-        'CellModeller.GUI'
+        'CellModeller.gui'
     ],
     package_data={'': ['*.cl', '*.ui']},
     python_requires='>=3',

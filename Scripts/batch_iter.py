@@ -4,7 +4,7 @@ import subprocess
 import string
 import shutil
 
-from CellModeller.Simulator import Simulator
+from CellModeller.simulator import Simulator
 
 sys.path.append('../../Models')
 
@@ -20,4 +20,4 @@ def simulate(mod_name, ingam, fname):
 
 #here we are varying gamma from 1 to 50, every 2
 for i in range(len(gammas)):
-    simulate(sys.argv[1],gammas[i],(str(sys.argv[1])+'_gamma='+str(gammas[i]))
+    simulate(sys.argv[1],gammas[i],(str(sys.argv[1])+'_gamma='+str(gammas[i])))
