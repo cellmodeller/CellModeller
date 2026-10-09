@@ -2,7 +2,7 @@ import sys
 import os
 sys.path.append('.')
 import pickle
-import CellModeller
+import cellmodeller
 
 dir = os.path.join('data', sys.argv[1])
 

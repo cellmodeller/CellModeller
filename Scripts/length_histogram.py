@@ -4,7 +4,7 @@ import math
 import numpy as np
 sys.path.append('.')
 import pickle
-import CellModeller
+import cellmodeller
 #import matplotlib.pyplot as plt
 
 file = sys.argv[1] #select pickle file in command line

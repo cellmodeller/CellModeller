@@ -3,11 +3,11 @@ import os
 import math
 import numpy as np
 import pickle
-import CellModeller
+import cellmodeller
 import subprocess
 import string
 import shutil
-from CellModeller.simulator import Simulator
+from cellmodeller.simulator import Simulator
 import networkx
 from reportlab.pdfgen.canvas import Canvas
 from reportlab.lib import units

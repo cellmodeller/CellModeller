@@ -7,9 +7,9 @@ from .py_gl_widget import PyGLWidget
 from OpenGL.GL import *
 from OpenGL.GLU import *
 
-from CellModeller.Regulation import ModuleRegulator
-from CellModeller.simulator import Simulator
-from CellModeller.cell_state import CellState
+from cellmodeller.Regulation import ModuleRegulator
+from cellmodeller.simulator import Simulator
+from cellmodeller.cell_state import CellState
 import os
 import sys
 import pickle

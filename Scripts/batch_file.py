@@ -6,13 +6,13 @@ import shutil
 import time
 from exceptions import OSError
 
-from CellModeller.simulator import Simulator
+from cellmodeller.simulator import Simulator
 
 sys.path.append('./')
 
 print((os.getcwd()))
 
-import CellModeller.AdaptiveSimulator
+import cellmodeller.AdaptiveSimulator
 
 
 sys.path.append('Models')

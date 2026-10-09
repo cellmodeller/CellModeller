@@ -66,7 +66,7 @@ visualised.
         if "CMPATH" in os.environ:
             self.cfg_file = os.path.join(os.environ["CMPATH"], 'CMconfig.cfg')
         else:
-            self.cfg_file = 'CellModeller/CMconfig.cfg'
+            self.cfg_file = 'cellmodeller/CMconfig.cfg'
         if not self.init_cl(platnum=clPlatformNum, devnum=clDeviceNum):
             print("Couldn't initialise OpenCL context")
             return

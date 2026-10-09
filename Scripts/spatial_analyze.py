@@ -4,7 +4,7 @@ import math
 import numpy as np
 sys.path.append('.')
 import pickle
-import CellModeller
+import cellmodeller
 import matplotlib.pyplot as plt
 
 pname= sys.argv[1]

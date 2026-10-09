@@ -158,7 +158,7 @@
   <customwidget>
    <class>PyGLCMViewer</class>
    <extends>QWidget</extends>
-   <header>CellModeller.gui.py_gl_cm_viewer</header>
+   <header>cellmodeller.gui.py_gl_cm_viewer</header>
    <slots>
     <signal>setSavePicklesToggle(bool)</signal>
     <slot>load()</slot>

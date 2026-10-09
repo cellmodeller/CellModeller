@@ -4,7 +4,7 @@ import subprocess
 import string
 import shutil
 
-from CellModeller.simulator import Simulator
+from cellmodeller.simulator import Simulator
 
 max_cells = 100000
 cell_buffer = 256

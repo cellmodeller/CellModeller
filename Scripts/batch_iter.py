@@ -4,7 +4,7 @@ import subprocess
 import string
 import shutil
 
-from CellModeller.simulator import Simulator
+from cellmodeller.simulator import Simulator
 
 sys.path.append('../../Models')
 
