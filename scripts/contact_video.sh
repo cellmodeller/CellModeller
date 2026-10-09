@@ -7,7 +7,7 @@
 # Run Draw2DPDF to generate pdf files
 for f in $( ls *.pickle ); do
     echo Processing: $f
-    $CMPATH/bin/cmpython $CMPATH/Scripts/contact_graph.py $f
+    $CMPATH/bin/cmpython $CMPATH/scripts/contact_graph.py $f
 done
 
 # Convert and resize etc. pdf files into jpegs
