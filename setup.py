@@ -25,7 +25,7 @@ setup(
     ],
     packages=[
         'cellmodeller',
-        'cellmodeller.Regulation',
+        'cellmodeller.regulation',
         'cellmodeller.gui'
     ],
     package_data={'': ['*.cl', '*.ui']},
