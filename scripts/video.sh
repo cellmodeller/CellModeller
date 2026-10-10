@@ -7,7 +7,7 @@
 # Run Draw2DPDF to generate pdf files
 for f in $( ls *.pickle ); do
     echo Processing: $f
-    python $HOME/Code/CellModeller/Scripts/draw_2d_pdf.py $f
+    python $HOME/Code/CellModeller/scripts/draw_2d_pdf.py $f
 done
 
 # Convert and resize etc. pdf files into jpegs

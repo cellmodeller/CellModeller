@@ -5,7 +5,7 @@ import re
 from setuptools import setup
 import subprocess
 
-version_py = os.path.join(os.path.dirname(__file__), 'CellModeller/version.py')
+version_py = os.path.join(os.path.dirname(__file__), 'cellmodeller/version.py')
 
 try:
     version_git = subprocess.check_output(["git", "describe"], text=True).strip()
@@ -24,9 +24,9 @@ setup(
         'setuptools>=70,<82',
     ],
     packages=[
-        'CellModeller',
-        'CellModeller.Regulation',
-        'CellModeller.gui'
+        'cellmodeller',
+        'cellmodeller.regulation',
+        'cellmodeller.gui'
     ],
     package_data={'': ['*.cl', '*.ui']},
     python_requires='>=3',
