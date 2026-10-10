@@ -22,7 +22,7 @@ import sys
 qapp = QApplication([])
 
 # The UI
-uifile = resource_stream('cellmodeller.gui', 'py_gl_gui.ui')
+uifile = resource_stream("cellmodeller.gui", "py_gl_gui.ui")
 ui = uic.loadUi(uifile)
 ui.show()
 ui.raise_()
@@ -34,7 +34,8 @@ label.setTextFormat(Qt.RichText)
 label.setAlignment(Qt.AlignJustify)
 
 # Load a model if specified
-if len(sys.argv) > 1: cmv.loadModelFile(sys.argv[1])
+if len(sys.argv) > 1:
+    cmv.loadModelFile(sys.argv[1])
 
 # Launch app main loop
 sys.exit(qapp.exec_())
