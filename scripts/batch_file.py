@@ -6,16 +6,15 @@ import shutil
 import time
 from exceptions import OSError
 
-from CellModeller.simulator import Simulator
+from cellmodeller.simulator import Simulator
 
-sys.path.append('./')
+sys.path.append("./")
 
 print((os.getcwd()))
 
-import CellModeller.AdaptiveSimulator
+import cellmodeller.AdaptiveSimulator
 
-
-sys.path.append('Models')
+sys.path.append("Models")
 
 cells = 300000
 cell_buffer = 256
@@ -24,7 +23,7 @@ pickleSteps = 50
 try:
     mod_name = sys.argv[1]
 except:
-    mod_name = 'DaninoOscillator'
+    mod_name = "DaninoOscillator"
 
 try:
     pickleDir = sys.argv[2]
@@ -34,21 +33,21 @@ except:
 try:
     pickleSteps = int(sys.argv[3])
 except:
-    'setting pickleSteps to %i' % pickleSteps
+    "setting pickleSteps to %i" % pickleSteps
 
 try:
     os.mkdir(pickleDir)
 except OSError:
-    print((pickleDir, 'exists'))
+    print((pickleDir, "exists"))
 
 pickleSetDir = os.path.join(pickleDir, mod_name)
 
 try:
     os.mkdir(pickleSetDir)
 except:
-    print((pickleSetDir, 'exists'))
+    print((pickleSetDir, "exists"))
 
-folderName = time.strftime('%Y%m%d-%H%M%S', time.localtime())
+folderName = time.strftime("%Y%m%d-%H%M%S", time.localtime())
 pickleFileRoot = os.path.join(pickleSetDir, folderName)
 
 max_cells = 300000
@@ -56,14 +55,15 @@ cell_buffer = 256
 
 
 def simulate(mod_name, steps=50):
-    print('simulate')
+    print("simulate")
     sim = Simulator(mod_name, 0.25, None, pickleSteps=50, pickleFileRoot=pickleFileRoot)
-    print('start')
+    print("start")
 
     sim.phys.set_cells()
     sim.phys.calc_cell_geom()
 
-    while len(sim.cellStates) < max_cells-cell_buffer:
+    while len(sim.cellStates) < max_cells - cell_buffer:
         sim.step()
+
 
 simulate(mod_name)
