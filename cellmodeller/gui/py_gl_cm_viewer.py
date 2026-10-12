@@ -7,9 +7,8 @@ from .py_gl_widget import PyGLWidget
 from OpenGL.GL import *
 from OpenGL.GLU import *
 
-from CellModeller.Regulation import ModuleRegulator
-from CellModeller.simulator import Simulator
-from CellModeller.cell_state import CellState
+from cellmodeller.simulator import Simulator
+from cellmodeller.cell_state import CellState
 import os
 import sys
 import pickle
@@ -17,15 +16,16 @@ import pyopencl as cl
 import importlib
 import numpy as np
 
+
 class PyGLCMViewer(PyGLWidget):
 
     setSavePicklesToggle = pyqtSignal(bool)
-    selectedCell = pyqtSignal(str) #emit selected cell info
+    selectedCell = pyqtSignal(str)  # emit selected cell info
     selectedName = -1
     dt = 0.05
 
-    def __init__(self, parent = None):
-        PyGLWidget.__init__(self,parent)
+    def __init__(self, parent=None):
+        PyGLWidget.__init__(self, parent)
         self.animTimer = QTimer()
         self.animTimer.timeout.connect(self.animate)
         self.animTimer.start(0)
@@ -34,17 +34,17 @@ class PyGLCMViewer(PyGLWidget):
         self.run = False
         self.frameNo = 0
         self.loadingFromPickle = False
-        self.clPlatformNum=0
-        self.clDeviceNum=0
+        self.clPlatformNum = 0
+        self.clDeviceNum = 0
 
         # Initial view setup
         self.set_radius(32)
-        self.rotate([0,0,1],-45)
-        self.translate([0,0,20])
-        self.rotate([1,0,0],-45)
+        self.rotate([0, 0, 1], -45)
+        self.translate([0, 0, 20])
+        self.rotate([1, 0, 0], -45)
 
         # Assume no pixel scaling unless explicitly set
-        self.pix_ratio = 1.
+        self.pix_ratio = 1.0
 
     def help(self):
         pass
@@ -61,7 +61,7 @@ class PyGLCMViewer(PyGLWidget):
             self.frameNo += 1
         # Make GUI button match simulator state for saving pickles
         self.setSavePicklesToggle.emit(sim.saveOutput)
-        print('saveOutput ', sim.saveOutput)
+        print("saveOutput ", sim.saveOutput)
         # Get rid of any selected cell id
         self.selectedName = -1
 
@@ -69,21 +69,23 @@ class PyGLCMViewer(PyGLWidget):
         return self.getOpenCLPlatform() and self.getOpenCLDevice()
 
     def getOpenCLPlatform(self):
-        # Pop dialogs to get user to choose OpenCL platform 
+        # Pop dialogs to get user to choose OpenCL platform
         platforms = cl.get_platforms()
 
         platlist = [str(p.name) for p in platforms]
         platdict = dict(list(zip(platlist, list(range(len(platlist))))))
 
-        if len(platlist)==1:
+        if len(platlist) == 1:
             self.clPlatformNum = 0
             return True
 
-        qsPlatformName, ok = QInputDialog.getItem(self, \
-                                            'Choose OpenCL platform', \
-                                            'Available platforms:', \
-                                            platlist, \
-                                            editable=False)
+        qsPlatformName, ok = QInputDialog.getItem(
+            self,
+            "Choose OpenCL platform",
+            "Available platforms:",
+            platlist,
+            editable=False,
+        )
         if not ok:
             print("You didn't select a OpenCL platform...")
             return False
@@ -98,23 +100,20 @@ class PyGLCMViewer(PyGLWidget):
 
         devlist = [str(d.name) for d in devices]
         devdict = dict(list(zip(devlist, list(range(len(devlist))))))
-        
-        if len(devlist)==1:
+
+        if len(devlist) == 1:
             self.clDeviceNum = 0
             return True
-        
-        qsDeviceName, ok = QInputDialog.getItem(self, \
-                                            'Choose OpenCL device', \
-                                            'Available devices:', \
-                                            devlist, \
-                                            editable=False)
+
+        qsDeviceName, ok = QInputDialog.getItem(
+            self, "Choose OpenCL device", "Available devices:", devlist, editable=False
+        )
         if not ok:
             print("You didn't select a OpenCL device...")
             return False
         else:
             self.clDeviceNum = devdict[qsDeviceName]
             return True
-
 
     @pyqtSlot(bool)
     def toggleRun(self, run):
@@ -134,20 +133,24 @@ class PyGLCMViewer(PyGLWidget):
             importlib.reload(self.sim.module)
 
         if self.loadingFromPickle:
-            sim = Simulator(self.modName, \
-                            self.dt, \
-                            moduleStr=self.moduleStr, \
-                            clPlatformNum=self.clPlatformNum, \
-                            clDeviceNum=self.clDeviceNum, \
-                            is_gui=True) 
-            self.setSimulator(sim) 
+            sim = Simulator(
+                self.modName,
+                self.dt,
+                moduleStr=self.moduleStr,
+                clPlatformNum=self.clPlatformNum,
+                clDeviceNum=self.clDeviceNum,
+                is_gui=True,
+            )
+            self.setSimulator(sim)
         else:
-            sim = Simulator(self.modName, \
-                                self.dt, \
-                                clPlatformNum=self.clPlatformNum, \
-                                clDeviceNum=self.clDeviceNum, \
-                                is_gui=True) 
-            self.setSimulator(sim) 
+            sim = Simulator(
+                self.modName,
+                self.dt,
+                clPlatformNum=self.clPlatformNum,
+                clDeviceNum=self.clDeviceNum,
+                is_gui=True,
+            )
+            self.setSimulator(sim)
         self.frameNo = 0
         self.updateGL()
 
@@ -155,11 +158,13 @@ class PyGLCMViewer(PyGLWidget):
     def loadGeometry(self):
         options = QFileDialog.Options()
         options |= QFileDialog.DontUseNativeDialog
-        qs,_ = QFileDialog.getOpenFileName(self, 'Load geometry from pickle file', '', '*.pickle', options=options)
+        qs, _ = QFileDialog.getOpenFileName(
+            self, "Load geometry from pickle file", "", "*.pickle", options=options
+        )
         if qs:
             filename = str(qs)
             print(filename)
-            data = pickle.load(open(filename,'rb'))
+            data = pickle.load(open(filename, "rb"))
             if isinstance(data, dict):
                 self.sim.loadGeometryFromPickle(data)
                 self.frameNo = self.sim.stepNum
@@ -173,22 +178,26 @@ class PyGLCMViewer(PyGLWidget):
     def loadPickle(self):
         options = QFileDialog.Options()
         options |= QFileDialog.DontUseNativeDialog
-        qs,_ = QFileDialog.getOpenFileName(self, 'Load pickle file', '', '*.pickle', options=options)
+        qs, _ = QFileDialog.getOpenFileName(
+            self, "Load pickle file", "", "*.pickle", options=options
+        )
         if qs and self.getOpenCLPlatDev():
             filename = str(qs)
             print(filename)
-            data = pickle.load(open(filename,'rb'))
+            data = pickle.load(open(filename, "rb"))
             if isinstance(data, dict):
-                self.modName = data['moduleName']
-                self.moduleStr = data['moduleStr']
-                self.frameNo = data['stepNum']
-                sim = Simulator(self.modName, \
-                                    self.dt, \
-                                    moduleStr=self.moduleStr, \
-                                    clPlatformNum=self.clPlatformNum, \
-                                    clDeviceNum=self.clDeviceNum, \
-                                    is_gui=True) 
- 
+                self.modName = data["moduleName"]
+                self.moduleStr = data["moduleStr"]
+                self.frameNo = data["stepNum"]
+                sim = Simulator(
+                    self.modName,
+                    self.dt,
+                    moduleStr=self.moduleStr,
+                    clPlatformNum=self.clPlatformNum,
+                    clDeviceNum=self.clDeviceNum,
+                    is_gui=True,
+                )
+
                 self.loadingFromPickle = True
                 sim.loadFromPickle(data)
                 self.setSimulator(sim)
@@ -205,7 +214,9 @@ class PyGLCMViewer(PyGLWidget):
     def load(self):
         options = QFileDialog.Options()
         options |= QFileDialog.DontUseNativeDialog
-        qs,_ = QFileDialog.getOpenFileName(self, 'Load Python module', '', '*.py', options=options)
+        qs, _ = QFileDialog.getOpenFileName(
+            self, "Load Python module", "", "*.py", options=options
+        )
         if qs:
             modfile = str(qs)
             print(modfile)
@@ -213,19 +224,20 @@ class PyGLCMViewer(PyGLWidget):
 
     def loadModelFile(self, modname):
         if self.getOpenCLPlatDev():
-            self.loadingFromPickle=False
-            (path,name) = os.path.split(modname)
-            self.modName = str(name).split('.')[0]
+            self.loadingFromPickle = False
+            path, name = os.path.split(modname)
+            self.modName = str(name).split(".")[0]
             sys.path.append(path)
-            sim = Simulator(self.modName, \
-                                    self.dt, \
-                                    clPlatformNum=self.clPlatformNum, \
-                                    clDeviceNum=self.clDeviceNum, \
-                                    is_gui=True) 
- 
+            sim = Simulator(
+                self.modName,
+                self.dt,
+                clPlatformNum=self.clPlatformNum,
+                clDeviceNum=self.clDeviceNum,
+                is_gui=True,
+            )
+
             self.setSimulator(sim)
             self.updateGL()
-
 
     def animate(self):
         if self.sim:
@@ -234,25 +246,25 @@ class PyGLCMViewer(PyGLWidget):
                     self.updateSelectedCell()
                     if self.run:
                         self.frameNo += 1
-    
+
     def updateSelectedCell(self):
         if self.sim:
             states = self.sim.cellStates
             cid = self.selectedName
-            txt = ''
+            txt = ""
             if cid in states:
-                txt += '<b>Selected Cell (id = %d)</b><br>'%(cid)
+                txt += "<b>Selected Cell (id = %d)</b><br>" % (cid)
                 s = states[cid]
-                for (name,val) in list(s.__dict__.items()):
+                for name, val in list(s.__dict__.items()):
                     if name not in CellState.excludeAttr:
-                        txt += '<b>' + name + '</b>:\t'
+                        txt += "<b>" + name + "</b>:\t"
                         if type(val) in [float, np.float32, np.float64]:
-                            txt += '%g'%val
+                            txt += "%g" % val
                         elif type(val) in [list, tuple, np.array]:
-                            txt += ', '.join(['%g'%v for v in val])
+                            txt += ", ".join(["%g" % v for v in val])
                         else:
                             txt += str(val)
-                        txt += '<br>'
+                        txt += "<br>"
             self.selectedCell.emit(txt)
             self.updateGL()
 
@@ -265,7 +277,7 @@ class PyGLCMViewer(PyGLWidget):
         cid = self.selectedName
         # Uncomment the condition below to enable movement of cells
         # currently the translation is not great due to the way PyGLWidget works
-        if False: #self.sim and self.sim.cellStates.has_key(cid):
+        if False:  # self.sim and self.sim.cellStates.has_key(cid):
             self.sim.moveCell(cid, _trans)
             print("Called self.sim.moveCell")
             self.updateSelectedCell()
@@ -285,12 +297,12 @@ class PyGLCMViewer(PyGLWidget):
 
     def paintGL(self):
         PyGLWidget.paintGL(self)
-        glClearColor(0.5,0.5,0.5,0.0)
+        glClearColor(0.5, 0.5, 0.5, 0.0)
         glClear(GL_COLOR_BUFFER_BIT)
         glMatrixMode(GL_MODELVIEW)
         glPushMatrix()
-        #s = self.renderInfo.scale
-        #glScalef(s,s,s)
+        # s = self.renderInfo.scale
+        # glScalef(s,s,s)
 
         # Draw a grid in xy plane
         glEnable(GL_DEPTH_TEST)
@@ -300,24 +312,24 @@ class PyGLCMViewer(PyGLWidget):
         glLineWidth(1.0)
         glBegin(GL_LINES)
         for i in range(25):
-            glVertex(-120, (i-12)*10, 0)
-            glVertex(120, (i-12)*10, 0)
-            glVertex((i-12)*10, -120, 0)
-            glVertex((i-12)*10, 120, 0)
+            glVertex(-120, (i - 12) * 10, 0)
+            glVertex(120, (i - 12) * 10, 0)
+            glVertex((i - 12) * 10, -120, 0)
+            glVertex((i - 12) * 10, 120, 0)
         glEnd()
 
         # Draw x,y,z axes
         glDisable(GL_DEPTH_TEST)
         glBegin(GL_LINES)
-        glColor3f(1.0,0.0,0.0)
-        glVertex(0,0,0)
-        glVertex(25,0,0)
-        glColor3f(0.0,1.0,0.0)
-        glVertex(0,0,0)
-        glVertex(0,25,0)
-        glColor3f(0.0,0.0,1.0)
-        glVertex(0,0,0)
-        glVertex(0,0,25)
+        glColor3f(1.0, 0.0, 0.0)
+        glVertex(0, 0, 0)
+        glVertex(25, 0, 0)
+        glColor3f(0.0, 1.0, 0.0)
+        glVertex(0, 0, 0)
+        glVertex(0, 25, 0)
+        glColor3f(0.0, 0.0, 1.0)
+        glVertex(0, 0, 0)
+        glVertex(0, 0, 25)
         glEnd()
         glEnable(GL_DEPTH_TEST)
         glEnable(GL_LIGHTING)
@@ -332,8 +344,8 @@ class PyGLCMViewer(PyGLWidget):
     def drawWithNames(self):
         glMatrixMode(GL_MODELVIEW)
         glPushMatrix()
-        #s = self.renderInfo.scale
-        #glScalef(s,s,s)
+        # s = self.renderInfo.scale
+        # glScalef(s,s,s)
         if self.sim:
             for r in self.sim.renderers:
                 if r:
@@ -341,16 +353,17 @@ class PyGLCMViewer(PyGLWidget):
         glPopMatrix()
 
 
-        
 class RenderInfo:
     def __init__(self):
         self.renderers = []
         self.scale = 1.0
+
     def addRenderer(self, renderer):
         self.renderers.append(renderer)
+
     def reset(self):
         self.renderers = []
         self.scale = 1.0
+
     def setScale(self, s):
         self.scale = s
-
