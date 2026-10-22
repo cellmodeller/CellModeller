@@ -2,6 +2,7 @@ import sys
 import math
 import numpy
 import pyopencl as cl
+from types import SimpleNamespace
 import pyopencl.array as cl_array
 from pyopencl.array import vec
 from pyopencl.array import max as device_max
@@ -163,7 +164,10 @@ class CLBacterium:
         from pathlib import Path
         kernel_src = (Path(__file__).parent / 'CLBacterium.cl').read_text()
 
-        self.program = cl.Program(self.context, kernel_src).build(cache_dir=False)
+        program = cl.Program(self.context, kernel_src).build(cache_dir=False)
+        # Retrieve each kernel once and reuse it. Accessing program.<name> directly
+        # creates a new kernel object on every call (pyopencl RepeatedKernelRetrieval).
+        self.program = SimpleNamespace(**{k.function_name: k for k in program.all_kernels()})
         # Some kernels that seem like they should be built into pyopencl...
         self.vclearf = ElementwiseKernel(self.context, "float8 *v", "v[i]=0.0", "vecclearf")
         self.vcleari = ElementwiseKernel(self.context, "int *v", "v[i]=0", "veccleari")

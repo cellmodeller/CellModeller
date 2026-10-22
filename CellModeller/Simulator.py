@@ -430,6 +430,10 @@ visualised.
 
     # Populate simulation from saved data pickle
     def loadFromPickle(self, data):
+        max_cells = getattr(self.phys, 'max_cells', None)
+        if max_cells is not None and len(data['cellStates']) > max_cells:
+            raise ValueError('Pickle has %d cells but the model only allocates max_cells=%d - increase max_cells to load it'
+                             % (len(data['cellStates']), max_cells))
         self.setCellStates(data['cellStates'])
         self.lineage = data['lineage']
         self.stepNum = data['stepNum']

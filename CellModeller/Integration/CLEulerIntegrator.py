@@ -1,6 +1,7 @@
 import numpy
 import scipy.integrate.odepack
 import pyopencl as cl
+from types import SimpleNamespace
 import pyopencl.array as cl_array
 from pyopencl.array import vec
 import math
@@ -98,7 +99,10 @@ class CLEulerIntegrator:
         kernel_src = (Path(__file__).parent / 'CLEulerIntegrator.cl').read_text()
         # substitute user defined kernel code, and number of signals
         kernel_src = kernel_src%(specRateKernel)
-        self.program = cl.Program(self.context, kernel_src).build(cache_dir=False)
+        program = cl.Program(self.context, kernel_src).build(cache_dir=False)
+        # Retrieve each kernel once and reuse it. Accessing program.<name> directly
+        # creates a new kernel object on every call (pyopencl RepeatedKernelRetrieval).
+        self.program = SimpleNamespace(**{k.function_name: k for k in program.all_kernels()})
 
 
     def dydt(self):
@@ -155,8 +159,11 @@ class CLEulerIntegrator:
 
     def setLevels(self, specLevel):
         self.cellStates = self.sim.cellStates
-        self.levels = specLevel
-        self.makeViews()
+        # Copy the saved levels into this integrator's own buffers rather than replacing them:
+        # the saved arrays are sized for the max_cells of the run that wrote the pickle, which
+        # may differ from this run's, so only the rows of existing cells are copied.
+        nCells = len(self.cellStates)
+        self.specLevel[:nCells] = specLevel.reshape(-1, self.nSpecies)[:nCells]
         self.specLevel_dev.set(self.specLevel)
         cs = self.cellStates
         for id,c in list(cs.items()):

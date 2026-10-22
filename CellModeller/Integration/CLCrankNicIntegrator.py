@@ -4,6 +4,7 @@ from scipy.sparse.linalg import LinearOperator
 from scipy.ndimage.filters import convolve
 from scipy.sparse.linalg import gmres
 import pyopencl as cl
+from types import SimpleNamespace
 import pyopencl.array as cl_array
 from pyopencl.array import vec
 import math
@@ -209,7 +210,10 @@ class CLCrankNicIntegrator:
         kernel_src = kernel_src % {'sigKernel': sigRateKernel,
                                    'specKernel': specRateKernel,
                                    'nSignals': self.nSignals}
-        self.program = cl.Program(self.context, kernel_src).build(cache_dir=False)
+        program = cl.Program(self.context, kernel_src).build(cache_dir=False)
+        # Retrieve each kernel once and reuse it. Accessing program.<name> directly
+        # creates a new kernel object on every call (pyopencl RepeatedKernelRetrieval).
+        self.program = SimpleNamespace(**{k.function_name: k for k in program.all_kernels()})
 
 
     def dydt(self):
@@ -360,9 +364,13 @@ class CLCrankNicIntegrator:
 
     def setLevels(self, SSLevel, cellSigData):
         self.cellStates = self.sim.cellStates
-        self.levels = SSLevel
-        self.makeViews()
-        self.cellSigLevels = cellSigData
+        # Copy the saved levels into this integrator's own buffers rather than replacing them:
+        # the saved arrays are sized for the max_cells of the run that wrote the pickle, which
+        # may differ from this run's, so only the rows of existing cells are copied.
+        nCells = len(self.cellStates)
+        self.signalLevel[:] = SSLevel[:self.signalDataLen]
+        self.specLevel[:nCells] = SSLevel[self.signalDataLen:].reshape(-1, self.nSpecies)[:nCells]
+        self.cellSigLevels[:nCells] = cellSigData[:nCells]
         self.signalLevel_dev.set(self.signalLevel.reshape(self.gridDim))
         self.specLevel_dev.set(self.specLevel)
         self.cellSigLevels_dev.set(self.cellSigLevels)
